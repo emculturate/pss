@@ -1,16 +1,213 @@
-# SQL grammar extensions since 2026-01-01
+# SQL grammar, AST, and validation changes since 2026-01-01
 
-**Scope:** `parse/src/main/antlr4/sql/SQLSelectParser.g4` (and lexer tokens in the same file) on branch `Spring-2026-Extensions`, compared to the last pre-2026 snapshot (`f49203f`, 2025-12-31).
+**Reviewed through:** 2026-11-11, branch `Fall-2026-Extensions`, current 5.1.4-1 development line.
 
-**Purpose:** Quick outline of **new or materially expanded** parse coverage—by statement/clause—not walker, generator, or test work unless the grammar itself changed.
+**Scope:** Grammar and lexer changes since the last pre-2026 snapshot
+(`f49203f`, 2025-12-31), plus consumer-visible summer/fall AST, symbol-table,
+diagnostic, and defect-resolution changes carried into 5.1.4. The original
+August grammar inventory is retained below and supplemented by the dated review.
 
-**Build artifacts (2026-08-09):** `mvn package` in `parse/` produces:
+**Version boundary:** This is a cumulative feature inventory, not evidence that
+every listed feature was absent in 5.0.0. Changes explicitly compared with
+5.0.0-3 are identified below. The 5.1.3 symbol-table contracts remain applicable
+in 5.1.4. Planned work is not shipped functionality.
+
+**Consumer actions:** [Panto 5.1.4 upgrade checks](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-delivered-behavior-through-2026-11-11)
+uses the change IDs below to identify required application checks.
+
+**Build artifacts:** Packaging the current `parse/` module produces:
 
 | Artifact | Role |
 |----------|------|
-| `target/pss-parse-5.1.3-1.jar` | Main parser + runtime classes |
-| `target/pss-parse-5.1.3-1-tests.jar` | Test utilities (`classifier: tests`) |
-| `target/pss-parse-5.1.3-1-fat.jar` | Standalone jar-with-dependencies (Python/JS callers) |
+| `target/pss-parse-5.1.4-1.jar` | Main parser + runtime classes |
+| `target/pss-parse-5.1.4-1-tests.jar` | Test utilities (`classifier: tests`) |
+| `target/pss-parse-5.1.4-1-fat.jar` | Standalone jar-with-dependencies (Python/JS callers) |
+
+The opt-in `isolated-build` profile writes to `target-maven/` instead of
+`target/`, avoiding IDE auto-build interference. Workspace testing is configured
+for JDK 21. Artifact names here describe the development build, not a publication
+claim.
+
+## Summer/fall review and consumer-impact index
+
+**Implemented** means present on the current branch; it does not imply that
+every permitted grammar combination has complete acceptance or generator
+coverage. IDs U01-U27 are shared with the consumer checklist.
+
+| ID | Delivered coverage or changed behavior | Consumer-visible effect / boundary |
+|---|---|---|
+| U01 | SCRIPT and fragment endpoints, including LITERAL and DML | Select the correct endpoint; scripts have per-statement AST/symbol payloads, not one SELECT root |
+| U02 | DDL object coverage and verbatim option tails | Preserve opaque source text; structured DDL option semantics remain backlog |
+| U03 | INSERT / UPDATE / DELETE, RETURNING, ON CONFLICT | DML roots, target/assignment buckets, returning interfaces, and nested update scopes must be understood |
+| U04 | CTE bodies including DML/VALUES and substitutions; ordered visibility | Nested scopes and explicit alias bindings replace assumptions of one flat query namespace |
+| U05 | Global physical/tuple dictionary policy (5.1.3+) | CTE and local alias keys formerly promoted by 5.0.0-3 are intentionally absent |
+| U06 | Published `def_*`, scope interfaces, clause archives, `dependent_queries` | Trace each scope boundary; query dictionaries are not flattened physical-column inventories |
+| U07 | Grounded, earlier SELECT-list aliases | Same-scope lineage can use `table_ref=queryN`; forward/cyclic aliases are not valid resolved sources |
+| U08 | Window dependency isolation and archive policy | Read `window_partition_by` / `window_ordered_by`; window-only names need not be query-dictionary outputs |
+| U09 | PIVOT/UNPIVOT AST and derivation consolidation | `in_any`, `nulls_policy`, and singular `derivation` carry meaning; source lineage may fan out |
+| U10 | JOIN USING operand resolution and join-form diagnostics | USING contributes filter/source evidence; invalid CROSS/NATURAL ON/USING and NATURAL FULL joins are rejected |
+| U11 | Set-op wildcard-aware width checks | Unknown wildcard width no longer causes the known false mismatch; concrete mismatches still fail |
+| U12 | Duplicate output/interface validation | SQL accepted by 5.0.0-3 may now be FATAL; duplicate names can cause a cascading width mismatch |
+| U13 | Unparenthesized `FROM VALUES (...) AS alias(cols)` | Alias columns and VALUES scopes are available without adding an outer parenthesis pair |
+| U14 | WITHIN GROUP ordered aggregates | Dedicated `ordered_aggregate` AST and `within_group_ordered_by` lineage; wider acceptance matrix still pending |
+| U15 | Nested/product CASE and function-result array subscripts | Structured `subscript={array, index}`; bracketed identifiers remain distinct; not general array-literal support |
+| U16 | Grouping combinators and ALL/DISTINCT AST | Structured ROLLUP/CUBE/GROUPING SETS and clause-level `option` values, not just flat column lists |
+| U17 | Table-function arguments and row sources | Literal keyword arguments are scalarized; named arguments, lateral sources, and generic table functions need traversal |
+| U18 | Arithmetic, casts, search/scalar functions, predicates, bare values | Broader expression shapes; bare value expressions must not become physical columns; SQL UNIQUE predicate removed |
+| U19 | EXTRACT and DATE_PART FROM | Dedicated `extract` contract, part form, invocation discriminator, typed literal sources; distinct from planned datetime AST |
+| U20 | Per-statement Snowflake/Postgres affinity | Warnings/counters identify target dependence; mixed affinity is FATAL; state resets between script statements |
+| U21 | SELECT-list expression subquery scope fix (November Entry 13) | Restored scalar `lookup` wrapper; private subquery columns no longer leak into outer output lineage |
+| U22 | Join-extension diagnostic deferral (November Entry 14) | Specific missing-table FATALs become severe warnings plus `JOIN_EXTENSION_REQUIRED`; whole-query approximation |
+| U23 | Set-op query-variable interface fix (November Entry 16) | Real branch exports survive query-variable members; variable-only composites have an open wildcard interface |
+| U24 | Contextual `position`, `input`, `path`, and numeric `truncate()` (November Entry 18) | Ten observed bound-query regressions cleared; obsolete unused array snippet discrepancy waived, not fixed |
+| U25 | Structured syntax/walker diagnostics and production LL policy | A returned Snippet/JSON or partial AST is not parse success; error messages include more context |
+| U26 | Lexer token numbering | Token IDs are version-specific; the November batch shifts old IDs 393-413 by +26 |
+| U27 | Existing substitutions/Jinja/colon-path surface versus backlog | Grammar presence is not complete template expansion, semi-structured, or generator support |
+
+### Summer additions and corrected contracts
+
+- **Published scopes and dictionaries:** Phases 1-20 of symbol-table resolution
+  consolidation closed in August. Consume published `def_*` payloads; the
+  child's `interface` is the export boundary. Global table dictionaries collect
+  physical/tuple sources across scopes; each query dictionary tracks its own
+  outputs and justified usage sites, not every input expression. CTE references
+  belong on `table_alias` / `context_list` with nested query definitions, not
+  global physical table keys. Trailing-clause-only physical and tuple
+  references after joins are retained.
+- **Aliases and windows:** Prior grounded SELECT aliases resolve through
+  same-query interface hops, including substitution-backed and scalar-subquery
+  origins. Forward and ungrounded cyclic references remain unresolved/fatal.
+  Partition/order dependencies are archived separately; window-only inputs do
+  not automatically widen the query dictionary. Window output lineage retains
+  its own dependencies without contaminating neighboring SELECT outputs or
+  later query scopes.
+- **Dependent subqueries:** `dependent_queries.type` matches the owning role
+  bucket, including window, assignment, and PIVOT scalar sites. Parent dictionary
+  collection must not flatten child-private sources. Trace role archives and
+  their dependent subqueries together.
+- **Relational modifiers:** UNPIVOT records `nulls_policy`; PIVOT ANY uses
+  `in_any` (with optional ordering). Derived output references and their
+  `derivation.source_columns` preserve modifier-to-source lineage across
+  interfaces and clauses, including windows. The supported PIVOT registry
+  naming policy remains `{inComponent}_{aggregateAlias}`; do not infer physical
+  source columns from bare Snowflake generated output names.
+- **JOIN USING:** Matching uses each operand's exported interface, including
+  VALUES and table-function sources; USING columns contribute filter lineage
+  across flat join chains. CROSS/NATURAL joins with ON/USING receive diagnostics
+  per join entry. `NATURAL FULL [OUTER] JOIN` is intentionally unsupported;
+  ordinary FULL OUTER JOIN with ON/USING is the alternative.
+- **Set operations:** Wildcard-bearing unknown widths no longer trigger the
+  known false column-count FATAL. Explicit mismatches still do. Duplicate
+  interface names remain FATAL even where the target engine would execute a
+  positional UNION; add distinct aliases instead of disabling validation.
+  Set-op scope publication/merging isolates siblings rather than importing a
+  sibling's private definitions.
+- **August grammar additions:** Unparenthesized VALUES with column aliases,
+  WITHIN GROUP ordered aggregates, function-result subscripts and bracketed
+  identifier disambiguation, and nested CASE exemplars are delivered.
+  `ordered_aggregate` contains the function and `within_group`, plus optional
+  OVER content; ordered sort dependencies use `within_group_ordered_by`.
+  Grammar admits LISTAGG, ARRAY_AGG, PERCENTILE_CONT, and PERCENTILE_DISC,
+  but Entry 19 retains acceptance gaps beyond LISTAGG, and Entry 4 owns
+  broader ARRAY_AGG/compound-array coverage.
+- **Other structured AST changes:** GROUP BY ALL/DISTINCT records clause-level
+  `option=ALL|DISTINCT`; ROLLUP/CUBE/GROUPING SETS retain combinator structure.
+  Table-function literal keyword arguments are scalarized rather than exposed
+  as nested literal wrappers. EXTRACT/DATE_PART FROM uses `extract` with
+  `part`, `part_form`, `source`, optional `source_type`, and DATE_PART's
+  `invocation` discriminator. These contracts remain separate from the planned
+  `datetime_function` node.
+- **Dialect and bare-value handling:** Existing statement-level dialect
+  diagnostics were added in August. Shared constructs remain neutral;
+  dialect-specific grammar/parts use the existing collector, and mixed
+  Snowflake/Postgres dependence is FATAL within a statement. Bare ANSI/dialect
+  value expressions are not source columns.
+
+### September production parsing and diagnostics
+
+Production `SqlParserAccess` uses **LL parsing**, not SLL-first or SLL fallback.
+The historical 74-row timeout gate closed; its 90-second timing criterion is
+not proof that SQL is valid and is not part of the ordinary correctness suite.
+SLL probing and latency reporting are opt-in diagnostics only.
+
+Production still attempts the AST walk after parse errors. Recognized walker
+stack misalignment is reported as structured `AST_WALKER_STACK_MISALIGN`; other
+walker exceptions can still produce FATAL diagnostics. Earlier proposals to
+skip walking after syntax errors do not describe the current production path.
+Fatal syntax diagnostics gained snippet/rule context. Applications must inspect
+diagnostic severities, not success-shaped wrappers, nonempty ASTs, or exact
+message text. No general guarantee of exception-free walking on malformed SQL
+is implied.
+
+### November defect closure and lexer baseline
+
+- **Entry 13:** SELECT-list nested subqueries now retain private aliases inside
+  their own scopes; scalar operands regain the 5.0.0-style `lookup` AST wrapper.
+  The recorded corpus run fixed 395 affected cases with no newly fatal cases
+  at that checkpoint. This is historical checkpoint evidence, not a fresh
+  complete-corpus result for today's branch.
+- **Entry 14:** When a statement contains a join extension, only
+  `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` FATALs are downgraded to
+  `SEVERE_WARNING`, with `JOIN_EXTENSION_REQUIRED` per variable. Other FATALs
+  remain. The implementation is whole-query within a statement: it does not
+  prove the extension can satisfy a missing reference in that particular
+  scope. Precise scope-aware deferral remains Entry 15.
+- **Entry 16:** A concrete set-op branch combined with a query variable now
+  retains its exported interface; variable-only composites publish an open
+  wildcard interface. Unknown variable shape is not a known concrete width.
+  Revalidate the generated SQL after substitution.
+- **Entry 18:** All ten frozen bound-query cases involving `position`, `input`,
+  `path`, and `truncate(...)` now have zero FATALs. Four TRUNCATE ASTs exactly
+  match 5.0.0-3; the other six match after comparison-only CTE representation
+  normalization. This is not a dictionary-parity assertion. Unused snippet
+  s82233's array syntax/walker discrepancy was accepted as obsolete; neither
+  general array literals nor walker robustness were implemented for it.
+- **Entry 1 lexer baseline:** 26 function tokens were added before Identifier;
+  IDs 1-392 are unchanged and former IDs 393-413 become 419-439. Part aliases
+  remain identifiers. The user's manual golden edits are complete; the latest
+  VS Code testing-extension run on configured JDK 21 reports **2,643 passed,
+  0 failed**. Phase 1 / Slice A is complete, not the date/time feature itself.
+
+### Planned work and limitations as of 2026-11-11
+
+The common grammar rule and AST key **`datetime_function`**, semantic
+signatures, part registry, and new add/diff/truncation/Postgres families are
+approved but **not implemented**. q5866's date-part-as-column regression remains
+open under Entry 1. The [consumer date/time section](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-datetime-ast-changes-planned)
+describes the future shape, not current output.
+
+Do not promote the following to delivered support: Entry 2 quoted unaliased
+PIVOT outputs; Entry 3 full PARSE_* / colon semi-structured access; Entry 4 general
+arrays; Entries 5-6 broader Jinja/dbt; Entry 8 cardinality/dynamic expansion;
+Entry 9 structured DDL options; Entry 10 remaining generator coverage; Entry 15
+precise join-extension deferral; Entry 19 residual acceptance matrices.
+Existing grammar surface below may cover subsets of those topics without
+establishing full behavior. In particular, function-result subscripting is not
+array-literal construction, and parsing is not a SQL-generation parity claim.
+
+### Evidence and verification boundaries
+
+The review combines current grammar/walker/access source, literal contract
+tests, canonical consumer policies, and git history. Representative checkpoints:
+`eb499c7` (dialect tracking), `ee80e1b` / `e59cf99` (grouping AST),
+`e2c9388` (VALUES), `aacc694` (ordered aggregates), `442fff5` / `dd27a16`
+(subscripts), `0522ce7` (CTE/join policy), `cab17b7` / `48332e8`
+(production/diagnostic parsing policy), `fab17ba` (Entries 13-14), `0675160`
+(Entry 16), and `f8e1053` (lexer/contextual words).
+
+Canonical contracts:
+[scope/bucket reference](./symbol-table-bucket-reference.md),
+[dictionary collection](./table-and-query-dictionary-design.md),
+[CTE/global dictionary policy](./global-table-dictionary-cte-alias-policy.md),
+[ordered aliases](./ordered-select-list-output-alias-policy.md),
+[window policy](./phase-17.6.9-window-query-dictionary-policy.md),
+[modifier policy](./relational-modifier-resolution-policy.md), and
+[duplicate outputs](./set-operation-interface-duplicate-output-names-policy.md).
+The [master workplan](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/sql-grammar-5.1.4-workplan.md) remains authoritative for
+open work. Counts from different runners/checkpoints are not interchangeable;
+the latest green test run is not a new whole-corpus 5.0.0-versus-5.1.4 comparison.
+These repository-only links use GitHub URLs so they remain usable from the
+vendor/JAR mirror, which does not bundle the workplan or Panto remediation index.
 
 ---
 
@@ -187,4 +384,7 @@
 
 ## Related non-grammar work (same period, for context only)
 
-Walker AST, symbol tables, dialect warnings, JaCoCo exit coverage, golden test consolidation, and `SQLStatementGenerator` updates accompany these grammar changes but are not listed rule-by-rule here.
+The summer/fall review above now includes consumer-visible walker AST, symbol
+tables, dialect diagnostics, and defect fixes. JaCoCo exit coverage, golden
+consolidation, and generator work accompany them but do not by themselves prove
+new language support or complete regeneration fidelity.

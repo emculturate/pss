@@ -1216,6 +1216,7 @@ column_primary
 predicand_primary
   : extract_expression
   | date_part_expression
+  | datetime_function
   | value_expression_primary
   | string_value_expression
   | sign numeric_primary
@@ -1576,7 +1577,23 @@ factor
 numeric_primary
   : extract_expression
   | date_part_expression
+  | datetime_function
   | value_expression_primary
+  ;
+
+datetime_function
+  : snowflake_datetime_add_expression
+  ;
+
+snowflake_datetime_add_expression
+  : function=snowflake_datetime_add_function
+    LEFT_PAREN level=datetime_part
+    COMMA increment=value_expression
+    COMMA datetime_value=value_expression RIGHT_PAREN
+  ;
+
+snowflake_datetime_add_function
+  : DATEADD | TIMEADD | TIMESTAMPADD
   ;
 
 sign
@@ -1606,19 +1623,23 @@ date_part_expression
   ;
 
 extract_field
+  : datetime_part
+  ;
+
+datetime_part
   : primary_datetime_field
   | time_zone_field
   | extended_datetime_field
-  | snowflake_extract_field
+  | snowflake_datetime_part
   | character_literal
+  | identifier
   ;
 
 // Snowflake EXTRACT date/time parts — must precede `Identifier` (same-length names otherwise lex as identifiers).
-snowflake_extract_field
+snowflake_datetime_part
   : DAYOFMONTH | DAYOFWEEK | DAYOFWEEKISO | DAYOFYEAR
   | WEEKISO | WEEKOFYEAR
   | EPOCH_SECOND | EPOCH_MILLISECOND | EPOCH_MICROSECOND
-  | identifier
   ;
 
 time_zone_field

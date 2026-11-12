@@ -63,6 +63,55 @@ public class SqlDatetimeLexerBaselineTest {
 	}
 
 	@Test
+	public void datetimeAddAliasesShareDedicatedGrammarAndExpressionArguments() {
+		for (String name : new String[] {"DATEADD", "TIMEADD", "TIMESTAMPADD"}) {
+			for (String part : new String[] {"year", "mm", "'month'", "DAYOFWEEKISO"}) {
+				SQLSelectParserParser.SqlContext tree = assertParses(
+						"select " + name + "(" + part
+								+ ", coalesce(a.step, 1), cast(a.ts as timestamp)) from t a");
+				Assert.assertEquals(1,
+						Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_datetime_function).size());
+				var calls = Trees.findAllRuleNodes(
+						tree, SQLSelectParserParser.RULE_snowflake_datetime_add_expression);
+				Assert.assertEquals(1, calls.size());
+				var call = (SQLSelectParserParser.Snowflake_datetime_add_expressionContext) calls.iterator().next();
+				Assert.assertEquals(name, call.function.getText());
+				Assert.assertEquals(part, call.level.getText());
+				Assert.assertEquals("coalesce(a.step,1)", call.increment.getText());
+				Assert.assertEquals("cast(a.tsastimestamp)", call.datetime_value.getText());
+				Assert.assertTrue(Trees.findAllRuleNodes(
+						call.level, SQLSelectParserParser.RULE_column_reference).isEmpty());
+			}
+		}
+	}
+
+	@Test
+	public void datetimeAddExpressionSlotsKeepColumnsSubstitutionsAndNestedCalls() {
+		SQLSelectParserParser.SqlContext tree = assertParses(
+				"select dateadd(year, a.year + <increment>, "
+						+ "timeadd(hour, <hours>, a.ts)) from t a");
+		Assert.assertEquals(2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_datetime_function).size());
+		Assert.assertEquals(2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_variable_identifier).size());
+		var columns = Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_column_reference);
+		Assert.assertTrue(columns.stream().anyMatch(column -> "a.year".equals(column.getText())));
+		Assert.assertTrue(columns.stream().anyMatch(column -> "a.ts".equals(column.getText())));
+	}
+
+	@Test
+	public void qualifiedDatetimeAddNamesKeepGenericGrammar() {
+		for (String name : new String[] {"DATEADD", "TIMEADD", "TIMESTAMPADD"}) {
+			SQLSelectParserParser.SqlContext tree =
+					assertParses("select custom." + name + "(a.part, 1, a.ts) from t a");
+			Assert.assertTrue(Trees.findAllRuleNodes(
+					tree, SQLSelectParserParser.RULE_datetime_function).isEmpty());
+			Assert.assertEquals(1,
+					Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		}
+	}
+
+	@Test
 	public void contextualKeywordsAreAcceptedInIdentifierPositions() {
 		for (String name : new String[] {"position", "input", "path"}) {
 			assertParses("select " + name + " from t");

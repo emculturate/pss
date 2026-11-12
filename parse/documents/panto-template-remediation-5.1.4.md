@@ -2,12 +2,19 @@
 
 **Date:** 2026-11-11  
 **Audience:** Panto query template and snippet authors (ALR, Enroll360, Partner_Data_Platform, PDP, Pagoda, Foundation, Finaid, AMS, Program Assistant teams)  
-**Parser:** `pss-parse-5.1.4-1` (Fall-2026-Extensions, commit `fab17ba`)  
+**Parser:** `pss-parse-5.1.4-1` (Fall-2026-Extensions; original extract report at `fab17ba`, upgrade guidance reviewed through 2026-11-11)
+
 **Source data:** live extracts `bound_queries_11-10-2026.csv` (6,551 bound queries) and `snippets-11-10-2026.csv` (87,905 snippets), compared against `pss-parse-5.0.0-3`
 
 ## Summary
 
-PSS 5.1.4 validates SQL that 5.0.0-3 accepted without checking. In the 11-10-2026 extract, **172 bound queries and snippets** that were clean on 5.0.0-3 now report FATAL errors on 5.1.4 because the SQL itself is wrong. These are real defects: most would fail, or silently return wrong columns, when run in Snowflake. Each falls into one of seven patterns below, and each pattern has a mechanical fix.
+PSS 5.1.4 validates SQL that 5.0.0-3 accepted without checking. The saved
+11-10-2026 comparison classified **172 bound queries and snippets** as requiring
+author remediation under the stricter validation contract. This is a historical
+classified count, not a fresh full-corpus total for today's branch. Some cases
+are invalid SQL; others, such as duplicate names in a positional UNION that an
+engine may execute, violate PSS's distinct output-interface contract. Each falls
+into one of seven patterns below, and each pattern has a mechanical fix.
 
 | Pattern | What is wrong | Cases | Distinct templates / bundles |
 |---|---|---|---|
@@ -22,10 +29,232 @@ PSS 5.1.4 validates SQL that 5.0.0-3 accepted without checking. In the 11-10-202
 Many rows share a template name. The extract has no version or tenant column, so these are presumably per-tenant or per-version copies; fixing the source template should clear several rows at once. The index at the end lists every case.
 ### Not your problem (excluded from this document)
 
-These are not author errors and are **not** listed in the index. The parser team is fixing them:
+These are not author errors and are **not** listed in the index. Current
+disposition:
 
 - **Join extension templates.** Templates whose missing aliases are supplied by a `<join_extension.…>` snippet now report SEVERE_WARNING plus `JOIN_EXTENSION_REQUIRED` instead of FATAL (workplan Entry 14). The warning means the join extension must be substituted with a snippet that declares those aliases; it is not optional for that template.
-- **15 parser defects:** a derived table that unions with a `<union_add.…>` variable loses its columns (q2084, q2087, q2088); `DATEADD`/`DATEDIFF` date parts read as columns (q5866); Snowflake non-reserved words rejected — `position` (q5909, q5910, q5913), `input` (q5390, q5394), `path` (q2090), `truncate(…)` (q3399, q3438, q3490, q3546), and array literals `['a','b']` (s82233).
+- **13 of the original 15 parser cases fixed:** set-op/query-variable
+  interfaces (q2084, q2087, q2088, Entry 16), and contextual words/functions
+  `position` (q5909, q5910, q5913), `input` (q5390, q5394), `path` (q2090),
+  `truncate(...)` (q3399, q3438, q3490, q3546, Entry 18).
+- **One parser case still open:** `DATEADD`/`DATEDIFF` date parts read as
+  columns (q5866, Entry 1). Do not ask authors to rename date-part keywords
+  to work around the defect.
+- **One accepted obsolete case:** s82233's array-literal syntax and follow-on
+  walker failure occur in an unused bundle. The owner waived remediation;
+  this is not delivered general array-literal support.
+
+## Dependent application upgrade checks: delivered behavior through 2026-11-11
+
+This section translates the cumulative
+[grammar/AST/validation overview](./sql-grammar-extensions-since-2026-01-01.md#summerfall-review-and-consumer-impact-index)
+into application work. IDs U01-U27 match that overview. Some features predate
+5.1.4 and are inherited from 5.1.3; do not assume every feature was absent in
+5.0.0. Use the actual parser build and endpoint in regression fixtures, not a
+raw text diff of complete ASTs or dictionaries as the sole compatibility test.
+
+### AST readers, SQL generators, and endpoint routing
+
+| Change | Proactive application instruction and acceptance check |
+|---|---|
+| **U01 - Scripts/endpoints** | Route SQL, QUERY, TUPLE, COLUMN, PREDICAND, CONDITION, IN_LIST, VALUES, LITERAL, JOIN_EXTENSION, and DML fragments to their intended endpoints. Support SCRIPT's per-statement roots and `SCRIPT["N"]` symbol payloads; do not hardcode a SELECT root. Test mixed DDL/DML/query scripts and independent statement diagnostics. IN_LIST requires parentheses: wrap stored bare list text once, rather than treating raw-list rejection as a new regression. |
+| **U02 - DDL** | Recognize DDL roots and preserve verbatim option/parenthesis tails during transformation. Do not treat opaque text as structured, validated options. Test CTAS and non-query DDL separately; structured option support is not delivered. |
+| **U03 - DML** | Extend visitors and validators beyond SELECT to targets, assignments, source scopes, RETURNING interfaces, and ON CONFLICT's nested update scope. Verify INSERT/UPDATE/DELETE outputs and target/source lineage separately; do not flatten conflict UPDATE into its parent INSERT. Round-trip only supported generator paths. |
+| **U04 - CTEs** | Traverse numbered CTE storage and alias/body structure rather than assuming legacy alias-keyed AST entries. Resolve ordered CTE visibility through scope bindings. Include nested WITH, VALUES/DML bodies, and substitution bodies where used. Normalize old/new CTE layouts only in comparison tooling, not by rewriting the parser's published tree. |
+| **U09 - Relational-modifier AST** | Read PIVOT `in_any` and optional order, UNPIVOT `nulls_policy`, aggregate aliases, and IN prefixes. Preserve INCLUDE/EXCLUDE NULLS and ANY ordering when generating SQL. Test existing supported registry names; quoted unaliased Snowflake outputs and general default-name resolution are not new guarantees. |
+| **U13 - VALUES** | Accept unparenthesized FROM VALUES with alias/column list, and consume its exported VALUES scope. Check alias-based reads and column ordering. The exact joined UNION-branch acceptance fixture remains Entry 19.1, so test that construction if your templates use it. |
+| **U14 - Ordered aggregates** | Add `ordered_aggregate` traversal/rendering, its nested `function` and `within_group`, plus optional OVER. Preserve sort direction/null ordering; inspect `within_group_ordered_by` lineage. LISTAGG has current coverage; explicitly test PERCENTILE_CONT/DISC and ARRAY_AGG forms you use rather than inferring complete coverage from grammar acceptance. |
+| **U15 - CASE/subscripts** | Traverse both `array` and `index` under `subscript`, including function-result indexing, casts, and nested CASE. Preserve suffix order and bracketed identifier case. Do not interpret every bracketed token as a subscript or assume subscript support implies array-literal support. |
+| **U16 - GROUP BY** | Handle ROLLUP/CUBE/GROUPING SETS trees, empty grouping sets, and clause-level `option=ALL|DISTINCT`. Preserve combinator boundaries rather than flattening every grouping entry into a simple column list. Test rendering and grouped-column lineage independently. |
+| **U17 - Table functions** | Support TABLE wrappers/bare calls, lateral sources, named arguments, and scalar literal keyword-argument values. Remove validators that require a literal wrapper around every argument; do not collect argument names such as INPUT/PATH as physical columns. Check supported row-source output interfaces. |
+| **U18 - General expressions/predicates** | Exercise unparenthesized arithmetic, chained casts/NULL casts, POSITION IN/comma forms, INSTR/CHARINDEX, IFF/MD5/REVERSE, LIKE/ILIKE ANY, quantified comparisons, and substitution predicates used by your application. Traverse structured operands rather than assuming generic function calls. Keep CURRENT_DATE and other bare value expressions out of source-column inventories. SQL UNIQUE(subquery) is no longer a supported predicate; remediate any such templates. |
+| **U19 - Existing extract AST** | Support `extract` with `part`, `part_form`, `source`, optional typed-literal `source_type`, and DATE_PART's `invocation` discriminator. Preserve keyword versus quoted-string part form and typed DATE/TIME/TIMESTAMP/INTERVAL sources. Keep EXTRACT/DATE_PART FROM handling separate from the planned `datetime_function` migration below. |
+| **U21 - Scalar subqueries** | Expect `lookup` around scalar subquery operands, including arithmetic/function/CASE positions; the November fix restores the legacy wrapper, not a new unwrapped form. Keep child-local columns inside their child scope. Replace snapshots that encoded leaked inner references; verify genuine outer-scope mistakes still fail. |
+| **U24 - Contextual words/functions** | Remove application-side renaming/quoting workarounds needed solely for the ten known `position`, `input`, `path`, and numeric `truncate()` regressions, after testing your own templates. Preserve dedicated POSITION behavior and keep numeric TRUNCATE calls distinct from DDL TRUNCATE and planned datetime TRUNC. The s82233 waiver applies only to the confirmed unused snippet, not other live arrays. |
+| **U27 - Partial language surface** | Keep unsupported Jinja/dbt, PARSE_*/colon access, general arrays, structured DDL, and dynamic/cardinality substitutions on the compatibility checklist. Existing grammar rules do not certify every endpoint, walker path, or generator. Test the actual templates/snippets and final substituted SQL; do not enable unfinished features based on this inventory. |
+
+### Scope, dictionary, and lineage consumers
+
+Read the [bucket reference](./symbol-table-bucket-reference.md) before adapting
+these consumers. A missing legacy global key is not automatically missing
+source evidence.
+
+| Change | Proactive application instruction and acceptance check |
+|---|---|
+| **U05 - Global table dictionary** | Stop requiring CTE names and local aliases as global `tableDictionary` keys. Resolve them through enclosing `table_alias`/`context_list` to nested `def_*` interfaces. Continue asserting physical and tuple-substitution source keys, including trailing-clause-only column tokens. A missing physical/tuple source remains a regression to investigate. |
+| **U06 - Scope publication** | Read published `def_*` keys, not walk-time payloads. Treat each interface as the child export boundary; do not flatten sibling/grandchild private columns. Follow both role buckets and matching `dependent_queries.type` entries. Keep local query dictionaries output-oriented and the global query dictionary indexed by query, separate from physical source dictionaries. |
+| **U07 - Ordered aliases** | Handle same-scope `table_ref=queryN` as a hop to that scope's interface entry, not a physical table. Use cycle detection. Test earlier grounded aliases, including substitutions/scalar-subquery origins, and retain negative tests for forward or ungrounded cyclic references. Do not turn null table refs into invented physical origins. |
+| **U08 - Windows** | Read `window_partition_by`/`window_ordered_by` even when those names have no query-dictionary output key. Distinguish top-level output names from dependency lists on a window output. Accept modifier source-lineage fan-out, but reject leakage into neighboring SELECT outputs or sibling scopes. |
+| **U09 - Modifier lineage** | Use singular `derivation` and its `source_columns` to trace PIVOT/UNPIVOT outputs. Retain the derived hop and physical source fan-out; do not invent physical columns for generated names. Account for `{inComponent}_{aggregateAlias}` registry naming and test alias-qualified multi-modifier references/ambiguity. |
+| **U10 - JOIN USING** | Include USING columns in filter/source dependencies on both operands and read exported VALUES/table-function/query interfaces. Check each join's own ON/USING restrictions; do not attach a neighboring join's condition to it. Rewrite unsupported NATURAL FULL joins to explicit FULL OUTER JOIN ON/USING where appropriate. |
+| **U23 - Set-op query variables** | Consume the composite interface retained from real branches even when another member is a query substitution. Treat variable-only wildcard interfaces as open/unknown, not an empty interface or confirmed concrete column count. Reparse/revalidate final SQL after variable resolution. Do not restore the retired sibling-interface leakage to satisfy old snapshots. |
+
+### FATAL handling, warnings, and version-sensitive comparisons
+
+| Change | Proactive application instruction and acceptance check |
+|---|---|
+| **U10 - Join-form rejection** | Surface invalid CROSS/NATURAL ON/USING and `NATURAL_FULL_OUTER_JOIN_UNSUPPORTED` as actionable failures, even if an engine or older parser accepts the SQL. Do not suppress these as generic upgrade noise. |
+| **U11 - Wildcard width** | Remove compensating logic for the known false mismatch where the narrower side has unknown wildcard width. Keep a negative test for two known explicit widths that differ. Unknown width is deferred validation, not proof of matching outputs. |
+| **U12 - Duplicate outputs** | Treat `DUPLICATE_INTERFACE_COLUMNS` as author remediation; add distinct output aliases. When the same query also raises `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`, check for collapsed duplicate interface keys first. Do not equate PSS rejection with guaranteed Snowflake execution failure or disable all width checks. Retain genuine explicit-width mismatch controls. |
+| **U20 - Dialect dependence** | Inspect `STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR` and `STATEMENT_POSTGRES_DIALECT_GRAMMAR` warnings/counters, not a new invented AST flag. Treat `STATEMENT_MIXED_DIALECT_GRAMMAR` as FATAL. Test shared neutral forms and verify counters/warnings reset between SCRIPT statements. |
+| **U22 - Required join extensions** | Surface both the downgraded `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` severe warning and `JOIN_EXTENSION_REQUIRED`; a zero-FATAL template can still require a nonempty extension. Ensure the chosen snippet declares the referenced aliases and validate generated SQL. Do not downgrade other diagnostic codes yourself. Deferral is currently whole-query within a statement, not scope proof, and must not bleed to sibling script statements. |
+| **U25 - Diagnostics and production path** | Decide validity from merged diagnostic severities, not a returned Snippet, JSON status, AST presence, timeout completion, or exact message wording. Retain syntax context and structured walker failures such as `AST_WALKER_STACK_MISALIGN`. Production uses LL and still attempts walking after parse errors; do not rely on an always-skip or exception-free-invalid-input guarantee. Do not substitute an SLL/latency probe for production correctness validation. |
+| **U26 - Token IDs** | Do not hardcode 5.0.0 numeric token types in semantic readers or compare serialized token blobs without version awareness. For the November batch specifically, IDs 1-392 are unchanged and old 393-413 shift to 419-439 (`Identifier`: 393 to 419). These are not a universal mapping for every older 5.0.0 token. Keep token/text/location differences separate from AST/lineage changes; review exact golden replacements manually, not through an automatic blanket refresh. |
+
+### Upgrade acceptance procedure
+
+1. Inventory the application's endpoints, AST visitors/renderers, stored parse
+   trees, lineage/dictionary readers, and diagnostic filters against U01-U27.
+   Keep legacy-format support or reparse stored SQL explicitly; do not mutate
+   old trees into new shapes by guessing.
+2. Parse representative bound queries and each used snippet through its proper
+   endpoint with the production parser. Record parser version and separate
+   syntax/semantic FATALs from warnings and accepted limitations.
+3. Check semantic AST structure, output interfaces, physical/tuple sources,
+   substitution types, dependent scopes, and role lineage independently.
+   Normalize only documented comparison differences (for example CTE storage),
+   without hiding missing physical sources or unexpected new FATALs.
+4. Resolve snippets, generate SQL, reparse it, and verify any required join
+   extension and open interface becomes concrete and valid. For generator
+   paths not yet supported, report that gap rather than dropping unknown nodes.
+5. Retain negative controls for undeclared aliases, nonexported child columns,
+   duplicate outputs, explicit-width mismatches, mixed dialects, and malformed
+   syntax. New validation must not be globally disabled to reproduce 5.0.0's
+   permissive behavior.
+
+**Evidence boundary:** The latest workspace testing-extension run on configured
+JDK 21 reports **2,643 passed, 0 failed**. That is a regression-suite result,
+not a fresh full-corpus comparison or completion of Entry 19's acceptance
+backlog. The original 172-case index below remains historical author-remediation
+evidence. The date/time migration below remains planned.
+
+## Dependent application upgrade checks: date/time AST changes (planned)
+
+**Status (2026-11-12):** Partially implemented on the development branch:
+DATEADD AST shaping and the public part-registry lookups below are available.
+Other function families, signature validation, and new dialect-affinity handling
+remain unfinished. The complete signature table is the intended Entry 1
+contract, not a claim that every row is delivered.
+See the [authoritative workplan](./sql-grammar-5.1.4-workplan.md#approved-datetime_function-ast-contract-2026-11-11).
+
+Calls previously represented as ordinary `function` nodes with positional
+`parameters` will instead use the common **`datetime_function`** AST key when
+they match a supported date/time built-in signature. The key is singular, not
+`datetime_functions`. The umbrella grammar rule has the same name.
+`invocation` identifies the function specialization; its arguments have semantic
+names rather than numbered parameter positions.
+
+For example, the intended representation of `DATEADD(year, 1, created_at)` is:
+
+```text
+{datetime_function={
+  invocation=DATEADD,
+  level={canonical=YEAR, text=year, form=KEYWORD},
+  increment={literal=1},
+  value={column={name=created_at}}
+}}
+```
+
+### New parameter signatures
+
+The following is the planned full Entry 1 contract, delivered incrementally
+starting with the add family. Fields are listed in SQL argument order; consumers
+must not infer that order from map iteration.
+
+| Invocation | Semantic argument fields |
+|---|---|
+| `DATEADD`, `TIMEADD`, `TIMESTAMPADD` | `level`, `increment`, `value` |
+| `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF` | `level`, `left`, `right` |
+| `DATE_TRUNC` | `level`, `value` |
+| datetime `TRUNC` | `value`, optional `level` |
+| `TIME_SLICE` | `value`, `slice_length`, `level`, optional `boundary` |
+| `LAST_DAY` | `value`, optional `level` |
+| `NEXT_DAY`, `PREVIOUS_DAY` | `value`, `weekday` |
+| `DATE_BIN` | `stride`, `source`, `origin` |
+| one-argument `AGE` | `value` |
+| two-argument `AGE` | `left`, `right` |
+| `MAKE_DATE` | `year`, `month`, `day` |
+| `MAKE_TIME` | `hour`, `minute`, `second` |
+| `MAKE_TIMESTAMP` | `year`, `month`, `day`, `hour`, `minute`, `second` |
+| `MAKE_TIMESTAMPTZ` | timestamp fields above, plus optional `timezone` |
+| `MAKE_INTERVAL` | `components`, keyed by `years`, `months`, `weeks`, `days`, `hours`, `mins`, `secs`; preserve positional versus named source form |
+| `JUSTIFY_DAYS`, `JUSTIFY_HOURS`, `JUSTIFY_INTERVAL` | `value` |
+| `CLOCK_TIMESTAMP`, `STATEMENT_TIMESTAMP`, `TRANSACTION_TIMESTAMP`, `TIMEOFDAY` | no argument fields |
+
+### Public date/time part-registry lookup API (available 2026-11-12)
+
+The parser JAR exposes `sql.grammar.DatetimePartRegistry` for Java callers and
+process bridges such as an MCP adapter:
+
+```java
+List<String> parts = DatetimePartRegistry.canonicalValues();
+// [DAY, HOUR, MICROSECOND, MILLISECOND, MINUTE, MONTH,
+//  NANOSECOND, QUARTER, SECOND, WEEK, YEAR]
+
+Optional<List<String>> aliases =
+    DatetimePartRegistry.aliasesForCanonical("YEAR");
+// Present: [y, year, years, yr, yrs, yy, yyy, yyyy]
+
+Optional<String> canonical = DatetimePartRegistry.findCanonical("Yy");
+// Present: YEAR
+
+boolean found = DatetimePartRegistry.findCanonical("not_a_part").isPresent();
+// false
+```
+
+- `canonicalValues()` discovers all currently registered canonical names as an
+  immutable, alphabetically sorted list of uppercase values. Use these to
+  populate prompts or call `aliasesForCanonical` without hardcoded names.
+- `aliasesForCanonical` accepts a registered canonical name, case-insensitively,
+  and returns an immutable, alphabetically sorted list of lowercase spellings,
+  including the canonical spelling. An alias such as `yy` is not a canonical
+  name: resolve it with `findCanonical` first.
+- `findCanonical` accepts a canonical spelling or alias, case-insensitively,
+  and returns the registered uppercase canonical value.
+- The two input-taking lookups return `Optional.empty()` for null, blank, or unknown input. Input is
+  otherwise exact: surrounding whitespace and SQL quote delimiters are not
+  stripped. For a parsed part, pass `level.text`, not a quoted SQL literal.
+- An MCP/JSON adapter can serialize a present result as
+  `{"found":true,"canonical":"YEAR"}` or
+  `{"found":true,"aliases":["y","year","years","yr","yrs","yy","yyy","yyyy"]}`;
+  serialize absence as `{"found":false}`. These are adapter examples, not new
+  MCP endpoints implemented in the parser.
+- The current registry covers documented Snowflake DATEADD parts and aliases.
+  A successful lookup proves registry membership, not validity for every
+  date/time function, dialect, or argument type. Family-validity and affinity
+  metadata remain future work.
+- Use `findCanonical` for existence checks, **not** `canonicalize`: the latter
+  intentionally uppercases unknown/extensible text for AST metadata and does
+  not prove support. Do not copy alias lists into dependent applications.
+
+### What dependent applications must check
+
+- **AST traversal and validation:** Recognize `datetime_function` wherever
+  expressions can occur, including nested calls. Dispatch by `invocation` and
+  traverse its expression fields instead of expecting `function.parameters`.
+- **SQL generation:** Render the invocation's defined argument order. Date-part
+  metadata uses `{canonical, text, form}`: preserve authored `text`; emit
+  `KEYWORD`/`IDENTIFIER` without quotes and `STRING` as an escaped SQL string
+  literal. Do not silently replace aliases with the canonical spelling.
+- **Columns and substitutions:** A date part such as `year` in the signature's
+  part position is metadata, not a column or substitution expression. Genuine
+  expression arguments retain normal column resolution, dictionaries, lineage,
+  and predicand-substitution handling. Do not exclude a column simply because
+  its name matches a date part; field role and supported signature determine
+  the distinction.
+- **Compatibility exceptions:** Existing `EXTRACT` and `DATE_PART ... FROM`
+  AST contracts remain unchanged. Schema-qualified same-name UDF calls remain
+  generic functions. Numeric `TRUNC` remains generic and neutral; one-argument
+  `TRUNC` stays generic unless semantic type evidence establishes datetime use.
+  Do not convert every function-name match to the new node.
+- **Diagnostics:** Check the existing per-statement dialect warnings/counters
+  for supported target-specific forms; mixed Snowflake/Postgres affinity remains
+  FATAL. No separate dialect flag is introduced by this AST change.
+- **Upgrade tests and stored ASTs:** Update consumer visitors, renderers, shape
+  validators, and affected snapshots as each family ships. Test nested
+  expressions, date-part spelling/quoting, substitutions, and qualified UDFs.
+  If the application stores 5.0.0 ASTs, explicitly retain old-shape support or
+  reparse the source SQL; changing the parser JAR does not migrate stored trees.
 
 ## How to find a case in the extract
 

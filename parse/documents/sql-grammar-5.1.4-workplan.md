@@ -25,7 +25,7 @@
 
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
-| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slice A token batch generated/compiled; manual goldens and full-suite gate pending |
+| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Phase 1 / Slice A complete; testing-extension full suite on configured JDK 21: 2,643 passed, 0 failed; Slice B next |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Not started** |
@@ -107,9 +107,9 @@ Branch the grammar when the dialects have different syntax, arity, AST, or keywo
 | `TIME_SLICE(…)` | Snowflake | Dedicated production because arity and optional alignment argument are dialect-specific | Snowflake | Validate supported parts and optional arguments |
 | `LAST_DAY(…)`, `NEXT_DAY(…)`, `PREVIOUS_DAY(…)` | Snowflake | Dedicated productions (including optional part where Snowflake permits it) | Snowflake | Do not infer affinity from an unqualified UDF call until the call matches the built-in shape |
 | datetime `TRUNC(value, part)` / `TRUNC(value)` | Snowflake | Dedicated datetime alternative, separate from numeric `TRUNC` and DDL `TRUNCATE` | Snowflake | Numeric `TRUNC(number[, scale])` remains neutral unless a target-specific form proves otherwise |
-| `EXTRACT(part FROM value)` | Shared shell | Existing `extract_expression`; classify `part` using the part matrix below | Part-dependent or neutral | Preserve existing AST and diagnostics |
-| `DATE_PART(part FROM value)` | Shared parser extension | Existing `date_part_expression`; classify `part` | Part-dependent or neutral | This repo intentionally accepts the FROM form |
-| `DATE_PART('part', value)` | Shared Snowflake/Postgres name | Continue through function parsing or a shared dedicated rule; classify the literal part | Part-dependent or neutral | Existing comma-form affinity tests must remain green |
+| `EXTRACT(part FROM value)` | Shared shell | Fold extraction beneath `datetime_function`; classify `part` using the part matrix below | Part-dependent or neutral | Migrate AST under the Phase 1 extraction-unification action; preserve accepted source semantics |
+| `DATE_PART(part FROM value)` | Shared parser extension | Unify dedicated FROM/comma alternatives beneath `datetime_function`; classify `part` | Part-dependent or neutral | Preserve accepted FROM syntax; AST refactoring is permitted by the Phase 1 follow-up below |
+| `DATE_PART(part, value)` | Shared Snowflake/Postgres name | Dedicated DATE_PART alternative, accepting supported bare and quoted parts as metadata | Part-dependent or neutral | Remove built-in comma calls from generic argument collection; retain qualified UDF behavior and correct affinity |
 | `DATE_TRUNC('part', value)` | Shared Snowflake/Postgres name | Shared production; classify the part and any dialect-specific overload | Part-dependent or neutral | Do not flag from the function name alone |
 | `DATE_BIN(stride, source, origin)` | PostgreSQL | Dedicated Postgres production | Postgres | Interval stride; three arguments |
 | `AGE(…)`, `MAKE_DATE(…)`, `MAKE_TIME(…)`, `MAKE_TIMESTAMP(…)`, `MAKE_TIMESTAMPTZ(…)`, `MAKE_INTERVAL(…)` | PostgreSQL | Dedicated built-in alternatives or semantic function-shape registry | Postgres | A schema-qualified same-name UDF is neutral |
@@ -120,13 +120,17 @@ The Postgres rows are part of the dialect-symmetry requirement for Entry 1. They
 
 #### Approved parser grammar design (2026-11-11)
 
-Dedicated date/time productions must precede the generic `value_expression_primary` / `routine_invocation` path so a level such as `year` is parsed as part metadata, never as a `column_reference`. Existing `extract_expression`, `date_part_expression`, and their AST contracts remain unchanged.
+Dedicated date/time productions must precede the generic `value_expression_primary` / `routine_invocation` path so a level such as `year` is parsed as part metadata, never as a `column_reference`. The original EXTRACT/DATE_PART AST preservation requirements are superseded by the 2026-11-12 Phase 1 extraction-unification action below; grammar examples here describe the initial design until that action is implemented.
+
+The umbrella grammar rule and the common AST key are both named
+`datetime_function`. Family-specific grammar rules specialize this parent;
+they do not introduce separate top-level AST keys.
 
 ```antlr
 predicand_primary
   : extract_expression
   | date_part_expression
-  | datetime_manipulation_expression      // NEW: before generic functions
+  | datetime_function                     // NEW: before generic functions
   | value_expression_primary
   | string_value_expression
   | sign numeric_primary
@@ -140,11 +144,11 @@ predicand_primary
 numeric_primary
   : extract_expression
   | date_part_expression
-  | datetime_manipulation_expression      // NEW
+  | datetime_function                     // NEW
   | value_expression_primary
   ;
 
-datetime_manipulation_expression
+datetime_function
   : snowflake_datetime_add_expression
   | snowflake_datetime_diff_expression
   | datetime_trunc_expression
@@ -393,10 +397,747 @@ detailed AST/symbol-table/dialect assertions specified above.
 | Phase | Work |
 |-------|------|
 | **1 Lexer baseline** | Inventory and add every lexer entry required by delivery Slices B–E in one late-keyword batch immediately before `Identifier`; regenerate; publish the complete old→new token-ID substitutions in safe replacement order; the user updates affected goldens manually; require a green full suite before grammar work |
+| **1 follow-up: datetime regression suite** | Implement the invalid DATEADD level FATAL prerequisite, then develop the numbered DATEADD suite and reduced cross-function suite below, incrementally with the relevant delivery slices; the lexer baseline remains complete |
+| **1 follow-up: extraction unification** | Refactor EXTRACT and DATE_PART into datetime-family subtrees, with metadata-only parts, normal source expressions, explicit syntax-form retention, and the AST details described below |
+| **1 follow-up: per-function build and test** | Execute actions 66-97 below: deep context suites for distinct signature primaries, compact construction/resolution/validation suites for every sibling invocation |
 | **2 Grammar + AST** | Implement the approved dedicated productions, `datetime_part`, `datetime_function` contract, and invocation signature registry incrementally; branch only when syntax, arity, AST, or keyword role differs |
 | **3 Walker + affinity** | Add every exit method; exclude parts from symbol collection; stamp predicand substitutions in expression fields; route rule/function/part affinity through the existing statement collector |
 | **4 Focused tests** | Add `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus PostgreSQL/shared matrices, AST signatures, rendering forms, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
 | **5 Corpus + delivery** | Rebuild jar; re-run bound-query and snippet extracts; prove q5866 and all date/time matches; compare FATALs, AST/interfaces, dictionaries, lineage, and dialect diagnostics; finish generator/docs/release notes |
+
+#### Phase 1 follow-up substep: invalid DATEADD level diagnostic
+
+**Added 2026-11-12; pending implementation.** This is a prerequisite to the
+expanded DATEADD test suite, not a reopening of the completed lexer baseline.
+No new lexer tokens or token-ID changes are required.
+
+- Add a dedicated **FATAL** diagnostic for an invalid DATEADD level code
+  (proposed code: `INVALID_DATETIME_PART`), using the existing diagnostic
+  reporting path. Identify the invocation, authored level text, and source
+  location.
+- Validate the decoded level against the accepted DATEADD canonical names and
+  aliases. An unknown spelling must not become accepted merely because
+  `canonicalize` uppercases it. Reject parts unsupported by DATEADD even if
+  another date/time function accepts them; do not broaden EXTRACT or other
+  function validation as part of this substep.
+- Keep invalid level text out of column collection and resolution. Report the
+  level diagnostic rather than a phantom-column diagnostic.
+- Cover invalid identifier and string forms, empty quoted text, misspellings,
+  and invalid levels in nested calls. Keep these separate from malformed SQL
+  syntax tests. Replace the new DATEADD AST test's permissive unknown-part
+  expectation with the explicit FATAL expectation.
+- Positive level coverage must exercise all registered canonical names and
+  their accepted aliases, preserving authored text/form while asserting the
+  expected canonical value. Use explicit expected mappings, not registry output
+  as its own test oracle; a multi-expression SELECT can cover all canonical
+  names, with separate alias/form cases.
+- Extend the planned dedicated placement suite with unprefixed `predicand`
+  substitutions and table-prefixed `column` substitutions in INCREMENT, VALUE,
+  and formulas within either slot. Include both same-kind and mixed-kind slot
+  combinations, normal dictionaries/lineage, and scope qualification checks.
+- Include DATEADD as an argument to other functions and DATEADD nested in the
+  VALUE slot with a different date part and increment. Assert each call's
+  independent metadata and all expression-column dependencies.
+
+#### Phase 1 follow-up action: unify DATE_PART and EXTRACT grammar and AST
+
+**Approved 2026-11-12; pending implementation.** Unify built-in
+`DATE_PART(part, expression)`, `DATE_PART(part FROM expression)`, and
+`EXTRACT(part FROM expression)` as specialized alternatives beneath
+`datetime_function`. Include the parser's already accepted EXTRACT comma form
+in the extraction refactor, without claiming it is standard engine syntax.
+This supersedes this entry's earlier requirements to preserve the EXTRACT and
+DATE_PART AST shapes. Both invocations now use datetime-family subtrees.
+
+- History: commit `eb0566e` (2026-08-06, "Add DATE_PART FROM parsing and
+  case-insensitive EXTRACT/DATE_PART lexers.") introduced the dedicated grammar,
+  walker support, and tests. The completed-baselines table also dates this
+  functionality to August 2026. This establishes introduction after January
+  2026, not an independently verified artifact publication date; no release
+  tags are available in the current repository. Earlier generic same-name
+  calls are distinct from this dedicated feature.
+- Per the user's January-2026 compatibility cutoff, the newly introduced
+  dedicated DATE_PART AST need not be frozen for legacy use cases. The user
+  explicitly approved changing DATE_PART and EXTRACT to `datetime_function`
+  subtrees:
+  `datetime_function={invocation=DATE_PART|EXTRACT, level={canonical,text,form},
+  value=..., <syntax discriminator>}`. Choose and document the discriminator
+  key/values explicitly; retain comma versus FROM so generators never guess
+  the authored syntax from map order or part form.
+- Route both built-in forms through dedicated recognition before generic
+  invocation. Bare/quoted part spellings are metadata, not column arguments.
+  Reuse common recognition/registry mechanisms, but validate/classify against
+  extraction-specific supported parts, not DATEADD's part subset.
+- Explicitly recognize the comma-delimited variation
+  `DATE_PART(year, expression)` as well as `DATE_PART('year', expression)`.
+  Validate the part in comma and FROM forms alike, including canonical names,
+  accepted aliases, and invalid bare/quoted text. Do not let comma syntax
+  bypass part validation or collect its first argument as a column. Define
+  extraction-specific invalid-part diagnostics during this development step;
+  DATEADD's allowed-part set must not become the extraction validity test.
+- Apply the same metadata recognition, extraction-specific part validation,
+  and normal source-expression traversal to EXTRACT. Preserve accepted interval
+  and typed datetime literal sources, timezone/extended parts, and source type
+  information in the new VALUE subtree. Do not restrict EXTRACT to DATEADD
+  units or lose existing extraction semantics during the AST migration.
+- Source expressions must retain ordinary columns, formulas, nested functions,
+  unprefixed predicand substitutions, and table-qualified column substitutions,
+  with normal resolution, dictionaries, and lineage. Keep schema-qualified
+  `custom.date_part(...)` and `custom.extract(...)` generic; do not apply
+  built-in part validation to UDFs.
+- Update directly dependent walker exits and AST consumers/generation paths.
+  Inventory and update all affected DATE_PART and EXTRACT tests, including
+  those introduced in August: AST, diagnostics, dictionaries, lineage, typed
+  sources, and endpoint coverage. Preserve intended behavior except for the
+  approved AST/part-handling changes. Existing token-ID goldens remain
+  user-edited only; review behavioral golden changes explicitly.
+- Update consumer instructions to describe the new extraction subtrees and
+  adoption requirements directly: dispatch on `datetime_function` and
+  `invocation=DATE_PART|EXTRACT`, render level metadata with its preserved spelling and
+  quoting form, recursively generate the VALUE expression, and use the explicit
+  syntax discriminator to emit comma or FROM syntax. Include examples for both
+  forms and explain part validation and normal source-expression traversal.
+  Do not include a historical explanation that DATE_PART previously followed
+  generic function rules; that migration narrative is not needed.
+- Extend scenario 58 below with both syntax forms, quoted/bare canonical and
+  alias levels, no phantom-part columns, source-expression/substitution
+  coverage, nested DATEADD, qualified UDF controls, syntax preservation, and
+  extraction-specific dialect/diagnostic cases. Assert each invocation
+  independently so DATE_PART coverage cannot mask an EXTRACT regression.
+
+#### Phase 1 follow-up test suite: formulation and assertion instructions
+
+**Consolidated 2026-11-12; pending development.** The single numbered inventory
+below combines the agreed argument, placement, substitution, level, and nesting
+coverage. Numbers identify coverage scenarios, not a promised count of JUnit
+methods: a scenario may require several concrete cases. The DATEADD inventory
+comes first; the reduced cross-function inventory follows with continuous
+numbering. Other functions are tested as their delivery slices become available,
+not treated as implemented merely because their names have lexer tokens.
+
+**Test organization and execution**
+
+- Add one new JUnit 4 class,
+  `parse/src/test/java/sql/walker/SqlEventWalkerDatetimeFunctionPlacementTests.java`,
+  extending `AbstractSqlParseEventWalkerTest`, for the DATEADD suite. Keep new
+  datetime placement tests out of `SqlEventWalkerCoreSelectFromAliasingTests`.
+  Put reduced cross-function tests in a second dedicated class,
+  `SqlEventWalkerDatetimeFunctionFamilyTests`, in the same directory; use the
+  existing AST-only tests as complementary coverage, not as a substitute.
+- Follow [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java)
+  for literal assertion detail and
+  [AbstractSqlParseEventWalkerTest.java](../src/test/java/sql/walker/AbstractSqlParseEventWalkerTest.java)
+  for parsing, walking, diagnostic, and path-assertion helpers. Use production
+  SQL parsing/walking, not private symbol-helper method harnesses.
+- Build and review the standalone cases first, then scopes/clauses, DML, set
+  operations, and cross-function samples. Run only the current new class or
+  selected methods on JDK 21 using the established isolated Maven build when
+  needed. Do not run broad cohorts or the full workspace suite during each
+  construction batch. Report actual executed cases and failures separately
+  from remaining planned coverage; do not mark unimplemented families green.
+- Existing token-ID goldens are user-edited only. The new suite may introduce
+  new literal expectations, but never bulk-refresh existing expectations.
+  Update the newly added permissive unknown-DATEADD-part test specifically when
+  the FATAL contract is implemented; preserve unrelated EXTRACT behavior.
+
+**Reusable query ingredients**
+
+- Keep the three original one-line queries exactly in scenarios 1-3 so their
+  token locations remain reproducible. Use distinct output aliases in larger
+  SELECT lists, including canonical/alias coverage lists.
+- For the argument matrix, use `L`, `CQ`, `CU`, `FQ`, and `FU` for literal,
+  qualified column, unqualified column, qualified multi-column formula, and
+  unqualified multi-column formula. INCREMENT examples are `2`, `a.offset_days`,
+  `offset_days`, `a.offset_days + a.extra_days * 2`, and
+  `offset_days + extra_days * 2`. VALUE examples are `DATE '2026-01-01'`,
+  `a.created_at`, `created_at`, `a.created_at + (a.base_days + a.adjust_days)`,
+  and `created_at + (base_days + adjust_days)`. These use date-plus-numeric
+  arithmetic, not addition of two date columns.
+- Run all unqualified positive physical-column cases against one table.
+  Physical-table ambiguity is tested separately with two visible sources.
+  In cross-table qualified formulas deliberately split references between
+  `events a` and `accounts b`; do not accidentally turn a positive case into
+  an ambiguous one by dropping a qualifier.
+- Derived tables and CTEs must explicitly export every intended input under
+  known column names. Give overlapping names to both exports for ambiguity
+  tests, and distinct names for uniquely resolvable two-source tests. Do not
+  use `SELECT *` to hide interface assumptions.
+- Use `<increment>` / `<date value>` for unprefixed predicand substitutions and
+  `a.<increment column>` / `a.<date column>` for qualified column substitutions.
+  Use distinct variable names for different types; do not introduce a
+  same-name/different-type conflict into a positive test.
+- Query wrappers must remain valid in their clause: DATEADD is an expression,
+  not a condition. For WHERE/ON/HAVING/QUALIFY use an explicit comparison;
+  for grouped queries group the necessary inputs or use valid aggregates;
+  for scalar queries select one output and formulate a single-row result.
+  Keep set-op branch output counts aligned and use explicit parentheses for
+  intended nesting. Start DML from an existing accepted repository syntax,
+  rather than inventing UPDATE/DELETE alias or FROM/USING forms.
+
+**Required assertion contract**
+
+- For every concrete positive case assert zero syntax errors and no unexpected
+  diagnostics. Once affinity is implemented, a Snowflake DATEADD warning is
+  expected, not a reason to require an empty diagnostic list. Assert the exact
+  expected warning/error/FATAL set and the relevant dialect counters; keep
+  implementation-stage gaps visible rather than weakening final expectations.
+- Assert the complete AST for small queries. For larger queries assert the
+  complete relevant `sqlTree` subtrees plus the wrapper/scope structure.
+  Every DATEADD must have `datetime_function`, `invocation=DATEADD`,
+  `level={canonical,text,form}`, `increment`, and `value`, with normal expression
+  nodes, correct precedence, and no raw `Type=`/numbered grammar wrappers.
+- Assert output names/order, substitutions map, global table/query
+  dictionaries with all occurrence tokens, and the complete relevant published
+  `def_*` payloads: `table_alias`, `context_list`, per-scope dictionaries,
+  `interface`, and clause/DML buckets as applicable. Assert genuinely empty
+  artifacts as empty, not by omitting them.
+- INCREMENT and VALUE columns must both enter normal qualification, validation,
+  dictionaries, and lineage. Clause-only columns belong in the appropriate
+  filters/group/order/window/assignment bucket, not automatically in the output
+  interface. A parent sees child exports through the child `interface`, never
+  by flattening hidden grandchild columns into the parent.
+- Assert that metadata-only level/weekday strings are absent from physical
+  columns, query-column references, lineage, and unresolved-reference errors.
+  Do not globally ban names such as `year`: a real expression column named
+  `year` must still be collected.
+- Negative tests must assert exact diagnostic code, severity, full expected
+  message, token text, source line/character position, and diagnostic count,
+  using existing helpers where available. Assert remaining AST/symbol payloads
+  only to the extent guaranteed by the existing error-processing contract;
+  do not invent successful resolution after a FATAL.
+- Prefer [generate_symbol_path_assertions.py](../../tools/generate_symbol_path_assertions.py)
+  over manually copying large path goldens: put the exact SQL in a temporary
+  file and run `python3 tools/generate_symbol_path_assertions.py --sql-file /tmp/query.sql`
+  from the repository root, selecting `--root` and `--path-regex` for the
+  relevant maps/subpaths. Respect the current isolated-build/output setup
+  before using the generator, whose default build targets ordinary Maven
+  output. Use emitted `expected...` values and `assertSymbolTreePathEquals(...)`
+  lines, then check them against the documented scope/collection rules.
+  Generated current output is not proof of correct behavior. Fix the new
+  implementation if it violates those rules; do not bless a defect as a golden.
+  Remove temporary SQL/probe files after use.
+- For nested/set-op cases also follow
+  [symbol-table-bucket-reference.md](../../docs/vendor/pss-parse/5.1.3/symbol-table-bucket-reference.md)
+  and [set-op-convert-egress-scoping.mdc](../../.cursor/rules/set-op-convert-egress-scoping.mdc):
+  assert branch-local provenance and sibling isolation through observable
+  published scopes, with no post-bundle fallback assumptions.
+
+**Comprehensive DATEADD scenarios**
+
+1. **Original qualified VALUE.** Parse exactly
+   `select dateadd(year, 1, a.created_at) as shifted from events a`.
+   Golden the entire AST, dictionaries, interface, aliases, and symbol table;
+   YEAR is metadata and only `created_at` contributes output lineage.
+2. **Original unqualified VALUE.** Parse exactly
+   `select dateadd(year, 1, created_at) as shifted from events a`.
+   Preserve the unqualified AST reference and assert normal symbol resolution
+   to `events`, including the authored `created_at` occurrence location.
+3. **Original joined formula INCREMENT / literal VALUE.** Parse exactly
+   `select dateadd(day, a.offset_days + b.extra_days * 2, DATE '2026-01-01') as shifted from events a join accounts b on a.account_id = b.id`.
+   Assert multiplication precedence, typed date literal, both increment
+   dependencies, and join-key filter dependencies separately.
+4. **Original ambiguous VALUE.** Parse exactly
+   `select dateadd(year, 1, created_at) as shifted from events a join accounts b on a.account_id = b.id`.
+   Assert `AMBIGUOUS_COLUMN_REFERENCE` SEVERE_WARNING and
+   `UNRESOLVED_UNQUALIFIED_COLUMNS` ERROR at the expected occurrences, no
+   level-as-column diagnostics, and normal collection of qualified join keys.
+5. **Complete standalone argument-shape matrix.** Cross each INCREMENT shape
+   `L/CQ/CU/FQ/FU` with each VALUE shape `L/CQ/CU/FQ/FU`, omitting only `L/L`:
+   24 explicit cases. Include all four simple column qualification pairs
+   `CQ/CQ`, `CQ/CU`, `CU/CQ`, `CU/CU`, formulas in either slot alone, formulas
+   against a column in the other slot, and formulas in both slots. Cases
+   already covered by scenarios 1-3 need not be duplicated. Assert every input
+   occurrence and the union of both slots' output dependencies.
+6. **All-literal control.** Add `dateadd(day, 2, DATE '2026-01-01')` without a
+   FROM clause; assert a typed literal AST, no source-column dependencies, and
+   the normal constant-output interface. This is the optional control from
+   the earlier proposal, now explicitly included in this development inventory.
+7. **Joined qualified source split.** Use two joined tables with INCREMENT
+   columns from one and VALUE columns from the other, then qualified formulas
+   spanning both tables in each slot. Assert precise per-table provenance.
+8. **Ambiguous INCREMENT only.** Leave the increment column unqualified with
+   two physical sources, while VALUE is qualified or literal; assert only
+   the increment ambiguity/unresolved reference and correct VALUE resolution.
+9. **Both slots ambiguous.** Use distinct unqualified increment/value names
+   with two physical sources; assert both names and all offending locations
+   in the repository's normal per-occurrence/aggregate diagnostic structure.
+10. **Mixed qualification within formulas.** Put qualified and unqualified
+    terms in INCREMENT, VALUE, and both; use separate positive one-source and
+    negative two-source cases. Only genuinely ambiguous terms should fail.
+11. **Unique versus overlapping derived-source exports.** Join two explicit
+    derived tables, then repeat with two CTE sources. Unqualified unique output
+    names must resolve; names exported by both sources must be ambiguous.
+12. **Hidden or nonexistent source columns.** Reference a non-exported
+    underlying column, a missing derived/CTE output, and an unknown table alias
+    in separate cases. Assert standard existing diagnostics; DATEADD must not
+    bypass interface visibility or qualification checks.
+13. **Unprefixed predicand substitutions.** Put a variable in INCREMENT only,
+    VALUE only, and both. Assert `type=predicand` in each AST and substitutions
+    map; do not treat these as fixed source-column names.
+14. **Qualified COLUMN substitutions.** Repeat those three arrangements with
+    `a.<increment column>` and `a.<date column>`, including different joined
+    source aliases. Assert `type=column`, qualifier preservation, dictionary
+    occurrences, and normal column-substitution lineage.
+15. **Mixed substitution kinds across slots.** Cover predicand INCREMENT /
+    column VALUE and column INCREMENT / predicand VALUE, with independent
+    names and no type contamination between slots.
+16. **Substitutions inside formulas.** In either slot and both slots combine
+    ordinary columns, unprefixed variables, and qualified column variables.
+    Include same-kind and mixed-kind formulas; preserve each variable's own
+    type and collect only the appropriate column-bearing dependencies.
+17. **All canonical levels in one SELECT.** Use 11 uniquely aliased DATEADD
+    outputs for YEAR, QUARTER, MONTH, WEEK, DAY, HOUR, MINUTE, SECOND,
+    MILLISECOND, MICROSECOND, and NANOSECOND. Use a timestamp VALUE suitable
+    for subday units. Explicitly assert all 11 canonical/text/form triples
+    and independent output interfaces, not merely the SELECT item count.
+18. **Every documented registered alias.** Maintain explicit alias-to-canonical
+    expectations verified against the Snowflake reference. Group manageable
+    batches of uniquely aliased DATEADD SELECT items; cover every registered
+    spelling, not just one per canonical name. Compare registry membership
+    against the independently expected set as well as parser AST results so
+    an omitted or wrongly mapped alias cannot make the coverage self-fulfilling.
+19. **Case and level source forms.** Use representative canonical and alias
+    spellings in mixed case and single-quoted form, plus unquoted keyword and
+    identifier forms. Assert exact authored text and actual grammar form.
+    Do not assume every alias lexes as IDENTIFIER or every canonical as KEYWORD.
+20. **Level-like real columns.** Use `a.year` and `a.day` in argument formulas
+    alongside YEAR/DAY level metadata. Assert real column collection and no
+    phantom occurrence for the first argument.
+21. **Invalid level forms.** After the diagnostic prerequisite, test an unknown
+    identifier, unknown quoted text, misspelling, empty quoted text, and a
+    verified part unsupported by DATEADD but supported by another family.
+    Expect the dedicated FATAL at the level token, not an unresolved column.
+22. **Invalid nested level location.** Test an invalid inner level with a valid
+    outer call, then invalid outer with valid inner. Assert the diagnostic
+    identifies the correct invocation/location; keep valid and invalid calls
+    together once to detect cross-call state contamination.
+23. **Numeric edge expression shapes.** Use zero, negative literal, unary minus
+    on a column, and parenthesized multi-column INCREMENT expressions; assert
+    sign/parentheses/precedence and unchanged normal dependency collection.
+24. **Repeated references and independent sibling calls.** Repeat the same
+    column within/between slots and use several DATEADD outputs from different
+    sources. Assert all dictionary occurrence tokens, existing lineage
+    deduplication semantics, and no dependencies leaking between outputs.
+25. **DATEADD inside ordinary functions.** Put DATEADD in different legal
+    parameter positions of COALESCE and another existing supported function,
+    plus multiple sibling DATEADD arguments with distinct parts/sources.
+    Preserve the enclosing ordinary-function AST and each datetime subtree.
+26. **Ordinary functions inside DATEADD.** Use numeric functions in INCREMENT
+    and date-valued functions in VALUE, separately and together. Include
+    columns and substitutions inside those inner functions.
+27. **DATEADD VALUE contains DATEADD.** Use
+    `dateadd(month, 2, dateadd(day, 3, a.created_at))`, then a version whose
+    inner/outer increments use distinct column formulas and variables. Assert
+    different inner/outer part and increment metadata and complete dependencies.
+28. **CASE embedding.** Put DATEADD in THEN/ELSE expressions, then put CASE
+    expressions in its argument slots. Assert condition/filter and resulting
+    expression dependencies according to existing CASE collection behavior.
+29. **Derived-table producer.** Put each of scenarios 1-3 inside a FROM
+    subquery and consume its `shifted` output in an outer SELECT. Assert the
+    parent reference is to the child output, with traceable inner dependencies.
+30. **Derived-table consumer and multiple layers.** Export raw argument columns
+    from a derived table, call DATEADD outside it, then repeat through two
+    nested layers with renamed exports. Assert every intermediate interface
+    and reject direct access to hidden leaf names.
+31. **Join placements.** Put the anchor calls in the SELECT of a joined query,
+    inside left/right joined derived tables, and in an ON comparison. Use
+    INNER and representative LEFT JOIN coverage; verify output versus join
+    filter buckets rather than varying every join spelling.
+32. **Scalar-query placements.** Put an anchor DATEADD inside a single-output,
+    single-row scalar subquery in SELECT; separately let a scalar query supply
+    INCREMENT or VALUE to an outer DATEADD. Use aggregates or constrained
+    sources to make the scalar formulation sensible, and assert dependent
+    query linkage and scope-local inputs.
+33. **CTE producer, consumer, and chain.** Put each anchor in a CTE body and
+    consume its output; call DATEADD over raw CTE exports; then carry its result
+    through chained CTEs with renamed columns. Assert ordered context visibility,
+    published interfaces, and physical versus query dictionary separation.
+34. **Correlated subquery and shadowing.** Mix a local INCREMENT with outer
+    VALUE and reverse them, then use an inner alias that shadows an outer
+    alias. Assert the repository's normal nearest-visible-scope resolution,
+    not flattened or sibling visibility.
+35. **WHERE predicates.** Use anchor calls in explicit comparisons and BETWEEN;
+    also use DATEADD within an IN or EXISTS predicate subquery. Assert filter
+    dependencies and `dependent_queries`, including inputs not projected.
+36. **GROUP BY and HAVING.** Group by a DATEADD expression with matching SELECT
+    output; separately compare an aggregate-based DATEADD in HAVING. Assert
+    `grouped_by`, filters, and output dependencies independently.
+37. **ORDER BY expressions and output aliases.** Order directly by DATEADD,
+    then by its SELECT alias. Assert direct source references versus the
+    existing output-alias resolution contract in `ordered_by`.
+38. **Window PARTITION BY / ORDER BY and QUALIFY.** Place DATEADD in window
+    partition/order expressions and in a valid QUALIFY comparison alongside
+    a window expression. Assert `window_partition_by`, `window_ordered_by`,
+    filters, and expected Snowflake affinity without spurious output columns.
+39. **INSERT source.** Place each anchor in INSERT ... SELECT with explicit
+    target columns; include representative CTE/derived sources. Assert target
+    mapping, source scope, and lineage from both expression slots.
+40. **UPDATE assignment and predicate.** Place DATEADD in SET, then in WHERE,
+    then both. Include qualified column and substitution inputs using an
+    existing accepted UPDATE form. Assert target/assignment versus filter
+    dependencies and the complete statement's expected dialect diagnostics.
+41. **DELETE predicate and subquery.** Use DATEADD in a direct WHERE comparison
+    and in an EXISTS/scalar predicate subquery, based on an existing accepted
+    DELETE form. Assert source/filter/correlation scopes; DELETE does not gain
+    an invented SELECT output interface.
+42. **UNION and UNION ALL branches.** Put the anchor in first branch, later
+    branch, and both branches, with compatible outputs. Include a three-branch
+    case where branches 1/3 use a CTE and branch 2 uses a different physical
+    table. Assert branch-local dictionaries and no sibling provenance leakage.
+43. **EXCEPT branches.** Put DATEADD on left, right, and both sides; keep
+    outputs aligned. Assert operand order, composite interface, and branch
+    isolation rather than treating EXCEPT as interchangeable with UNION.
+44. **INTERSECT branches.** Repeat first/later/both branch placements and assert
+    its own composite scope/interface and source provenance.
+45. **Nested set operations.** Cover same-operator nesting and mixed nesting:
+    `(A UNION B) EXCEPT C`, `A UNION (B INTERSECT C)`, and
+    `(A EXCEPT B) INTERSECT (C UNION ALL D)`, formulated with the grammar's
+    accepted parenthesized query syntax. Distribute different anchor calls
+    across leaves and inspect every intermediate set-op interface.
+46. **Set-op consumers and DML composition.** Consume a set-op result in a
+    derived table, CTE, and INSERT source; call DATEADD on exported result
+    columns as well as inside leaf branches. Assert all intervening exports,
+    target mappings where applicable, and absence of hidden/sibling inputs.
+47. **Qualified same-name UDF control.** Keep
+    `custom.dateadd(a.part, 1, a.created_at)` generic and neutral unless another
+    construct establishes affinity. Its `a.part` is an ordinary column, not
+    level metadata; do not apply built-in level validation to it.
+48. **Statement affinity and reset.** Once affinity is implemented, verify
+    repeated/nested DATEADD counts with one Snowflake warning, composition
+    with a PostgreSQL-only construct in either order yielding the existing
+    mixed-dialect FATAL, and SCRIPT statements resetting independently.
+    Assert exact counts from the defined collector behavior, not a guessed
+    one-hit-per-query rule.
+
+**Reduced replication for other datetime functions**
+
+Do not repeat the 24-shape DATEADD matrix or every query wrapper for each
+sibling function. The per-function actions 66-97 below supersede the earlier
+reduced-only scope of scenarios 49-64: distinct-signature primaries now receive
+deep context suites; sibling names receive compact suites without repeated
+placement matrices. Retain the signature-specific cases below, moving wrapper
+coverage to the appropriate primary instead of adding it to every sibling.
+Preserve actual signatures:
+diff has two datetime expressions, not an increment; day-boundary metadata is
+not a column; PostgreSQL constructors have expression fields, not part slots.
+`TIMEADD` is the add alias; `TIMEDIFF` is the difference alias (not `TIMEDD`).
+For each listed invocation at least one test must check its own name/signature,
+named AST fields, relevant dictionaries/interfaces, and affinity. Verify exact
+supported forms/parts against the linked engine reference before implementation.
+Reduced alias sampling does not authorize an incomplete production registry.
+
+49. **TIMEADD representative add subset.** Cover qualified column INCREMENT /
+    VALUE, unqualified one-source inputs, formula INCREMENT, and both
+    substitution kinds across its two expression slots. Use HOUR/MINUTE/SECOND
+    and TIME-valued examples, not DAY on a TIME literal. Add one joined ON
+    comparison and one nested ordinary-function case. Include one valid alias
+    spelling and invalid-level FATAL coverage once family validation exists.
+50. **TIMESTAMPADD representative add subset.** Cover formulas in both slots,
+    mixed predicand/column substitutions, DATEADD nested in VALUE with a
+    different part, a CTE consumer, and an INSERT source containing UNION ALL.
+    Assert it lexes/parses as TIMESTAMPADD, preserves that invocation, and
+    uses the add-family `level/increment/value` signature. Include a canonical,
+    an alias, and invalid-level coverage.
+51. **DATEDIFF representative diff subset.** Cover literal/column and
+    column/column `left/right`, a multi-column date-valued expression, and
+    predicand versus column substitutions in either expression slot. Add one
+    ambiguous unqualified operand and one joined query. Assert authored
+    left/right order with distinct operands, part metadata exclusion, and
+    supported/unsupported part handling; never reuse increment assertions.
+52. **TIMEDIFF and TIMESTAMPDIFF alias samples.** Give each a distinct-operand
+    baseline and substitution case. Use TIMEDIFF in HAVING with appropriate
+    time expressions, and TIMESTAMPDIFF in a CTE over an INTERSECT source.
+    Preserve invocation spelling and left/right order; include one part alias
+    and one invalid part per invocation, with suitable time/timestamp values.
+53. **DATE_TRUNC and datetime TRUNC argument-order samples.** For each, use a
+    qualified VALUE, a value formula, and both variable kinds in the expression
+    slot. Contrast `DATE_TRUNC('month', value)` with `TRUNC(value, 'month')`.
+    Put one in GROUP BY and the other in ORDER BY over a derived table.
+    Add family-specific invalid part coverage; verify shared versus
+    target-specific affinity from the existing matrix, not function name alone.
+54. **TRUNC overload and DDL controls.** Keep numeric `TRUNC(number[, scale])`
+    neutral and preserve its established generic AST. One-argument ambiguous
+    `TRUNC(value)` stays generic without distinguishing semantic evidence.
+    Keep DDL TRUNCATE separate. These are compatibility tests, not permission
+    to infer datetime types from a column name.
+55. **TIME_SLICE signature samples.** Cover required arguments and omitted/
+    explicit supported boundary choices, formula/column slice length, a VALUE
+    column substitution, and a predicand variable. Use one window-order
+    placement and one CTE projection; assert `value/slice_length/level/boundary`
+    in SQL signature order, metadata exclusion, and documented invalid
+    level/boundary handling rather than a guessed DATEADD part set.
+56. **LAST_DAY optional-level samples.** Test omitted level and explicit
+    supported level, a qualified VALUE, and both variable kinds. Place one
+    case in UPDATE SET and another in a scalar subquery. Assert optional-field
+    representation according to the agreed AST and reject unsupported levels
+    through the family-specific validation contract.
+57. **NEXT_DAY and PREVIOUS_DAY weekday samples.** Give each literal/column
+    VALUE and documented weekday spelling variants, then one predicand and
+    one column-substitution VALUE. Put one in DELETE WHERE and one in CASE.
+    Assert `weekday` metadata instead of a column, correct invocation, and
+    invalid-weekday diagnostics under their own validation contract.
+58. **EXTRACT and DATE_PART unification samples.** For both invocations,
+    implement the approved Phase 1 action above: accepted comma/FROM forms use the
+    agreed datetime-family AST with explicit syntax retention. Sample shared
+    and dialect-specific parts, quoted/bare canonical and alias spellings,
+    normal source columns/formulas, both substitution kinds, one nested DATEADD
+    VALUE, and qualified generic UDF controls. Assert no phantom-part columns,
+    correct extraction-specific validation/affinity, and intentional reviewed
+    EXTRACT/DATE_PART behavioral golden changes, not DATEADD's allowed-part set.
+    Include typed datetime/interval sources, extended/timezone parts, and
+    existing extraction endpoint coverage to verify no source semantics are lost.
+59. **PostgreSQL DATE_BIN samples.** Use interval stride with distinct source
+    and origin expressions, qualified/unqualified columns, and substitution
+    examples in expression slots permitted by its grammar. Put one in a CTE
+    and one in a set-op branch. Assert `stride/source/origin`, interval literal
+    representation, source order, lineage, and PostgreSQL affinity.
+60. **PostgreSQL AGE overload samples.** Cover one-argument `value` and
+    two-argument `left/right`, distinct qualified operands, unprefixed and
+    qualified substitutions, and an ordinary-function wrapper. Use a
+    correlated scalar-query case to exercise outer/local resolution without
+    re-running the entire DATEADD placement matrix.
+61. **PostgreSQL MAKE_* constructor samples.** Give MAKE_DATE, MAKE_TIME,
+    MAKE_TIMESTAMP, and MAKE_TIMESTAMPTZ one explicit signature baseline each.
+    Across these cases distribute formula fields, both substitution kinds,
+    joined sources, a derived-table consumer, and     optional timezone coverage.
+    Assert named numeric/timezone expression fields and normal source
+    collection; `year`/`month` field names here are not level metadata.
+62. **PostgreSQL MAKE_INTERVAL source-form samples.** Cover supported positional
+    and named forms, omitted components, formulas, and both substitution kinds
+    in component expressions. Preserve component mapping and source form for
+    regeneration; use one chained-CTE case. Do not silently rearrange positional
+    arguments or invent defaults in the AST.
+63. **PostgreSQL JUSTIFY_* interval samples.** Give JUSTIFY_DAYS, JUSTIFY_HOURS,
+    and JUSTIFY_INTERVAL a baseline each; distribute an interval-valued column,
+    interval expression, predicand variable, qualified column variable, and
+    nested invocation across those tests. Put one in an EXCEPT branch and
+    assert normal interval-expression lineage and PostgreSQL affinity.
+64. **PostgreSQL zero-argument clock samples.** Cover CLOCK_TIMESTAMP,
+    STATEMENT_TIMESTAMP, TRANSACTION_TIMESTAMP, and TIMEOFDAY in one uniquely
+    aliased SELECT. Assert each invocation has no invented argument fields or
+    source columns. Include an ORDER BY alias and a neutral CURRENT_TIMESTAMP
+    control; add only arity diagnostics defined by the implemented contract.
+65. **Cross-family isolation, UDFs, and dialect composition.** Sample a
+    Snowflake add/diff nesting, a shared truncation with dialect-specific part,
+    and a PostgreSQL-only nested expression. Add schema-qualified same-name
+    UDF controls for one function from each new family. Assert normal UDF
+    column arguments, family-specific allowed-part boundaries, one warning per
+    target, accurate hit counts, mixed-dialect FATAL in both orders, and SCRIPT
+    reset. Do not treat cross-dialect composition as a positive clean statement.
+
+#### Phase 1 additional steps: per-function build and test actions
+
+**Approved 2026-11-12; pending implementation.** This section defines the
+execution scope for each function individually. Scenarios 1-65 remain the
+case-formulation reference; the profiles below govern which functions repeat
+deep context coverage. Do not interpret the earlier reduced-family examples as
+permission to omit a primary function's deep suite. A build action includes
+dedicated recognition, named AST construction, signature-specific metadata
+validation, normal expression collection/substitution typing, and the existing
+dialect collector. Complete and run its tests before claiming that invocation
+implemented. Deliver incrementally with Slices B-E, not as one large rewrite.
+
+66. **Define the compact sibling suite (S).** For every parameterized sibling
+    invocation, write separate simple SELECT cases for: literal construction;
+    qualified columns; unqualified columns with one source; ambiguous
+    unqualified columns with two physical sources; formulas; unprefixed
+    predicand substitutions; qualified COLUMN substitutions; and mixed
+    substitution kinds where at least two expression slots exist. Exercise each
+    expression slot at least once, with distinct values to detect reordering.
+    For multiple slots, ambiguity must be tested in each slot separately; one
+    representative both-slots ambiguity case is sufficient. Include a
+    canonical part, representative accepted alias and quoted/bare forms where
+    supported, and the invalid-date-part FATAL for every invocation with a
+    date-part slot. Include invalid weekday/boundary tests for those metadata
+    slots under their own validation contracts. Do not manufacture a date-part
+    error for functions without a part parameter. Add same-name qualified UDF
+    control, exact affinity expectations, and signature-specific optional/arity
+    cases. All cases use the full assertion contract above: exact named AST,
+    dictionaries/occurrences, interface, substitutions, and diagnostics.
+    No sibling repeats the placement matrix merely because its name differs.
+    Zero-argument siblings instead use profile Z in actions 92-95.
+67. **Define the deep primary suite (D).** Every primary gets S plus the
+    scope/clause/DML/set-operation coverage in scenarios 25-46, adapted to its
+    signature, not copied by textual replacement of DATEADD. For each primary
+    formulate three anchors: qualified column expressions; one-source
+    unqualified expressions; multi-column formulas with inputs split across
+    qualified joined sources. Substitute these into scenarios 29-46, covering
+    derived producer/consumer and multiple layers, joins/ON, scalar queries,
+    CTE producer/consumer/chains, correlation/shadowing, WHERE/BETWEEN/IN/EXISTS,
+    grouping/HAVING, ordering/aliases, window clauses, INSERT, UPDATE, DELETE,
+    UNION/UNION ALL, EXCEPT, INTERSECT, nested mixed set operations, and set-op
+    consumers. Retain the distinct first/later/both branch placements.
+    Also include scenario 12 visibility failures, 13-16 substitution varieties,
+    21-24 applicable validation/state/occurrence checks, and 47-48 UDF/affinity
+    controls. Do not repeat DATEADD's 24-shape standalone Cartesian matrix:
+    use the primary's own argument shapes, covering every expression field
+    with a column, formula, and both substitution kinds. For metadata, cover
+    its documented allowed values independently of DATEADD.
+    Use type-sensible wrappers: compare extracted/diff results numerically,
+    date outputs with dates, interval outputs with intervals, and text outputs
+    with text. Nested same-family calls require compatible argument/result
+    types; otherwise use a compatible enclosing function rather than inventing
+    invalid SQL. For PostgreSQL primaries, choose PostgreSQL-compatible DML
+    forms; a Snowflake-only QUALIFY wrapper is an explicit mixed-dialect
+    negative, not a clean positive. Record any genuinely inapplicable case and
+    its reason rather than silently dropping a category. Add a dedicated
+    primary-family test class extending the existing abstract test base when
+    the suite is developed; keep sibling cases beside their primary, except
+    the already planned DATEADD/add-shape classes. Do not create a new test
+    framework or generic query-generation abstraction.
+68. **Build/test DATEADD (primary, D plus full scenarios 1-48).** Finish the
+    invalid-part FATAL prerequisite, then the agreed comprehensive standalone
+    and placement suite. This is the reference for normal collection in two
+    expression slots after metadata.
+69. **Build/test TIMEADD (sibling, S).** Reuse the add-family implementation and
+    mini-suite with `level/increment/value`; preserve `invocation=TIMEADD`.
+    Use time-appropriate examples. Required negatives include invalid part and
+    separately ambiguous INCREMENT and VALUE. Do not duplicate context tests.
+70. **Build/test TIMESTAMPADD (sibling, S).** Reuse the add-family implementation
+    with timestamp inputs; assert its own token/name and invocation rather than
+    DATEADD. Include invalid part and separate INCREMENT/VALUE ambiguity.
+    Move scenario 50's placement wrappers to primary coverage, not this suite.
+71. **Build/test DATEDIFF (add-shaped sibling, S).** Its layout is metadata plus
+    two expressions, so reuse the compact two-expression coverage, not a new
+    deep placement suite. Build `level/left/right`; both expression operands
+    are datetime-valued. Test distinct operands/order, invalid part, one-source
+    unqualified success, and separate left/right ambiguity.
+72. **Build/test TIMEDIFF (add-shaped sibling, S).** Reuse diff construction with
+    its own invocation and suitable time operands. Include its own invalid
+    part, unqualified success, left/right ambiguity, and both variable types.
+    No dedicated HAVING/CTE context matrix is required for this alias.
+73. **Build/test TIMESTAMPDIFF (add-shaped sibling, S).** Reuse diff construction
+    with timestamp operands and distinct left/right dependencies. Include its
+    own invalid part, unqualified success, and ambiguity per operand; preserve
+    invocation and do not duplicate INTERSECT/context suites.
+74. **Build/test DATE_TRUNC (primary, D).** Primary for leading part metadata
+    plus one expression: `level/value`. Use valid parts and date-valued formula
+    anchors; include invalid part, unqualified VALUE, and ambiguous VALUE.
+    Deep grouping/order/window cases must assert the corresponding buckets.
+75. **Build/test DATE_PART (syntax-variant sibling, S).** Share leading-part/
+    expression collection coverage with DATE_TRUNC, but implement extraction
+    semantics and both comma/FROM forms under the approved new datetime AST.
+    Run S for both syntactic alternatives, including invalid bare/quoted parts,
+    unqualified/ambiguous VALUE, and syntax-discriminator goldens. Update all
+    affected August tests; do not repeat DATE_TRUNC's placement matrix.
+76. **Build/test EXTRACT (syntax-variant sibling, S).** Fold into the datetime
+    AST with its own invocation and extraction registry. Apply S to FROM and
+    the parser's accepted comma form, including invalid parts and unqualified/
+    ambiguous source expressions. Preserve interval/typed literal source
+    semantics, extended/timezone part handling, and endpoint coverage. Update
+    affected old tests and consumer instructions; do not repeat deep wrappers.
+77. **Build/test LAST_DAY (primary, D).** Primary for expression followed by
+    optional part: `value/[level]`. Cover omitted/explicit level and its own
+    smaller allowed-part set, invalid part, unqualified/ambiguous VALUE, both
+    variable kinds, and full deep contexts. Do not normalize an omitted level
+    into an invented authored AST argument.
+78. **Build/test datetime TRUNC (sibling, S).** Reuse trailing-part expression
+    placement coverage from LAST_DAY, not its allowed-part set or semantics.
+    Assert `value/level` order, invalid part, unqualified/ambiguous VALUE, and
+    both variable kinds. Retain scenario 54 numeric/one-argument/DDL controls;
+    one-argument TRUNC stays generic without distinguishing semantic evidence.
+79. **Build/test TIME_SLICE (primary, D).** Unique
+    `value/slice_length/level/[boundary]` signature. Cover both expression
+    fields with qualified/unqualified/formula/substitution inputs, ambiguity
+    separately in each, valid/invalid part, and omitted/explicit boundary
+    choices and invalid boundary. Replicate deep contexts with timestamp/date
+    anchors and appropriate length expressions; do not parse boundary as a
+    normal source column or borrow DATEADD's validity set.
+80. **Build/test NEXT_DAY (primary, D).** Primary for `value/weekday` metadata.
+    Use documented weekday spellings and its dedicated invalid-weekday
+    contract; there is no date-part parameter. Include unqualified/ambiguous
+    VALUE and both variable kinds, then full deep contexts with date outputs.
+81. **Build/test PREVIOUS_DAY (sibling, S).** Reuse weekday-family construction
+    but preserve its own invocation and direction. Include valid/invalid
+    weekday, unqualified/ambiguous VALUE, both variable types, and no context
+    matrix duplication. Do not label its weekday failure a DATEADD part error.
+82. **Build/test DATE_BIN (primary, D).** Unique three-expression
+    `stride/source/origin`, with no metadata part. Use interval, timestamp, and
+    origin anchors; test each expression slot's collection and substitutions.
+    Include separate source/origin ambiguity and a column-backed stride where
+    accepted. Replicate deep contexts and preserve stride/source/origin order;
+    no invalid-date-part test is applicable.
+83. **Build/test AGE (primary, D).** Unique optional expression arity: one
+    `value` or two `left/right` operands. Run simple construction/resolution
+    cases for both overloads, and adapt each deep context category to both
+    forms without an unnecessary Cartesian product. Assert interval-valued
+    results, left/right order, omitted versus present fields, and ambiguity
+    in each operand. No part metadata/part diagnostic applies.
+84. **Build/test MAKE_DATE (primary, D).** Primary for three ordered numeric
+    expression fields `year/month/day`. All are ordinary expressions, not
+    date-part codes. Distribute qualified/unqualified/formula inputs and both
+    substitution kinds across every field, including field-local ambiguity,
+    then deep date-output context tests.
+85. **Build/test MAKE_TIME (sibling, S).** Reuse three-numeric-field collection
+    coverage with `hour/minute/second`, preserving different field names and
+    supported second precision. Include unqualified/ambiguous input cases and
+    both substitution kinds for each field. No invalid-part test or replicated
+    deep placement matrix applies.
+86. **Build/test MAKE_TIMESTAMP (primary, D).** Primary for six numeric
+    expression fields `year/month/day/hour/minute/second`. Exercise every field
+    with normal collection/substitutions and field-local ambiguity, then deep
+    timestamp-output contexts. Do not assume three-field constructor tests
+    prove the six-field AST and argument order.
+87. **Build/test MAKE_TIMESTAMPTZ (sibling with unique optional tail, S).** Reuse
+    six-field context coverage, preserving its own invocation. Add explicit
+    simple cases for omitted/explicit timezone expression, both substitution
+    kinds in that field, its qualified/unqualified columns, and ambiguity.
+    This tail is an expression, not a date-part code; test it directly rather
+    than duplicating every placement wrapper.
+88. **Build/test MAKE_INTERVAL (primary, D).** Unique positional/named component
+    signature. Cover full and partial supported forms, source-form retention,
+    expression formulas, both variable types, and ambiguity in each populated
+    component. Deep contexts must exercise both positional and named paths
+    across the suite, with at least one of each in derived/CTE, DML, and set-op
+    categories. Do not invent omitted components or confuse component names
+    with metadata-valued date parts.
+89. **Build/test JUSTIFY_INTERVAL (primary, D).** Primary for one ordinary
+    interval expression `value`, without part metadata. Cover literals,
+    columns, formulas, both substitutions, unqualified success and ambiguity,
+    then interval-appropriate deep context wrappers.
+90. **Build/test JUSTIFY_DAYS (sibling, S).** Reuse the one-interval-expression
+    implementation/coverage with its own invocation; include unqualified/
+    ambiguous VALUE and both variable types. No part diagnostic or placement
+    replication is applicable.
+91. **Build/test JUSTIFY_HOURS (sibling, S).** Same compact obligations as
+    JUSTIFY_DAYS, with its own invocation and normal input dependencies.
+92. **Build/test CLOCK_TIMESTAMP (zero-argument primary, D adapted as Z).**
+    Build a no-argument datetime node with PostgreSQL affinity. Replicate deep
+    contexts using a constant-like anchor, multiple independently aliased
+    occurrences, and calls mixed with ordinary source columns. There are no
+    argument columns, substitutions, parts, or ambiguous function inputs:
+    explicitly mark those S/anchor cases inapplicable. Verify wrapper columns
+    still resolve normally, but never claim they test clock-input ambiguity.
+    Do not nest the function as its own argument. Group only where SQL permits;
+    do not introduce a window OVER directly on a non-window clock function.
+93. **Build/test STATEMENT_TIMESTAMP (zero-argument sibling, Z compact).**
+    Assert invocation, no argument fields/source dependencies, independent
+    output aliases, PostgreSQL affinity, and qualified same-name UDF behavior.
+    Reuse CLOCK_TIMESTAMP placement proof without repeating its context suite.
+94. **Build/test TRANSACTION_TIMESTAMP (zero-argument sibling, Z compact).**
+    Apply the same simple no-argument construction/affinity controls with its
+    own invocation; no invented invalid-part/unqualified-input cases.
+95. **Build/test TIMEOFDAY (zero-argument sibling, Z compact).** Apply compact
+    clock construction controls with its own invocation; its result is text,
+    so any enclosing expression must be text-compatible. Retain a neutral
+    CURRENT_TIMESTAMP comparison control without making it a new family member.
+96. **Build shared signature/validation plumbing without sibling shortcuts.**
+    Reuse the single registry and ordinary expression helpers, but keep
+    per-invocation AST names, supported parts, optional fields, and affinity
+    explicit. Run invalid-date-part FATAL cases for DATEADD, TIMEADD,
+    TIMESTAMPADD, DATEDIFF, TIMEDIFF, TIMESTAMPDIFF, DATE_TRUNC, DATE_PART,
+    EXTRACT, datetime TRUNC, TIME_SLICE, and LAST_DAY individually. Canonical
+    existence alone is not family validity. A compact sibling test must fail
+    if only that invocation is misrouted, swapped, or skips validation.
+97. **Close each build/test action with observable evidence.** Record the
+    function name, implemented signature/form variants, profile S/D/Z, actual
+    tests run and pass/fail counts, and remaining gaps. Only run the current
+    family class/methods during development. Review new AST/symbol/diagnostic
+    goldens against the assertion contract, not just a successful test exit.
+    Update consumers/generation instructions for each newly available signature
+    and retain syntax forms; the extraction documentation describes the new
+    AST directly without a generic-function migration narrative. Do not mark
+    the whole datetime family complete because DATEADD passes.
 
 ### Delivery slices
 
@@ -411,7 +1152,7 @@ detailed AST/symbol-table/dialect assertions specified above.
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
 
-**Slice A, step 1 complete (2026-11-11):** Added 26 late date/time function
+**Phase 1 / Slice A complete (2026-11-11):** Added 26 late date/time function
 tokens, `DATEADD` through `TIMEOFDAY`, immediately before `Identifier`. Existing
 token IDs 1–392 remain unchanged; former IDs 393–413 shift by +26. Supply the
 replacement list in descending old-ID order, matching exact `<nnn>` strings.
@@ -436,15 +1177,44 @@ forced a successful javac rebuild. Java auto-build was temporarily disabled with
 permission and restored. Subsequent IDE output interference is avoided with the
 opt-in `isolated-build` Maven profile (`target-maven/` output); Java auto-build
 remains enabled. Regeneration, compilation, and the five focused baseline tests
-are verified. The last isolated full suite ran 2,199 tests: 1,680 passed, 498
+are verified. The earlier isolated full suite ran 2,199 tests: 1,680 passed, 498
 failed on remaining `<393>` versus `<419>` expectations, 0 errors, 21 skipped.
-The user's manual golden edits and a green full-suite gate are still required
-before Slice A closes. Step 1 is complete, not all of Phase 1; date/time AST,
-symbol-table, and affinity implementation have not begun.
+After the user's manual golden edits, the full workspace suite was run through
+the VS Code testing extension using its configured JDK 21 execution settings:
+**2,643 passed, 0 failed**. This satisfies the Phase 1 / Slice A full-suite gate;
+the counts come from a different runner than the earlier Maven run. No golden
+edits were made by the agent. Date/time AST, symbol-table, and affinity
+implementation have not begun; Phase 2 starts with Slice B's add family and
+shared registries.
 
 ### Acceptance
 
-Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE and q5866 are clean; no date/time part appears as a physical/query column or unresolved reference; EXTRACT/DATE_PART FROM unchanged; every target-only function/part/construct in the matrices raises the matching statement dialect flag; shared forms raise neither; mixed affinity remains FATAL per statement; bound-query and snippet extract re-check is documented with no unexplained regressions; 5.1.4 jar + grammar extension doc.
+**Slice B grammar-only inspection checkpoint (2026-11-11):** Added
+`datetime_function`, the shared add-family expression/name rules, and the shared
+`datetime_part` / `snowflake_datetime_part` rules. `extract_field` remains a
+compatibility wrapper. All five new walker exit overrides are intentionally
+empty for raw-AST inspection; no signature/part registry, AST shaping, or new
+affinity handling is implemented yet. JDK 21 isolated-build verification passed
+91 focused grammar/EXTRACT tests, with lexer declaration order unchanged.
+An ordinary JDK 21 run of
+`select dateadd(year, 1, a.created_at) as shifted from events a`
+reported zero syntax errors/FATALs and retained numbered rule maps and `Type`
+markers, as expected before shaping. This does not complete Slice B or establish
+its final symbol-table/substitution/affinity contract.
+
+**DATEADD AST checkpoint (2026-11-12):** DATEADD now emits
+`datetime_function={invocation=DATEADD, level={canonical,text,form},
+increment=..., value=...}` without numbered rule wrappers or `Type` markers.
+`DatetimePartRegistry` canonicalizes documented Snowflake DATEADD aliases while
+preserving authored spelling and part form; unknown/extensible text retains its
+uppercased canonical text, with family-validity checks still deferred. Nested
+DATEADD, ordinary expression operands, predicand substitutions, and qualified
+generic UDFs have focused AST tests. TIMEADD/TIMESTAMPADD shaping, signature
+validation, and new dialect-affinity handling remain unfinished. Verification
+on JDK 21: 96 focused tests passed; isolated full parser suite ran 2,207 tests
+with 0 failures, 0 errors, 21 skipped. No existing goldens were edited.
+
+Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE and q5866 are clean; no date/time part appears as a physical/query column or unresolved reference; EXTRACT/DATE_PART unified under the approved Phase 1 action with syntax-preserving datetime-family ASTs, retained source semantics, and documented consumer changes; every target-only function/part/construct in the matrices raises the matching statement dialect flag; shared forms raise neither; mixed affinity remains FATAL per statement; bound-query and snippet extract re-check is documented with no unexplained regressions; 5.1.4 jar + grammar extension doc.
 
 ### Snowflake reference
 
@@ -888,7 +1658,7 @@ All problem evidence, reproductions, implementation requirements, tests, and bou
 | **18.3** | Array literal value expression (with Entry 4.4) | Obsolete for this discrepancy: s82233 is unused; no compatibility fix planned. General array work remains independently scoped under Entry 4.4 |
 | **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not implemented; follow-on diagnostic for unused s82233 accepted without remediation under this entry, not a claim of general walker robustness |
 | **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Known-word syntax/keyword-role coverage passes in `SqlDatetimeLexerBaselineTest`; broader coverage not required for accepted closure scope |
-| **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Sample comparison complete: all ten bound queries fixed; s82233 difference accepted as immaterial. Green full-suite gate remains tracked under Entry 1 Slice A, not claimed by this closure |
+| **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Sample comparison complete: all ten bound queries fixed; s82233 difference accepted as immaterial. Subsequent testing-extension full suite passed: 2,643 passed, 0 failed (Entry 1 Slice A) |
 
 ### Entry 18 sample comparison (2026-11-11)
 
@@ -927,9 +1697,9 @@ Entry 18 is therefore **closed**: all ten relevant bound-query regressions are
 fixed, and the unused snippet's syntax failure and follow-on walker
 `String`-to-`Map` diagnostic are accepted without remediation. This is a scoped
 owner acceptance, not proof of general array support, a completed broader keyword
-audit, general walker robustness, or a green full suite. Entry 4.4's independent
-array work and Entry 1 Slice A's full-suite gate are unchanged. No parser code or
-golden was changed for this closure.
+audit, or general walker robustness. Entry 4.4's independent array work is
+unchanged. Entry 1 Slice A's full-suite gate was subsequently satisfied as
+recorded above. No parser code or golden was changed for this closure.
 
 Frozen inputs, old/current result JSONL, captured ASTs, probe logs, and SHA-256
 manifest are retained in the local archive's

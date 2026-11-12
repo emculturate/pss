@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Static part-name sets aligned with {@code snowflake_extract_field} vs {@code extended_datetime_field}
+ * Static part-name sets aligned with {@code snowflake_datetime_part} vs {@code extended_datetime_field}
  * in {@code SQLSelectParser.g4}. Used for optional dialect affinity warnings on {@code extract} nodes.
  */
 public final class ExtractDatetimeFieldAffinity {
