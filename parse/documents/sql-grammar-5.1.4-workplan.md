@@ -42,7 +42,7 @@
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
 | **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Complete** (2026-11-11) |
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
-| **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Partial** — known identifier/function grammar fixes included with Entry 1 lexer baseline |
+| **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
 
 ---
@@ -411,7 +411,7 @@ detailed AST/symbol-table/dialect assertions specified above.
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
 
-**Slice A, first checkpoint (2026-11-11):** Added 26 late date/time function
+**Slice A, step 1 complete (2026-11-11):** Added 26 late date/time function
 tokens, `DATEADD` through `TIMEOFDAY`, immediately before `Identifier`. Existing
 token IDs 1–392 remain unchanged; former IDs 393–413 shift by +26. Supply the
 replacement list in descending old-ID order, matching exact `<nnn>` strings.
@@ -433,9 +433,14 @@ Initial builds encountered IDE-written unresolved-ANTLR error classes that Maven
 considered current; invalidating only
 `parse/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst`
 forced a successful javac rebuild. Java auto-build was temporarily disabled with
-permission and restored. The full golden suite remains pending manual token-ID
-edits; this checkpoint does not complete Slice A or implement date/time AST,
-symbol-table, or affinity changes.
+permission and restored. Subsequent IDE output interference is avoided with the
+opt-in `isolated-build` Maven profile (`target-maven/` output); Java auto-build
+remains enabled. Regeneration, compilation, and the five focused baseline tests
+are verified. The last isolated full suite ran 2,199 tests: 1,680 passed, 498
+failed on remaining `<393>` versus `<419>` expectations, 0 errors, 21 skipped.
+The user's manual golden edits and a green full-suite gate are still required
+before Slice A closes. Step 1 is complete, not all of Phase 1; date/time AST,
+symbol-table, and affinity implementation have not begun.
 
 ### Acceptance
 
@@ -850,7 +855,8 @@ All problem evidence, reproductions, implementation requirements, tests, and bou
 
 ## Entry 18 — Snowflake non-reserved words, array literals, and walker crash after syntax errors
 
-**Status:** Not started (opened 2026-11-11)  
+**Status:** Closed by owner decision (2026-11-11): known bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, no remediation planned under this entry
+
 **Kind:** Defect  
 **Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract
 
@@ -877,12 +883,57 @@ All problem evidence, reproductions, implementation requirements, tests, and bou
 
 | Sub | Work | Status |
 |-----|------|--------|
-| **18.1** | Non-reserved identifier audit; allow `position`, `input`, `path` (+ any others found) as identifiers | Known three names accepted; broader audit and corpus validation pending |
-| **18.2** | `TRUNCATE(expr[, scale])` function | Generic grammar acceptance delivered; walker/corpus validation pending |
-| **18.3** | Array literal value expression (with Entry 4.4) | Not started |
-| **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not started |
-| **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Not started |
-| **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Not started |
+| **18.1** | Non-reserved identifier audit; allow `position`, `input`, `path` (+ any others found) as identifiers | Known three names verified in all six affected bound queries; broader audit not performed and not a closure requirement under the owner's accepted scope |
+| **18.2** | `TRUNCATE(expr[, scale])` function | Complete for known regression: grammar forms tested and all four affected bound queries parse/walk with zero FATALs |
+| **18.3** | Array literal value expression (with Entry 4.4) | Obsolete for this discrepancy: s82233 is unused; no compatibility fix planned. General array work remains independently scoped under Entry 4.4 |
+| **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not implemented; follow-on diagnostic for unused s82233 accepted without remediation under this entry, not a claim of general walker robustness |
+| **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Known-word syntax/keyword-role coverage passes in `SqlDatetimeLexerBaselineTest`; broader coverage not required for accepted closure scope |
+| **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Sample comparison complete: all ten bound queries fixed; s82233 difference accepted as immaterial. Green full-suite gate remains tracked under Entry 1 Slice A, not claimed by this closure |
+
+### Entry 18 sample comparison (2026-11-11)
+
+Rebuilt the current 5.1.4-1 fat JAR using
+`mvn -Pisolated-build -pl parse -Dmaven.test.skip=true package`. Replayed the same
+frozen inputs through both that JAR and the archived 5.0.0-3 JAR with
+`BatchParse.java`: bound queries use `SQL`, s82233 uses `TUPLE`. Both batch
+processes exited 0 and returned all 11 records; process success alone is not
+parse success, so FATAL counts were checked explicitly.
+
+| Construction | Cases | 5.0.0-3 FATALs per case | Pre-fix 5.1.4 FATALs per case | Current FATALs per case |
+|--------------|-------|------------------------|-----------------------------|------------------------|
+| `position` alias/column | q5909, q5910, q5913 | 0 | 3 | 0 |
+| `input` CTE | q5390, q5394 | 0 | 3 | 0 |
+| `path` alias/column | q2090 | 0 | 4 | 0 |
+| `truncate(...)` | q3399, q3438, q3490, q3546 | 0 | 2 | 0 |
+| Array literal | s82233 | 0 | 2 | 2 |
+
+All ten bound-query keyword/function regressions are resolved in this sample.
+The four TRUNCATE query ASTs match 5.0.0-3 exactly. The other six match after
+comparison-only normalization of 5.1.x numbered CTE storage
+(`with.N={alias, cte}`) to legacy alias-keyed CTE storage; no other AST differences
+remain. This does not claim dictionary/interface parity across parser versions.
+The five focused tests also pass (0 failures/errors), covering identifier
+positions, POSITION IN/comma forms, FLATTEN argument keywords, numeric TRUNCATE
+forms, and DDL TRUNCATE.
+
+**Closure decision (2026-11-11):** The owner checked usage and confirmed that the
+snippets in Foundation bundle `m_STUDENT_COURSE_WORK_8026_OSF:v.5001`, containing
+s82233, are never used. The s82233 discrepancy is **obsolete and immaterial**;
+the 5.0.0-3 versus 5.1.4-1 behavior difference will **not be fixed** under Entry 18.
+Legacy acceptance was not correct array support: its captured AST represented
+the 29 strings as separate SELECT literals rather than one array.
+
+Entry 18 is therefore **closed**: all ten relevant bound-query regressions are
+fixed, and the unused snippet's syntax failure and follow-on walker
+`String`-to-`Map` diagnostic are accepted without remediation. This is a scoped
+owner acceptance, not proof of general array support, a completed broader keyword
+audit, general walker robustness, or a green full suite. Entry 4.4's independent
+array work and Entry 1 Slice A's full-suite gate are unchanged. No parser code or
+golden was changed for this closure.
+
+Frozen inputs, old/current result JSONL, captured ASTs, probe logs, and SHA-256
+manifest are retained in the local archive's
+`comparison/runs/entry18-keywords-20261111T1838/` (archive location under Entry 1).
 
 ---
 
