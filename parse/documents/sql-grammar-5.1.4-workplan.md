@@ -216,7 +216,7 @@ All new dedicated Snowflake and PostgreSQL constructions use a common top-level 
 DATEADD(year, 1, created_at)
 
 {datetime_function={
-  invocation=DATEADD,
+  function_name=DATEADD,
   level={canonical=YEAR, text=year, form=KEYWORD},
   increment={literal=1},
   value={column={name=created_at}}
@@ -225,7 +225,7 @@ DATEADD(year, 1, created_at)
 DATE_TRUNC('month', created_at)
 
 {datetime_function={
-  invocation=DATE_TRUNC,
+  function_name=DATE_TRUNC,
   level={canonical=MONTH, text=month, form=STRING},
   value={column={name=created_at}}
 }}
@@ -239,7 +239,10 @@ Part-like values use `{canonical, text, form}`:
 - generators write `KEYWORD` / `IDENTIFIER` text without quotes and emit `STRING` text as an escaped SQL character literal;
 - canonicalization must never silently replace authored text during ordinary regeneration.
 
-Generators dispatch once on `datetime_function`, then use `invocation` to select an ordered signature. Never infer SQL argument order from map insertion order.
+`function_name` preserves the authored case, as ordinary routine calls do.
+Generators dispatch once on `datetime_function`, then compare `function_name`
+case-insensitively to select an ordered signature. Preserve the authored name
+when generating SQL; never infer argument order from map insertion order.
 
 | Invocation family | Permitted subtree keys in SQL argument order |
 |-------------------|-----------------------------------------------|
@@ -402,14 +405,20 @@ detailed AST/symbol-table/dialect assertions specified above.
 | **1 follow-up: per-function build and test** | Execute actions 66-97 below: deep context suites for distinct signature primaries, compact construction/resolution/validation suites for every sibling invocation |
 | **2 Grammar + AST** | Implement the approved dedicated productions, `datetime_part`, `datetime_function` contract, and invocation signature registry incrementally; branch only when syntax, arity, AST, or keyword role differs |
 | **3 Walker + affinity** | Add every exit method; exclude parts from symbol collection; stamp predicand substitutions in expression fields; route rule/function/part affinity through the existing statement collector |
-| **4 Focused tests** | Add `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus PostgreSQL/shared matrices, AST signatures, rendering forms, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
+| **4 Focused tests** | Extend `SqlEventWalkerDatetimeFunctionPlacementTests` plus PostgreSQL/shared matrices, AST signatures, rendering forms, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
 | **5 Corpus + delivery** | Rebuild jar; re-run bound-query and snippet extracts; prove q5866 and all date/time matches; compare FATALs, AST/interfaces, dictionaries, lineage, and dialect diagnostics; finish generator/docs/release notes |
 
 #### Phase 1 follow-up substep: invalid DATEADD level diagnostic
 
-**Added 2026-11-12; pending implementation.** This is a prerequisite to the
-expanded DATEADD test suite, not a reopening of the completed lexer baseline.
-No new lexer tokens or token-ID changes are required.
+**Added 2026-11-12; DATEADD validation implemented, expanded suite pending.**
+This is a prerequisite to the expanded DATEADD test suite, not a reopening of
+the completed lexer baseline. No new lexer tokens or token-ID changes are required.
+DATEADD now reports `INVALID_DATETIME_PART` FATAL at the authored level token
+for an unknown part. Focused tests cover registered spellings, invalid bare and
+quoted levels, empty text, and an invalid nested level; the remaining canonical,
+alias, and placement matrices below are still pending. TIMEADD and TIMESTAMPADD
+subsequently gained the same registered-part validation; other families remain
+unvalidated by this add-family change.
 
 - Add a dedicated **FATAL** diagnostic for an invalid DATEADD level code
   (proposed code: `INVALID_DATETIME_PART`), using the existing diagnostic
@@ -460,7 +469,7 @@ DATE_PART AST shapes. Both invocations now use datetime-family subtrees.
   dedicated DATE_PART AST need not be frozen for legacy use cases. The user
   explicitly approved changing DATE_PART and EXTRACT to `datetime_function`
   subtrees:
-  `datetime_function={invocation=DATE_PART|EXTRACT, level={canonical,text,form},
+  `datetime_function={function_name=DATE_PART|EXTRACT, level={canonical,text,form},
   value=..., <syntax discriminator>}`. Choose and document the discriminator
   key/values explicitly; retain comma versus FROM so generators never guess
   the authored syntax from map order or part form.
@@ -493,7 +502,7 @@ DATE_PART AST shapes. Both invocations now use datetime-family subtrees.
   user-edited only; review behavioral golden changes explicitly.
 - Update consumer instructions to describe the new extraction subtrees and
   adoption requirements directly: dispatch on `datetime_function` and
-  `invocation=DATE_PART|EXTRACT`, render level metadata with its preserved spelling and
+  `function_name=DATE_PART|EXTRACT` case-insensitively, render level metadata with its preserved spelling and
   quoting form, recursively generate the VALUE expression, and use the explicit
   syntax discriminator to emit comma or FROM syntax. Include examples for both
   forms and explain part validation and normal source-expression traversal.
@@ -517,15 +526,51 @@ not treated as implemented merely because their names have lexer tokens.
 
 **Test organization and execution**
 
-- Add one new JUnit 4 class,
+- Use the dedicated JUnit 4 class,
   `parse/src/test/java/sql/walker/SqlEventWalkerDatetimeFunctionPlacementTests.java`,
   extending `AbstractSqlParseEventWalkerTest`, for the DATEADD suite. Keep new
   datetime placement tests out of `SqlEventWalkerCoreSelectFromAliasingTests`.
   Put reduced cross-function tests in a second dedicated class,
-  `SqlEventWalkerDatetimeFunctionFamilyTests`, in the same directory; use the
-  existing AST-only tests as complementary coverage, not as a substitute.
+  `SqlEventWalkerDatetimeFunctionFamilyTests`, in the same directory. The
+  original `SqlEventWalkerSnowflakeDatetimeManipulationTests` was renamed to
+  the placement class; its existing tests seed, rather than complete, the suite.
+- Keep endpoint permutations together in
+  `SqlEventWalkerDatetimeFunctionSnippetTests`; add a separate class only if a
+  future endpoint genuinely needs substantially different setup. DATEADD
+  currently has one case each for PREDICAND, CONDITION, QUERY, TUPLE, IN_LIST,
+  JOIN_EXTENSION, VALUES, INSERT, UPDATE, DELETE, DDL, and SCRIPT. These tests
+  use the real endpoint and six complete literal output goldens; the DELETE case
+  also asserts its expected Snowflake warning at its source position.
+- For **every** planned datetime invocation, add one test for each of those
+  12 endpoints as that invocation's implementation becomes available:
+  TIMEADD, TIMESTAMPADD, DATEDIFF, TIMEDIFF, TIMESTAMPDIFF, DATE_TRUNC,
+  datetime TRUNC, TIME_SLICE, LAST_DAY, NEXT_DAY, PREVIOUS_DAY, DATE_PART,
+  EXTRACT, DATE_BIN, AGE, MAKE_DATE, MAKE_TIME, MAKE_TIMESTAMP, MAKE_TIMESTAMPTZ,
+  MAKE_INTERVAL, JUSTIFY_DAYS, JUSTIFY_HOURS, JUSTIFY_INTERVAL, CLOCK_TIMESTAMP,
+  STATEMENT_TIMESTAMP, TRANSACTION_TIMESTAMP, and TIMEOFDAY. DATEADD's
+  permutations are already covered; SQL statement placement is covered
+  separately in the placement suite. Each case must assert the function's own
+  invocation/semantic AST, not the current generic fallback. Use appropriate
+  argument and result types for each endpoint and its surrounding comparison,
+  and assert any expected dialect diagnostic rather than suppressing it.
+  Complete DATE_PART/EXTRACT form-specific checks under their own actions;
+  one endpoint case per function is the minimum, not a substitute for
+  required syntax-form tests. Do not mark the remaining permutations complete
+  until the relevant function implementation and runnable goldens exist.
+- The COLUMN endpoint accepts only a column reference/substitution, LITERAL
+  accepts literal values, and TRUNCATE accepts a truncate statement: none
+  accepts a datetime function as an expression. Do not manufacture positive
+  datetime-function cases for those endpoints. DDL is applicable through a
+  query-containing form such as CREATE VIEW AS SELECT; TUPLE is applicable
+  through a subquery without a relation alias at the endpoint root.
+- DATEADD previously followed generic function parsing in CONDITION, IN_LIST,
+  JOIN_EXTENSION, VALUES, UPDATE, and DELETE expression positions. The shared
+  nonparenthesized expression grammar now selects `datetime_function` before
+  generic invocation, so the part is metadata rather than a phantom column.
+  Preserve qualified same-name UDF handling and existing token numbers.
 - Follow [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java)
-  for literal assertion detail and
+  specifically `basicSelectListQuotedNumericPrefixColumnTest` as the structural
+  model for every diagnostic-free test case, and
   [AbstractSqlParseEventWalkerTest.java](../src/test/java/sql/walker/AbstractSqlParseEventWalkerTest.java)
   for parsing, walking, diagnostic, and path-assertion helpers. Use production
   SQL parsing/walking, not private symbol-helper method harnesses.
@@ -576,14 +621,35 @@ not treated as implemented merely because their names have lexer tokens.
 
 **Required assertion contract**
 
+- For each diagnostic-free concrete SQL case, use `parse(query)`,
+  `runParsertest(query, parser)`, and `assertNoWalkerDiagnostics(extractor)`
+  as in `basicSelectListQuotedNumericPrefixColumnTest`. Provide independent,
+  explicit full golden expectations for all six outputs: AST
+  (`getAsTree()`), output interface (`getInterface()`), substitutions
+  (`getSubstitutionsMap()`), global table dictionary
+  (`getTableColumnDictionaryMap()`), global query dictionary
+  (`getQueryColumnDictionaryMap()`), and full symbol table
+  (`getSymbolTable()`). Include exact token IDs/positions in the dictionary and
+  symbol goldens, and assert empty objects explicitly. This applies to every
+  SQL case, including cases grouped in loops; a few subtree or presence checks
+  cannot substitute for these six goldens. Path assertions may supplement, not
+  replace, full-object goldens, even for large or deeply nested queries.
+- For expected diagnostics use the standard position-based methods on
+  `AbstractSqlParseEventWalkerTest`, preferably
+  `assertFatalDiagnosticAtPositionWithFullMessage` for FATAL cases. Supply the
+  exact full message, diagnostic code, token text, line, and character position
+  so a casual reader can understand the reported failure; assert severity and
+  the exact expected diagnostic set/count as well. Use corresponding existing
+  severity/position helpers for non-FATAL diagnostics. Assert relevant outputs
+  for diagnostic cases as far as the error-processing contract guarantees them;
+  never treat a FATAL's partial output as a successful parse.
 - For every concrete positive case assert zero syntax errors and no unexpected
   diagnostics. Once affinity is implemented, a Snowflake DATEADD warning is
   expected, not a reason to require an empty diagnostic list. Assert the exact
   expected warning/error/FATAL set and the relevant dialect counters; keep
   implementation-stage gaps visible rather than weakening final expectations.
-- Assert the complete AST for small queries. For larger queries assert the
-  complete relevant `sqlTree` subtrees plus the wrapper/scope structure.
-  Every DATEADD must have `datetime_function`, `invocation=DATEADD`,
+- Assert the complete AST for every query.
+  Every DATEADD must have `datetime_function`, an authored-case `function_name`,
   `level={canonical,text,form}`, `increment`, and `value`, with normal expression
   nodes, correct precedence, and no raw `Type=`/numbered grammar wrappers.
 - Assert output names/order, substitutions map, global table/query
@@ -990,7 +1056,7 @@ implemented. Deliver incrementally with Slices B-E, not as one large rewrite.
     and placement suite. This is the reference for normal collection in two
     expression slots after metadata.
 69. **Build/test TIMEADD (sibling, S).** Reuse the add-family implementation and
-    mini-suite with `level/increment/value`; preserve `invocation=TIMEADD`.
+    mini-suite with `level/increment/value`; preserve its authored `function_name`.
     Use time-appropriate examples. Required negatives include invalid part and
     separately ambiguous INCREMENT and VALUE. Do not duplicate context tests.
 70. **Build/test TIMESTAMPADD (sibling, S).** Reuse the add-family implementation
@@ -1203,16 +1269,33 @@ markers, as expected before shaping. This does not complete Slice B or establish
 its final symbol-table/substitution/affinity contract.
 
 **DATEADD AST checkpoint (2026-11-12):** DATEADD now emits
-`datetime_function={invocation=DATEADD, level={canonical,text,form},
+`datetime_function={function_name=DATEADD, level={canonical,text,form},
 increment=..., value=...}` without numbered rule wrappers or `Type` markers.
 `DatetimePartRegistry` canonicalizes documented Snowflake DATEADD aliases while
 preserving authored spelling and part form; unknown/extensible text retains its
 uppercased canonical text, with family-validity checks still deferred. Nested
 DATEADD, ordinary expression operands, predicand substitutions, and qualified
-generic UDFs have focused AST tests. TIMEADD/TIMESTAMPADD shaping, signature
-validation, and new dialect-affinity handling remain unfinished. Verification
+generic UDFs have focused AST tests. At that checkpoint TIMEADD/TIMESTAMPADD
+shaping, signature validation, and new dialect-affinity handling remained unfinished. Verification
 on JDK 21: 96 focused tests passed; isolated full parser suite ran 2,207 tests
 with 0 failures, 0 errors, 21 skipped. No existing goldens were edited.
+
+**Add-family AST follow-up (2026-11-12):** TIMEADD and TIMESTAMPADD now use
+the same named argument shaping and registered-part validation as DATEADD,
+while retaining their own invocation names. One focused query tests both
+aliases, qualified expression arguments, and their full output goldens; a
+second focused test covers each alias's invalid-part FATAL. Type-dependent
+unit restrictions, dialect affinity, complete sibling mini-suites, and
+snippet permutations remain pending.
+
+**DATEADD scenario progress (2026-11-12):** Placement tests now include
+scenarios 1-6, 8, 17, and 19, plus portions of 13-16, 20-22, 25, 27,
+and 47. Scenario 5 has all 24 argument-shape combinations except literal/literal,
+each with six literal output goldens. The remaining alias inventory, substitution permutations,
+scope/clause/DML/set-operation matrix, and affinity/reset coverage are not yet
+complete. Scenario 48 depends on DATEADD dialect affinity, which is not yet
+implemented. Positive cases use six literal output goldens; ambiguity cases
+assert the existing source-position diagnostics.
 
 Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE and q5866 are clean; no date/time part appears as a physical/query column or unresolved reference; EXTRACT/DATE_PART unified under the approved Phase 1 action with syntax-preserving datetime-family ASTs, retained source semantics, and documented consumer changes; every target-only function/part/construct in the matrices raises the matching statement dialect flag; shared forms raise neither; mixed affinity remains FATAL per statement; bound-query and snippet extract re-check is documented with no unexplained regressions; 5.1.4 jar + grammar extension doc.
 

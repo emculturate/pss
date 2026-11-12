@@ -1260,6 +1260,7 @@ nonparenthesized_value_expression_primary
   | case_expression
   | cast_function_expression
   | position_function
+  | datetime_function
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery

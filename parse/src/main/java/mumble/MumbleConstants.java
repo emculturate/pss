@@ -58,7 +58,6 @@ public final class MumbleConstants {
     public static final String MUMBLE_ESCAPE_KEY = "escape";
     public static final String MUMBLE_EXISTS_KEY = "exists";
     public static final String MUMBLE_DATETIME_FUNCTION_KEY = "datetime_function";
-    public static final String MUMBLE_DATETIME_INVOCATION_KEY = "invocation";
     public static final String MUMBLE_DATETIME_LEVEL_KEY = "level";
     public static final String MUMBLE_DATETIME_INCREMENT_KEY = "increment";
     public static final String MUMBLE_DATETIME_PART_CANONICAL_KEY = "canonical";

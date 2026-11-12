@@ -11075,17 +11075,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitDatetime_function(SQLSelectParserParser.Datetime_functionContext ctx) {
-		if (ctx.snowflake_datetime_add_expression().function.DATEADD() != null) {
-			walker.handleOneChild(ctx.getRuleIndex());
-		}
+		walker.handleOneChild(ctx.getRuleIndex());
 	}
 
 	@Override
 	public void exitSnowflake_datetime_add_expression(
 			SQLSelectParserParser.Snowflake_datetime_add_expressionContext ctx) {
-		if (ctx.function.DATEADD() == null) {
-			return;
-		}
+		String functionName = ctx.function.getText();
 		int ruleIndex = ctx.getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
 		String text = ctx.level.getText();
@@ -11096,13 +11092,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			form = ctx.level.identifier() != null ? "IDENTIFIER" : MUMBLE_EXTRACT_PART_FORM_KEYWORD;
 		}
+		if (DatetimePartRegistry.findCanonical(text).isEmpty()) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+		}
 		Map<String, Object> level = new LinkedHashMap<>();
 		level.put(MUMBLE_DATETIME_PART_CANONICAL_KEY, DatetimePartRegistry.canonicalize(text));
 		level.put(MUMBLE_DATETIME_PART_TEXT_KEY, text);
 		level.put(MUMBLE_DATETIME_PART_FORM_KEY, form);
 
 		Map<String, Object> function = new LinkedHashMap<>();
-		function.put(MUMBLE_DATETIME_INVOCATION_KEY, "DATEADD");
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
 		function.put(MUMBLE_DATETIME_LEVEL_KEY, level);
 		function.put(MUMBLE_DATETIME_INCREMENT_KEY,
 				walker.stampPredicandSubstitutionsInValueSubtree(subMap.get("3")));

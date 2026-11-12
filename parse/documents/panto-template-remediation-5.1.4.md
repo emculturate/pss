@@ -131,7 +131,8 @@ evidence. The date/time migration below remains planned.
 ## Dependent application upgrade checks: date/time AST changes (planned)
 
 **Status (2026-11-12):** Partially implemented on the development branch:
-DATEADD AST shaping and the public part-registry lookups below are available.
+DATEADD, TIMEADD, and TIMESTAMPADD AST shaping, level validation, and the public
+part-registry lookups below are available.
 Other function families, signature validation, and new dialect-affinity handling
 remain unfinished. The complete signature table is the intended Entry 1
 contract, not a claim that every row is delivered.
@@ -141,14 +142,15 @@ Calls previously represented as ordinary `function` nodes with positional
 `parameters` will instead use the common **`datetime_function`** AST key when
 they match a supported date/time built-in signature. The key is singular, not
 `datetime_functions`. The umbrella grammar rule has the same name.
-`invocation` identifies the function specialization; its arguments have semantic
-names rather than numbered parameter positions.
+`function_name` identifies the function specialization and preserves its authored
+case, as with ordinary routine calls; its arguments have semantic names rather
+than numbered parameter positions.
 
 For example, the intended representation of `DATEADD(year, 1, created_at)` is:
 
 ```text
 {datetime_function={
-  invocation=DATEADD,
+  function_name=DATEADD,
   level={canonical=YEAR, text=year, form=KEYWORD},
   increment={literal=1},
   value={column={name=created_at}}
@@ -220,7 +222,9 @@ boolean found = DatetimePartRegistry.findCanonical("not_a_part").isPresent();
   serialize absence as `{"found":false}`. These are adapter examples, not new
   MCP endpoints implemented in the parser.
 - The current registry covers documented Snowflake DATEADD parts and aliases.
-  A successful lookup proves registry membership, not validity for every
+  DATEADD, TIMEADD, and TIMESTAMPADD report `INVALID_DATETIME_PART` as a FATAL at the authored level
+  token when that level is not registered. A successful lookup proves registry
+  membership, not validity for every
   date/time function, dialect, or argument type. Family-validity and affinity
   metadata remain future work.
 - Use `findCanonical` for existence checks, **not** `canonicalize`: the latter
@@ -230,8 +234,9 @@ boolean found = DatetimePartRegistry.findCanonical("not_a_part").isPresent();
 ### What dependent applications must check
 
 - **AST traversal and validation:** Recognize `datetime_function` wherever
-  expressions can occur, including nested calls. Dispatch by `invocation` and
-  traverse its expression fields instead of expecting `function.parameters`.
+  expressions can occur, including nested calls. Dispatch case-insensitively by
+  `function_name` and traverse its expression fields instead of expecting
+  `function.parameters`.
 - **SQL generation:** Render the invocation's defined argument order. Date-part
   metadata uses `{canonical, text, form}`: preserve authored `text`; emit
   `KEYWORD`/`IDENTIFIER` without quotes and `STRING` as an escaped SQL string

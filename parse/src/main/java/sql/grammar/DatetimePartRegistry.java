@@ -13,7 +13,7 @@ public final class DatetimePartRegistry {
 	private DatetimePartRegistry() {
 	}
 
-	// Snowflake's supported DATEADD parts and their documented abbreviations.
+	// Snowflake's supported add-family parts and their documented abbreviations.
 	private static Map<String, String> buildCanonicalParts() {
 		Map<String, String> parts = new HashMap<>();
 		register(parts, "YEAR", "y", "yy", "yyy", "yyyy", "yr", "years", "yrs");

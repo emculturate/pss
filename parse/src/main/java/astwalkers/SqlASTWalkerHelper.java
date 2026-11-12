@@ -70,6 +70,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
+		public static final String DIAG_SQL_INVALID_DATETIME_PART = "SQL_INVALID_DATETIME_PART";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED = "SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED";
 		public static final String DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT =
@@ -290,6 +291,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER,
 				 "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
 				 "%s member %s contains INTO. INTO is allowed only in the first SELECT of a set operation.");
+		 registerDiagnostic(
+				 DIAG_SQL_INVALID_DATETIME_PART,
+				 "INVALID_DATETIME_PART",
+				 "Invalid date/time part %s for %s at (l:%s c:%s).");
 		 registerDiagnostic(
 				 DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE,
 				 "PIVOT_IN_IDENTIFIER_REFERENCE",
