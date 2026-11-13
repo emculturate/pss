@@ -219,7 +219,9 @@ column merely because its name is also a date part.
 The add-family grammar, AST, and part registry are present, but other new
 date/time families and the approved EXTRACT/DATE_PART unification remain
 unfinished. Existing EXTRACT/DATE_PART output still uses `extract`.
-q5866's date-part-as-column regression remains open under Entry 1. The
+The original q5866 DATEADD query was replayed without diagnostics on
+2026-11-13; broader date/time work and corpus verification remain open under
+Entry 1. The
 [consumer date/time section](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-datetime-ast-changes-planned)
 distinguishes the implemented add family from the planned wider contract.
 

@@ -44,6 +44,14 @@
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
+| **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Not started** — s85047 and reduced reproductions confirmed; related historical cases require reclassification |
+
+**5.0.0 → 5.1.4 parity gate:** Entry **20** must be fixed and verified before
+declaring parity for the bound-query and snippet extracts. The previously
+reported closure of the named bound-query parser defects did not account for
+Pattern 6's seven bound queries, which were classified as author remediation
+and now require re-evaluation under Entry 20. This gate is in addition to the
+remaining corpus, consumer, generator, and release checks.
 
 ---
 
@@ -313,6 +321,14 @@ Entry 1 owns the complete fix and regression evidence for the date-part-as-colum
 |---------|----------------|------------------------------|--------------------|
 | q5866 | `bound_queries_11-10-2026.csv` record 5866 (header = record 1) | PDP_AMS / mkt__segmentation / pdp_ams_mkt__segmentation_intake | `Unqualified column 'year' at (l:29 c:15) was not found in output interface of any visible query alias [cte_mkt_segmentation]` — `dateadd(year,2000,effective_end_date)` |
 
+**q5866 resolved (2026-11-13):** Replayed the original frozen SQL record with
+the current JDK 21 isolated-build fat JAR. The historical 5.1.4 run had one
+FATAL; the replay had zero syntax errors and zero diagnostics. Both DATEADD
+calls retain YEAR metadata and `effective_end_date` as their value; `year` is
+absent as a column in global dictionaries and published symbol-table lineage.
+This closes the q5866 case only, not the broader DATEDIFF/date-time work or
+the required full-corpus re-test.
+
 **Minimal reproductions (2026-11-11):**
 
 - `select dateadd(year, 1, c.d) as y from (select a.d from t a) c` → FATAL on `year`;
@@ -334,6 +350,183 @@ Use a rebuilt 5.1.4 fat jar and re-run both 11-10-2026 extracts through their co
 7. Record the affected case IDs, template/bundle names, before/after FATAL counts, dialect diagnostics, and any remaining failures in this entry. When extracts with stable Panto IDs become available, add those IDs rather than relying only on `qN` / `sN` record numbers.
 
 There was no known snippet-specific date-part regression in the original 15 parser-defect cases, but the snippet extract must still be re-run: generic function parsing can hide phantom part columns without producing a FATAL.
+
+**Interim snippet replay (2026-11-13):** Replayed all 87,897 recognized
+snippet records from `corpus-final.jsonl` with the current isolated-build
+5.1.4-1 fat JAR and their frozen endpoint normalization. Eight source records
+have unrecognized extract types and were excluded as in the original comparison.
+Against the saved `final514` run, all cases have the same clean/FATAL status:
+87,378 clean, 519 with FATALs, no batch crashes or timeouts; no cases newly
+passed or failed. Against `base5003` with the `inlist5003` overlay, 26 cases
+are FATAL only on current 5.1.4, nine are FATAL only on 5.0.0-3, and 493
+are FATAL on both. The 26 are the same historical cases: 25 previously
+classified for author remediation and the owner-waived unused s82233.
+The two parsers' totals are 87,378 vs 87,395 clean respectively.
+
+The current replay changed canonical AST hashes for 121 cases clean in both
+5.1.4 runs; all 121 contain textual add-family function matches. Two already
+failing cases have changed walker-exception messages but unchanged FATAL
+counts. Results and case IDs are in the local-only archive under
+`comparison/runs/snippet514-20261113-0909/`.
+
+**Fresh bound-query replay (2026-11-13):** Replayed all 6,551 original
+bound-query SQL inputs on the current isolated-build 5.1.4-1 fat JAR; each
+input was verified against the frozen historical corpus. There were no batch
+crashes or timeouts. Against the saved 5.0.0-3 results:
+
+| 5.0.0-3 | Current 5.1.4 | Records |
+|---|---|---:|
+| Zero FATALs | Zero FATALs | 6,304 |
+| Zero FATALs | FATAL | 147 |
+| FATAL | FATAL | 73 |
+| FATAL | Zero FATALs | 27 |
+
+The 147 5.1.4-only FATALs are all in the historical classification:
+110 duplicate outputs in a set-operation branch with a width diagnostic;
+five duplicate outputs in one SELECT; one set-operation width mismatch;
+16 missing or out-of-scope aliases; five concrete columns absent from a
+derived interface; one syntax case (q5128); seven variable-outside cases
+covered by Entry 20; and two mirror-image variable-inside cases (q5314 and
+q5335) approved by the owner for release with author guidance to add fixed
+output aliases or use concrete columns. The original two queries remain
+FATAL until revised; no parser change is implied. The owner also accepts the
+other 138 author-classified bound-query differences for release, with
+corrective guidance in
+[Panto template and snippet remediation](./panto-template-remediation-5.1.4.md).
+The same acceptance applies to the remaining author-classified snippet issues
+in Patterns 1–5 and 7. The owner also accepts mirror-image snippets s8491 and
+s8492 for release with fixed-alias or concrete-column guidance. These
+dispositions do not mean the SQL has already been corrected or that unchanged
+records will pass. The variable-outside defect in Entry 20 remains open.
+
+Compared with the prior 5.1.4 run, 14 previously failing bound queries now
+have zero FATALs, including q5866; no clean query became FATAL. One query
+that still fails, q3718, retains its syntax FATAL while its walker-exception
+message changes. Canonical AST hashes changed for 36 queries with zero FATALs
+in both 5.1.4 runs; their separate audit is recorded below. The 73 failures
+shared with 5.0.0 and the 27
+5.0.0-only failures are status comparisons, not individual semantic
+approvals. Local-only results and per-case IDs are under
+`comparison/runs/bound514-20261113-fresh/`.
+
+**Bound-query DATEADD AST audit (2026-11-13):** All 36 changed ASTs were
+captured from the historical and current 5.1.4 JARs, with hashes matching the
+saved corpus results. All 100 DATEADD calls migrate from generic `function`
+nodes to the expected `datetime_function` representation. Applying only that
+transformation to each historical AST reproduces the entire current AST.
+Function names and authored part text match the SQL, and all 200 increment
+and value expressions match independent parenthesized PREDICAND parses.
+All 36 original queries and all 200 probes have zero syntax errors, reach EOF,
+and report zero FATALs on the current JAR.
+
+Zero FATALs does not mean zero diagnostics: 12 queries still emit 18
+`AMBIGUOUS_COLUMN_REFERENCE` SEVERE_WARNINGs and 15
+`UNRESOLVED_UNQUALIFIED_COLUMNS` ERROR diagnostics. These concern
+`acs_contact_id`, `ST_DT_APP_STU_GEN_ACSL`, and `ST_DT_APP_PAR_GEN_ACSL`,
+not DATEADD part keywords; the same unresolved references existed on the
+historical 5.1.4 JAR. Three queries lose historical phantom DATEADD-part
+diagnostics (`year` in q3673, `day` in q4155 and q5499). The audit validates
+the AST migration, not the unresolved references, dictionaries, lineage,
+generation, or release approval. Local-only per-case evidence and captured
+diagnostics are under `comparison/runs/datetime-bound-ast-audit-20261113/`.
+
+**5.0.0 diagnostic comparison:** All 12 of these queries also have zero
+FATALs and zero syntax errors on 5.0.0-3. Its exposed parser message lists
+are empty for each; unlike 5.1.4, that version does not expose the same
+structured diagnostic API. Thus FATAL status matches, but the available
+outputs do not establish matching diagnostic behavior. The owner approves
+all 12 queries (q4139–q4143, q4149–q4151, q4155, q4157, q4159, and q4160)
+for the 5.0.0-to-5.1.4 switch as-is. Their recorded direct-API diagnostics include both
+`AMBIGUOUS_COLUMN_REFERENCE` SEVERE_WARNING and
+`UNRESOLVED_UNQUALIFIED_COLUMNS` ERROR for `acs_contact_id`; q4157, q4159,
+and q4160 also
+report these diagnostics for `ST_DT_APP_STU_GEN_ACSL` and
+`ST_DT_APP_PAR_GEN_ACSL`. Approval does not change their direct-API severities.
+All 12 have now received the owner's release disposition.
+
+**RMCP presentation check (q4151):** Direct `SqlParserAccess` reports the
+unresolved-column diagnostic as ERROR on both the RMCP-bundled 5.1.3 JAR and
+the current 5.1.4 JAR. Through RMCP's MCP service, both JARs instead return
+that diagnostic as WARNING along with the ambiguity SEVERE_WARNING; both
+report zero FATALs. The MCP adapter normalizes AST-walker ERRORs to WARNING,
+so the user's warning-only RMCP result and the direct-parser audit are
+consistent with their different delivery paths. This check is for q4151;
+do not infer that every diagnostic from every query has been compared through
+both paths.
+
+**Bare TUPLE review (2026-11-13):** The owner accepts the 484 cases that
+FATAL on both parsers as bare SELECT inputs and accepts the 471 that were
+FATAL-free on both historical parsers when wrapped. This is acceptance of those
+comparison outcomes, not a claim that the 471 were freshly re-run or checked
+for every warning, AST, or consumer behavior.
+
+Of the other 13, the current JAR reproduced the historical 5.1.4 FATAL counts:
+
+- Eleven (s37279, s87311, s87868–s87875, s87905) include a trailing semicolon.
+  The historical wrapper placed it inside the closing parenthesis. The legacy
+  parser reports two FATALs; current 5.1.4 reports no FATALs but emits two
+  `RECOVER_INLINE` warnings and leaves the semicolon as its current token.
+  **This is a comparison-input artifact, not an established difference for the
+  original snippets.** The owner reports successful unwrapped parses in RMCP
+  with 5.1.3 while selecting the TUPLE endpoint, and confirms that applications
+  will not wrap these statements without removing the semicolon. **Owner
+  disposition: all eleven are accepted as successfully matched for the snippet
+  comparison**; the artificial wrapper differences require no remediation.
+  Replaying all eleven original inputs at the SQL endpoint produced zero
+  FATALs on each of 5.0.0-3, RMCP's bundled 5.1.3, and current 5.1.4.
+  At the TUPLE endpoint, the same unwrapped inputs produced FATALs on all
+  three versions in the standalone replay. This differs from the owner's RMCP
+  observation and is retained as a test-path distinction, not a rejected
+  snippet-comparison case. In the inspected RMCP extension, highlighted-editor
+  validation defaults to SQL even if a different endpoint is selected; the
+  owner's exact validation path has not been independently established.
+  Removing that terminal semicolon *for a separate comparison input* before
+  wrapping produced zero FATALs and matching AST hashes on both parsers in all
+  eleven cases; current 5.1.4 reached EOF with no diagnostics.
+- s84947 projects `extended_prop_min_value` twice: current 5.1.4 emits a
+  duplicate-interface FATAL, whereas 5.0.0-3 did not. **Accepted by the
+  owner:** the 5.1.4 FATAL prevents a duplicate-column runtime failure.
+- s85047 references `sub.<Source Contact ID>` in a join while `sub` projects
+  `sourcecontact_id AS source_contact_id`: current 5.1.4 emits a
+  qualified-column-not-found FATAL and a separate ambiguous-column
+  SEVERE_WARNING; 5.0.0-3 reported no FATAL. The owner confirmed the qualified
+  column-variable FATAL as a parser defect; fix and parity gate: **Entry 20**.
+
+**Snippet-comparison disposition:** The owner considers the reviewed snippet
+comparison satisfied except for the qualified column-variable defect in
+**Entry 20**, which remains the outstanding parity remediation. This disposition
+includes the eight records with unrecognized types (s37280–s37286 and s77528):
+the owner considers them invalid extract records and excludes them as parity
+blockers for either version. Neither parser was tested on these records, so
+this is an accepted data disposition, not a measured parser outcome. The
+disposition does not claim that the broader Entry 1 corpus, dialect, lineage,
+and consumer checks are complete.
+The original inputs remain unchanged; local-only replay evidence is under
+`comparison/runs/tuplewrap-differences-20261113/`,
+`comparison/runs/tuple-semicolon-514-20261113/`, and
+`comparison/runs/tuple-semicolon-5003-20261113/`.
+
+**DATEADD AST audit (2026-11-13):** All 121 changed snippets are individually
+approved as DATEADD AST migration fixtures for dependent-application testing
+(117 PREDICAND, three CONDITION, one TUPLE; 128 DATEADD calls). Captured AST
+hashes matched both saved runs; each whole-tree difference matched the expected
+generic-function-to-`datetime_function` transformation. Authored function
+names and levels matched their AST metadata; 256 independently parsed,
+parenthesized increment/value operands matched the embedded ASTs. All 121
+original snippets had zero syntax errors and FATALs. The per-case disposition,
+original endpoint inputs, and historical/current AST fixtures are in the
+local-only archive under `comparison/runs/datetime-ast-audit-20261113/`.
+Approval is limited to this AST migration; it does not certify dictionary,
+lineage, dialect, generator behavior, other pre-existing AST semantics, or the
+full corpus gate above.
+
+**Separate pre-existing PREDICAND finding:** Standalone `-1 * 30` silently
+produces the AST for `-1` with zero syntax errors and FATALs on both the
+historical postfix and current JAR; `(-1 * 30)` preserves the multiplication.
+The audited embedded DATEADD expressions retain their full operands, and no
+extract PREDICAND is exactly the standalone example. The owner does not regard
+this synthetic example as a blocker for certifying the snippet extract. The
+general standalone endpoint behavior remains outside the AST audit.
 
 ### Local corpus evidence and replay tools (archived 2026-11-11)
 
@@ -1844,6 +2037,89 @@ The old Phase 2 plan is otherwise accounted for: wildcard set-op handling (2.1),
 For **19.1**, use a physical table in place of `{{ ref('sort_orders') }}` so the Phase 2 grammar/walker behavior is independently testable. Add the Jinja-authored variant when **Entry 5.1** lands. Require no syntax recovery, no `QUALIFIED_COLUMN_NOT_FOUND` for `pso` or `default_stream`, and a seven-column set-op interface. Keep a missing-alias negative control.
 
 For **19.2**, assert AST, interface, dictionaries, symbol table, and `within_group_ordered_by` lineage. Do not add unsupported aggregate names merely to satisfy the old prose; test the four aggregates admitted by `ordered_aggregate_function` (`LISTAGG`, `ARRAY_AGG`, `PERCENTILE_CONT`, `PERCENTILE_DISC`) and align dialect restrictions with current target documentation.
+
+---
+
+## Entry 20 — Qualified column variables on visible query aliases
+
+**Status:** Not started — confirmed 2026-11-13; **required for 5.0.0 → 5.1.4
+extract parity**.  
+**Kind:** Defect / resolution and diagnostic enhancement.
+
+**Evidence:** The original s85047 TUPLE snippet uses
+`sub.<Source Contact ID>` in a join against a visible derived-table alias.
+5.0.0-3 reports no FATAL; current 5.1.4 reports
+`QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS` because it looks up the
+column-variable placeholder as a literal output name. The separate
+ambiguous-column warning in that snippet is not automatically resolved by
+this entry. The original input and comparison are in the local-only archive
+under `comparison/runs/tuplewrap-differences-20261113/`.
+
+**Reduced reproduction (verified against both JARs):**
+
+```sql
+SELECT sub.id
+FROM (SELECT id FROM t) sub
+JOIN b ON sub.<Contact ID> = b.<Contact ID>
+```
+
+Through `SQL` this has zero FATALs on 5.0.0-3 and one on current 5.1.4:
+`Qualified column '<Contact ID>' ... was not found in output interface of query
+alias 'sub'.` The AST identifies `sub.<Contact ID>` as a `column` substitution,
+not a literal column. Parenthesizing the query and using the `TUPLE` endpoint
+reproduces the same difference. An even smaller SELECT-list variant is
+`SELECT sub.<Contact ID> FROM (SELECT id FROM t) sub`. The synthetic inputs,
+both JAR results, and the typed-substitution AST are retained locally under
+`comparison/runs/s85047-qualified-variable-20261113/`.
+
+**Goal and resolution policy:**
+
+- Recognize the typed, qualified column substitution in column resolution.
+  Once the qualifier is proven visible under the existing scope rules, do not
+  FATAL merely because the placeholder name is absent from that query alias's
+  interface. Its eventual binding must name an actual exported column.
+- Emit a **warning** for this deferred check,
+  identify the variable, query alias, and source location, and explain the
+  binding requirement. Do not present an unresolved variable as a validated
+  concrete column. Whether and how binding is validated after substitution is
+  a separate consumer/generation concern; do not claim it already happens.
+- Preserve typed substitution collection, AST, dictionaries, symbol-table
+  lineage, scope visibility, and normal handling of actual column names.
+  Continue to FATAL for a missing or invisible qualifier and for a concrete
+  column absent from a closed query interface. Do not suppress unrelated
+  diagnostics, including s85047's ambiguity warning.
+- This entry covers the **variable-outside** form. A concrete column read
+  outside a query that exports a variable without a literal alias is a
+  distinct case; do not automatically relax its validation.
+
+**Phases and acceptance:**
+
+1. Trace how typed substitutions and source qualifiers reach the resolution
+   and diagnostic paths; reuse existing scope and diagnostic machinery.
+2. Implement the targeted deferral and the warning described above. Verify
+   `SQL` and `TUPLE`, SELECT and JOIN/ON placements, and visible
+   derived-table and CTE aliases; exercise physical sources and nested scopes
+   as controls.
+3. Keep negative controls: `sub.missing` against
+   `(SELECT id FROM t) sub` still FATALs; `ghost.<Contact ID>` with no visible
+   `ghost` still FATALs; an inaccessible sibling or child alias remains
+   invisible. Check substitutions and real columns in interfaces,
+   dictionaries, and lineage without inventing a resolved column name.
+4. Re-run the original s85047 and compare AST, substitutions, diagnostics,
+   and resolution artifacts. Re-evaluate the seven historically classified
+   variable-outside bound queries q5201 and q5286–q5291. The owner approved
+   mirror-image bound queries q5314 and q5335 and snippets s8491 and s8492 for
+   release with fixed-alias or concrete-column author remediation; their
+   original FATALs are not parser fixes. Record results
+   individually; do not presume all Pattern 6 cases have the same disposition.
+5. Re-run the relevant bound-query and snippet comparisons and document any
+   remaining regressions. Update directly affected consumer guidance. Close
+   this entry only when these checks pass; no 5.0.0 → 5.1.4 extract parity
+   sign-off before closure.
+
+**Out of scope:** implementing broader variable binding, weakening concrete
+column or alias validation, automatically accepting the other Pattern 6
+cases, or changing the DATEADD test goldens.
 
 ---
 

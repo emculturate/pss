@@ -13,8 +13,18 @@ PSS 5.1.4 validates SQL that 5.0.0-3 accepted without checking. The saved
 author remediation under the stricter validation contract. This is a historical
 classified count, not a fresh full-corpus total for today's branch. Some cases
 are invalid SQL; others, such as duplicate names in a positional UNION that an
-engine may execute, violate PSS's distinct output-interface contract. Each falls
-into one of seven patterns below, and each pattern has a mechanical fix.
+engine may execute, violate PSS's distinct output-interface contract. Pattern 6
+is now under parser-defect review: its historical count must not be treated as
+an established count of required author fixes. The patterns below retain the
+original classification and possible workarounds.
+
+**Release disposition (2026-11-13):** The owner accepts the remaining
+author-classified issues in Patterns 1–5 and 7 for release with the corrective
+guidance in those sections. The separately approved q5314, q5335, s8491, and
+s8492 have Pattern 6 guidance below. Acceptance does not mean the SQL has
+already been corrected or that 5.1.4 will accept the unchanged records;
+authors must apply the applicable guidance and verify their SQL. Entry 20's
+variable-outside defect remains distinct.
 
 | Pattern | What is wrong | Cases | Distinct templates / bundles |
 |---|---|---|---|
@@ -33,13 +43,14 @@ These are not author errors and are **not** listed in the index. Current
 disposition:
 
 - **Join extension templates.** Templates whose missing aliases are supplied by a `<join_extension.…>` snippet now report SEVERE_WARNING plus `JOIN_EXTENSION_REQUIRED` instead of FATAL (workplan Entry 14). The warning means the join extension must be substituted with a snippet that declares those aliases; it is not optional for that template.
-- **13 of the original 15 parser cases fixed:** set-op/query-variable
+- **13 other original parser cases fixed:** set-op/query-variable
   interfaces (q2084, q2087, q2088, Entry 16), and contextual words/functions
   `position` (q5909, q5910, q5913), `input` (q5390, q5394), `path` (q2090),
   `truncate(...)` (q3399, q3438, q3490, q3546, Entry 18).
-- **One parser case still open:** `DATEADD`/`DATEDIFF` date parts read as
-  columns (q5866, Entry 1). Do not ask authors to rename date-part keywords
-  to work around the defect.
+- **q5866 resolved:** The original bound query was replayed on 2026-11-13
+  with zero diagnostics; its DATEADD parts are metadata, not columns.
+  Broader DATEDIFF/date-time work and remaining corpus semantic checks remain
+  open under Entry 1. Do not ask authors to rename date-part keywords.
 - **One accepted obsolete case:** s82233's array-literal syntax and follow-on
   walker failure occur in an unused bundle. The owner waived remediation;
   this is not delivered general array-literal support.
@@ -369,16 +380,33 @@ Examples and fixes:
 
 ## Pattern 6 — column-name variables across a derived-table boundary (11 cases)
 
+**Status update (2026-11-13):** A qualified column variable used against a
+visible derived-table alias can be incorrectly rejected as a literal missing
+column. The owner identified this as a parser defect and a 5.0.0 parity gate:
+[workplan Entry 20](./sql-grammar-5.1.4-workplan.md#entry-20--qualified-column-variables-on-visible-query-aliases).
+The seven variable-outside bound queries below require re-evaluation when that
+fix lands. The owner approved the mirror-image bound queries q5314 and q5335
+and snippets s8491 and s8492 for release with the author guidance below. The
+original records still produce FATALs until their authors revise them; this
+disposition does not change the parser or claim the SQL has been corrected.
+
 **What the parser reports:** `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS` or `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` where one side is a column-name variable such as `<ACS Contact ID>`.
 
 **Why:** A column-name variable is replaced only at generation time, so the parser cannot know that `<Contact Key>` will become `contact_key`. When the name inside a derived table and the name used outside it are written differently — one as a variable, one as a literal — the parser cannot match them. There are two mirror-image forms:
 
-- **Variable inside, literal outside** (`q5314`, `q5335`, `s8491`, `s8492`):
+- **Variable inside, literal outside** (`q5314`, `q5335`):
 
   ```sql
   LEFT JOIN (SELECT distinct a.<Contact Key>, a.<Dummy Email>
              FROM <[Partner_Data_Platform].[Contact Acquia Crosswalk]> as a) as xwalk
   ON chosen_cont.contact_key = xwalk.contact_key
+  ```
+
+- **Variable inside, literal outside** (`s8491`, `s8492`, abbreviated):
+
+  ```sql
+  SELECT primary_student_id, address_line_1
+  FROM (SELECT a.<Primary Student ID>, ... FROM <[ALR].[Student Address]> AS a) cte
   ```
 
 - **Literal inside, variable outside** (`q5201`, `q5286`–`q5291`):
@@ -388,7 +416,9 @@ Examples and fixes:
   on acs_act.<ACS Contact ID> = …
   ```
 
-**Fix:** inside a derived table or CTE, always give a variable column a literal alias, and outside refer only to that literal name:
+**Author guidance for q5314 and q5335:** If a column variable in a derived
+table or CTE must be referenced by a fixed name outside that scope, give it
+that fixed alias. For the original statement above, use:
 
 ```sql
 LEFT JOIN (SELECT distinct a.<Contact Key> as contact_key, a.<Dummy Email> as dummy_email
@@ -396,11 +426,39 @@ LEFT JOIN (SELECT distinct a.<Contact Key> as contact_key, a.<Dummy Email> as du
 ON chosen_cont.contact_key = xwalk.contact_key
 ```
 
+The `dummy_email` alias is also needed because the outer query references
+`xwalk.dummy_email`. Alternatively, if the column is always named `contact_key`,
+use the concrete column directly instead of the variable:
+
+```sql
+LEFT JOIN (SELECT distinct a.contact_key, a.<Dummy Email> as dummy_email
+           FROM <[Partner_Data_Platform].[Contact Acquia Crosswalk]> as a) as xwalk
+ON chosen_cont.contact_key = xwalk.contact_key
+```
+
+These approaches provide a stable output interface. Authors should validate
+the substituted SQL and confirm the referenced source columns exist. The
+owner accepts q5314 and q5335 for release with this author remediation; the
+original extract records remain unchanged.
+
+**Author guidance for s8491 and s8492:** In the inner SELECT list, replace
+`a.<Primary Student ID>` with `a.<Primary Student ID> AS primary_student_id`
+so the outer reference has a fixed exported name. Alternatively, if the
+source column is always `primary_student_id`, select that concrete column
+instead. Preserve other uses of the variable, including the window partition,
+unless changing them is independently intended. Validate the generated SQL
+and its source columns. Both cases are accepted for release with this guidance;
+the original snippets remain unchanged.
+
+For the distinct variable-outside form, a possible current-parser workaround
+is to use the concrete exported name:
+
 ```sql
 on acs_act.acs_contact_id = …
 ```
 
-This makes the template's interface independent of how the variable is bound. (The parser team may relax this pattern to a SEVERE_WARNING; the rewrite is correct either way.)
+This workaround is not a requirement for the variable-outside form after the
+planned fix. Validate the actual binding against the query interface.
 
 ## Pattern 7 — typos (2 cases)
 
