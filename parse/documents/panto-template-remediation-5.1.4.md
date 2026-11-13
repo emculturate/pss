@@ -146,7 +146,7 @@ they match a supported date/time built-in signature. The key is singular, not
 case, as with ordinary routine calls; its arguments have semantic names rather
 than numbered parameter positions.
 
-For example, the intended representation of `DATEADD(year, 1, created_at)` is:
+For example, the current add-family representation of `DATEADD(year, 1, created_at)` is:
 
 ```text
 {datetime_function={
@@ -156,6 +156,16 @@ For example, the intended representation of `DATEADD(year, 1, created_at)` is:
   value={column={name=created_at}}
 }}
 ```
+
+For a quoted part such as `DaTeAdD('yEaR', 1, a.ts)`, `level` is
+`{canonical=YEAR, text=yEaR, form=STRING}`. The unquoted `yEaR` has the same
+canonical value and text but `form=KEYWORD`. `text` preserves spelling and
+case, not quote delimiters: `STRING` content is decoded, including doubled
+single quotes. SQL generators must use `form` to restore single quotes and
+escape embedded quotes; they must not treat the quoted and unquoted ASTs as
+identical. The parser's SQL generator does not yet handle `datetime_function`.
+See the bundled [grammar consumer guidance](./sql-grammar-extensions-since-2026-01-01.md#dateadd-family-ast-consumer-guidance-514-development)
+for the complete add-family contract and its limitations.
 
 ### New parameter signatures
 

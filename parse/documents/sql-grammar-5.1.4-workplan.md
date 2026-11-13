@@ -814,6 +814,14 @@ not treated as implemented merely because their names have lexer tokens.
     INCREMENT or VALUE to an outer DATEADD. Use aggregates or constrained
     sources to make the scalar formulation sensible, and assert dependent
     query linkage and scope-local inputs.
+32a. **Correlated scalar arguments.** Supply INCREMENT and VALUE independently
+    with single-output, single-row scalar subqueries, including both uncorrelated
+    controls and subqueries that reference columns from the enclosing query.
+    Also put separate correlated scalar subqueries in both slots of one DATEADD.
+    Assert each argument's scalar AST and dependent-query linkage, the inner
+    local and correlated references in their proper scopes and roles, and the
+    outer output lineage without flattening or leaking sibling-query inputs.
+    Use aggregates or otherwise constrain each subquery to a single row.
 33. **CTE producer, consumer, and chain.** Put each anchor in a CTE body and
     consume its output; call DATEADD over raw CTE exports; then carry its result
     through chained CTEs with renamed columns. Assert ordered context visibility,
@@ -1289,7 +1297,7 @@ unit restrictions, dialect affinity, complete sibling mini-suites, and
 snippet permutations remain pending.
 
 **DATEADD scenario progress (2026-11-12):** Placement tests now include
-scenarios 1-29, plus portions of 47. Scenario 5 has all 24 argument-shape combinations except literal/literal,
+scenarios 1-33, including 32a, plus portions of 47. Scenario 5 has all 24 argument-shape combinations except literal/literal,
 each with six literal output goldens. The remaining substitution permutations,
 scope/clause/DML/set-operation matrix, and affinity/reset coverage are not yet
 complete. Scenario 18 compares the registry against the Snowflake DATEADD
@@ -1297,12 +1305,28 @@ parts table and tests all 62 canonical and alias spellings in 11 full-golden
 parser batches. Scenario 48 depends on DATEADD dialect affinity, which is not yet
 implemented. Positive cases use six literal output goldens; ambiguity cases
 assert the existing source-position diagnostics.
+Scenario 16 includes mixed variable kinds alongside ordinary columns in each
+argument independently and in both together. Scenario 19 includes quoted
+canonical and alias spellings as well as unquoted forms.
 Scenarios 20-28 cover level-like columns, invalid and nested levels, numeric
 expressions, repeated inputs, ordinary-function nesting, nested DATEADD, and
 CASE. The `epoch_second` control is accepted by EXTRACT with the existing
 Snowflake dialect warning and rejected as a DATEADD part.
 Scenario 29 covers all three DATEADD anchors as derived-table producers,
 including child-to-parent output lineage and the joined anchor's filter inputs.
+Scenario 30 covers DATEADD consuming arguments through one derived table and
+two renamed layers, with fatal diagnostics for hidden leaf names in either slot.
+Scenario 31 covers the three anchor shapes in joined SELECT and ON expressions,
+and in derived tables on both sides of INNER and LEFT JOINs; output and filter
+dependencies are asserted separately.
+Scenario 32 covers DATEADD inside a single-row scalar SELECT and uncorrelated
+scalar aggregates supplying INCREMENT and VALUE independently. These two
+argument tests are also the uncorrelated controls for scenario 32a, which adds
+correlated scalar aggregates independently in each argument and in both together.
+Their local inputs, outer references, filters, and dependent-query links are
+asserted in their respective scopes.
+Scenario 33 covers the three anchor shapes as CTE producers, DATEADD over raw
+CTE exports, and a renamed CTE chain with ordered visibility and lineage.
 Nested qualified column substitutions in both DATEADD formulas are also
 covered with missing source aliases: they remain fatal without a join extension
 and become severe warnings with a required-extension warning when one is present.

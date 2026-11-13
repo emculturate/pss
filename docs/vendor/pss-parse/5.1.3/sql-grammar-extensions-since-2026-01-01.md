@@ -1,6 +1,6 @@
 # SQL grammar, AST, and validation changes since 2026-01-01
 
-**Reviewed through:** 2026-11-11, branch `Fall-2026-Extensions`, current 5.1.4-1 development line.
+**Reviewed through:** 2026-11-12, branch `Fall-2026-Extensions`, current 5.1.4-1 development line.
 
 **Scope:** Grammar and lexer changes since the last pre-2026 snapshot
 (`f49203f`, 2025-12-31), plus consumer-visible summer/fall AST, symbol-table,
@@ -54,7 +54,7 @@ coverage. IDs U01-U27 are shared with the consumer checklist.
 | U16 | Grouping combinators and ALL/DISTINCT AST | Structured ROLLUP/CUBE/GROUPING SETS and clause-level `option` values, not just flat column lists |
 | U17 | Table-function arguments and row sources | Literal keyword arguments are scalarized; named arguments, lateral sources, and generic table functions need traversal |
 | U18 | Arithmetic, casts, search/scalar functions, predicates, bare values | Broader expression shapes; bare value expressions must not become physical columns; SQL UNIQUE predicate removed |
-| U19 | EXTRACT and DATE_PART FROM | Dedicated `extract` contract, part form, invocation discriminator, typed literal sources; distinct from planned datetime AST |
+| U19 | EXTRACT and DATE_PART FROM | Dedicated `extract` contract, part form, invocation discriminator, typed literal sources; distinct from the add-family datetime AST |
 | U20 | Per-statement Snowflake/Postgres affinity | Warnings/counters identify target dependence; mixed affinity is FATAL; state resets between script statements |
 | U21 | SELECT-list expression subquery scope fix (November Entry 13) | Restored scalar `lookup` wrapper; private subquery columns no longer leak into outer output lineage |
 | U22 | Join-extension diagnostic deferral (November Entry 14) | Specific missing-table FATALs become severe warnings plus `JOIN_EXTENSION_REQUIRED`; whole-query approximation |
@@ -115,8 +115,8 @@ coverage. IDs U01-U27 are shared with the consumer checklist.
   Table-function literal keyword arguments are scalarized rather than exposed
   as nested literal wrappers. EXTRACT/DATE_PART FROM uses `extract` with
   `part`, `part_form`, `source`, optional `source_type`, and DATE_PART's
-  `invocation` discriminator. These contracts remain separate from the planned
-  `datetime_function` node.
+  `invocation` discriminator. These contracts remain separate from the current
+  add-family `datetime_function` node.
 - **Dialect and bare-value handling:** Existing statement-level dialect
   diagnostics were added in August. Shared constructs remain neutral;
   dialect-specific grammar/parts use the existing collector, and mixed
@@ -168,13 +168,60 @@ is implied.
   VS Code testing-extension run on configured JDK 21 reports **2,643 passed,
   0 failed**. Phase 1 / Slice A is complete, not the date/time feature itself.
 
-### Planned work and limitations as of 2026-11-11
+### DATEADD-family AST: consumer guidance (5.1.4 development)
 
-The common grammar rule and AST key **`datetime_function`**, semantic
-signatures, part registry, and new add/diff/truncation/Postgres families are
-approved but **not implemented**. q5866's date-part-as-column regression remains
-open under Entry 1. The [consumer date/time section](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-datetime-ast-changes-planned)
-describes the future shape, not current output.
+The current development branch emits a dedicated `datetime_function` node for
+unqualified built-in `DATEADD`, `TIMEADD`, and `TIMESTAMPADD` calls:
+
+```text
+DaTeAdD('yEaR', 1, a.ts)
+{datetime_function={
+  function_name=DaTeAdD,
+  level={canonical=YEAR, text=yEaR, form=STRING},
+  increment={literal=1},
+  value={column={name=ts, table_ref=a}}
+}}
+```
+
+`function_name` retains the authored case. Dispatch on it case-insensitively;
+the add-family SQL argument order is `level`, `increment`, `value`, regardless
+of map iteration order. Qualified same-name functions such as `custom.dateadd`
+remain generic function calls.
+
+The `level` fields have distinct purposes:
+
+- `canonical` is the uppercase registry-normalized part, such as `YEAR` or
+  `MONTH`, for interpreting the part's meaning. An AST alone does not prove a
+  valid part: inspect diagnostics, including `INVALID_DATETIME_PART` FATAL.
+- `text` retains the authored spelling and case, including aliases. For a
+  `STRING`, it is the decoded content **without** the surrounding single
+  quotes; doubled single quotes inside the literal are decoded to one quote.
+- `form` records whether the original part was a `KEYWORD`, `IDENTIFIER`, or
+  `STRING`. For example, `DaTeAdD(yEaR, ...)` also has `text=yEaR` and
+  `canonical=YEAR`, but has `form=KEYWORD`, not `STRING`. Use `form`, not the
+  contents of `text`, to distinguish the quoted and unquoted cases.
+
+Consumers generating SQL should preserve `function_name` and `level.text`, use
+the signature's argument order, emit `KEYWORD` and `IDENTIFIER` text without
+string quotes, and emit `STRING` text as a single-quoted SQL literal with
+embedded single quotes doubled. Do not replace an authored alias with its
+canonical name when preserving source spelling. The current SQL generator
+does **not** yet handle `datetime_function`; this is guidance for consumers,
+not a claim of parser-provided round-trip generation.
+
+`level` is metadata, not a column reference. Traverse `increment` and `value`
+as ordinary expressions: their column references and substitutions retain
+normal typing, resolution, dictionaries, and lineage. Do not exclude a real
+column merely because its name is also a date part.
+
+### Planned work and limitations as of 2026-11-12
+
+The add-family grammar, AST, and part registry are present, but other new
+date/time families and the approved EXTRACT/DATE_PART unification remain
+unfinished. Existing EXTRACT/DATE_PART output still uses `extract`.
+q5866's date-part-as-column regression remains open under Entry 1. The
+[consumer date/time section](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-datetime-ast-changes-planned)
+distinguishes the implemented add family from the planned wider contract.
 
 Do not promote the following to delivered support: Entry 2 quoted unaliased
 PIVOT outputs; Entry 3 full PARSE_* / colon semi-structured access; Entry 4 general
