@@ -1278,6 +1278,154 @@ implemented. Deliver incrementally with Slices B-E, not as one large rewrite.
     with timestamp operands and distinct left/right dependencies. Include its
     own invalid part, unqualified success, and ambiguity per operand; preserve
     invocation and do not duplicate INTERSECT/context suites.
+
+#### Entry 1 execution checkpoint (2026-11-14): diff-family implementation plan (actions 71-73)
+
+This checkpoint defines the concrete implementation and test inventory for the
+next milestone: `DATEDIFF` / `TIMEDIFF` / `TIMESTAMPDIFF` with
+`level/left/right` shaping and full left-right visibility validation.
+
+**Status at checkpoint**
+- DATEADD family milestone is complete through the scenario-65 boundary and
+  validated in `SqlEventWalkerDatetimeFunctionPlacementTests`.
+- Next executable slice is the diff-family block before starting truncation
+  families.
+
+**Implementation plan (code changes)**
+1. **Grammar routing and parser productions**
+   - Ensure each diff invocation binds to dedicated datetime-function rules and
+     preserves invocation name text/case.
+2. **Walker shaping**
+   - Build `datetime_function={function_name, level, left, right}` in SQL
+     argument order.
+   - Stamp predicand substitutions in `left` and `right` exactly as in add-family
+     expression slots.
+3. **Part/level validation**
+   - Reuse canonical registry + alias normalization for `level`.
+   - Emit family-specific invalid-part diagnostics at the level token location.
+4. **Resolution/collection contracts**
+   - Preserve existing table/query dictionary collection behavior for both
+     expression slots; never collect `level` as a source column.
+   - Preserve existing ambiguity/unresolved/hidden-interface diagnostics.
+5. **Dialect affinity**
+   - Register diff-family hits through the existing statement dialect collector;
+     preserve mixed-dialect FATAL behavior and SCRIPT statement reset semantics.
+6. **Regression guard**
+   - Keep schema-qualified same-name UDF invocations generic (not datetime-family)
+     unless the grammar specifically routes them as built-ins.
+
+**Realistic-context test rule (applies to all scenarios below)**
+- Every scenario should include lightweight natural SQL context around the
+  target function: add 1-3 nearby non-target expressions/columns and at least
+  one benign surrounding clause pattern (for example extra SELECT projections,
+  JOIN filters, COALESCE/CASE wrapper, WHERE conjunct, ORDER BY alias use).
+- Keep this deterministic (stable SQL text), not random at runtime, so goldens
+  remain reproducible while still surfacing side effects.
+
+**Diff-family scenario catalog (96 cases; IDs DF-01..DF-96)**
+
+**A. Signature and level metadata (DF-01..DF-12)**
+- DF-01 DATEDIFF baseline with qualified `left/right`.
+- DF-02 DATEDIFF unqualified one-source operands.
+- DF-03 TIMEDIFF baseline.
+- DF-04 TIMESTAMPDIFF baseline.
+- DF-05 Canonical shared levels captured in metadata.
+- DF-06 Alias level spellings normalize but preserve authored text.
+- DF-07 Quoted level (`STRING` form) preserved.
+- DF-08 Identifier-form level preserved.
+- DF-09 Invalid identifier level FATAL at level token.
+- DF-10 Invalid quoted level FATAL at level token.
+- DF-11 Mixed-case invocation name preserved.
+- DF-12 Distinct `left/right` order preserved in AST and lineage.
+
+**B. Left/right argument-shape matrix (DF-13..DF-37)**
+- 25 explicit combinations using shapes `L`, `CQ`, `CU`, `FQ`, `FU`
+  crossed for left x right.
+- Include all four simple qualification pairs (`CQ/CQ`, `CQ/CU`, `CU/CQ`,
+  `CU/CU`) and both formula-on-one-side / formula-on-both-sides variants.
+- DF-13..DF-17 left `L` x right `L/CQ/CU/FQ/FU`
+- DF-18..DF-22 left `CQ` x right `L/CQ/CU/FQ/FU`
+- DF-23..DF-27 left `CU` x right `L/CQ/CU/FQ/FU`
+- DF-28..DF-32 left `FQ` x right `L/CQ/CU/FQ/FU`
+- DF-33..DF-37 left `FU` x right `L/CQ/CU/FQ/FU`
+
+**C. Ambiguity and visibility failures (DF-38..DF-49)**
+- DF-38 Ambiguous unqualified `left`.
+- DF-39 Ambiguous unqualified `right`.
+- DF-40 Both sides ambiguous (distinct names).
+- DF-41 Unresolved unqualified `left`.
+- DF-42 Unresolved unqualified `right`.
+- DF-43 Unknown alias on `left`.
+- DF-44 Unknown alias on `right`.
+- DF-45 Hidden non-exported derived column in `left`.
+- DF-46 Hidden non-exported derived column in `right`.
+- DF-47 Missing derived export name in one slot.
+- DF-48 Missing CTE export name in one slot.
+- DF-49 Overlapping derived/CTE exports trigger ambiguity.
+
+**D. Substitutions in left/right trees (DF-50..DF-67)**
+- DF-50 Predicand substitution in `left` only.
+- DF-51 Predicand substitution in `right` only.
+- DF-52 Predicand substitutions in both slots.
+- DF-53 Qualified column substitution in `left` only.
+- DF-54 Qualified column substitution in `right` only.
+- DF-55 Column substitutions in both slots.
+- DF-56 Mixed kinds: predicand-left / column-right.
+- DF-57 Mixed kinds: column-left / predicand-right.
+- DF-58 Predicand substitutions inside `left` formula.
+- DF-59 Predicand substitutions inside `right` formula.
+- DF-60 Column substitutions inside `left` formula.
+- DF-61 Column substitutions inside `right` formula.
+- DF-62 Mixed substitutions + ordinary columns in `left` formula.
+- DF-63 Mixed substitutions + ordinary columns in `right` formula.
+- DF-64 Mixed substitutions in both formulas.
+- DF-65 Joined-source substitution typing stays isolated.
+- DF-66 Missing qualified column substitution remains fatal without join extension.
+- DF-67 Same reference with join extension follows existing defer/warning policy.
+
+**E. Nested and sibling isolation (DF-68..DF-76)**
+- DF-68 DATEDIFF nested in ordinary function argument #1.
+- DF-69 DATEDIFF nested in ordinary function argument #2.
+- DF-70 Ordinary function nested in `left`.
+- DF-71 Ordinary function nested in `right`.
+- DF-72 Nested diff in `left` with valid outer diff.
+- DF-73 Nested diff in `right` with valid outer diff.
+- DF-74 Invalid inner level does not contaminate sibling diff expression.
+- DF-75 Repeated references preserve existing occurrence semantics.
+- DF-76 Distinct sibling diff outputs retain independent lineage.
+
+**F. Producer/consumer and scope propagation (DF-77..DF-86)**
+- DF-77 Derived-table producer exports diff result lineage.
+- DF-78 Derived-table consumer computes diff from exports.
+- DF-79 Two-layer derived rename chain.
+- DF-80 CTE producer lineage.
+- DF-81 CTE consumer lineage.
+- DF-82 Chained CTE rename path.
+- DF-83 Scalar subquery supplies `left`.
+- DF-84 Scalar subquery supplies `right`.
+- DF-85 Correlated scalar in `left`.
+- DF-86 Correlated scalar in `right`.
+
+**G. Clause/DML/set-op placement (DF-87..DF-94)**
+- DF-87 WHERE placement.
+- DF-88 HAVING placement.
+- DF-89 ORDER BY expression + output alias placement.
+- DF-90 Window PARTITION/ORDER placement.
+- DF-91 INSERT ... SELECT placement.
+- DF-92 UPDATE (SET and WHERE) placement.
+- DF-93 DELETE (WHERE and EXISTS) placement.
+- DF-94 UNION/EXCEPT/INTERSECT + nested set-op branch isolation.
+
+**H. UDF controls and statement reset (DF-95..DF-96)**
+- DF-95 Schema-qualified same-name UDF remains generic.
+- DF-96 SCRIPT multi-statement reset and per-statement affinity isolation.
+
+**Per-scenario assertion contract**
+- Full literal `assertEquals` goldens for AST/interface/substitutions/table
+  dictionary/query dictionary/symbol table.
+- Exact diagnostic assertions (code, severity, message, token text, line/char,
+  diagnostic count) for all negative/edge cases.
+- Symbol-path checks for key left/right scope buckets and set-op interfaces.
 74. **Build/test DATE_TRUNC (primary, D).** Primary for leading part metadata
     plus one expression: `level/value`. Use valid parts and date-valued formula
     anchors; include invalid part, unqualified VALUE, and ambiguous VALUE.

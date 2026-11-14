@@ -1584,6 +1584,7 @@ numeric_primary
 
 datetime_function
   : snowflake_datetime_add_expression
+  | snowflake_datetime_diff_expression
   ;
 
 snowflake_datetime_add_expression
@@ -1595,6 +1596,17 @@ snowflake_datetime_add_expression
 
 snowflake_datetime_add_function
   : DATEADD | TIMEADD | TIMESTAMPADD
+  ;
+
+snowflake_datetime_diff_expression
+  : function=snowflake_datetime_diff_function
+    LEFT_PAREN level=datetime_part
+    COMMA left_operand=value_expression
+    COMMA right_operand=value_expression RIGHT_PAREN
+  ;
+
+snowflake_datetime_diff_function
+  : DATEDIFF | TIMEDIFF | TIMESTAMPDIFF
   ;
 
 sign

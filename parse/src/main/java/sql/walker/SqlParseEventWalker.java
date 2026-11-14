@@ -11117,6 +11117,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitSnowflake_datetime_diff_expression(
+			SQLSelectParserParser.Snowflake_datetime_diff_expressionContext ctx) {
+		String functionName = ctx.function.getText();
+		int ruleIndex = ctx.getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		String text = ctx.level.getText();
+		String form;
+		if (ctx.level.character_literal() != null) {
+			text = stripSqlCharacterStringLiteral(text).replace("''", "'");
+			form = MUMBLE_EXTRACT_PART_FORM_STRING;
+		} else {
+			form = ctx.level.identifier() != null ? "IDENTIFIER" : MUMBLE_EXTRACT_PART_FORM_KEYWORD;
+		}
+		if (DatetimePartRegistry.findCanonical(text).isEmpty()) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+		}
+		Map<String, Object> level = new LinkedHashMap<>();
+		level.put(MUMBLE_DATETIME_PART_CANONICAL_KEY, DatetimePartRegistry.canonicalize(text));
+		level.put(MUMBLE_DATETIME_PART_TEXT_KEY, text);
+		level.put(MUMBLE_DATETIME_PART_FORM_KEY, form);
+
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		function.put(MUMBLE_DATETIME_LEVEL_KEY, level);
+		function.put(MUMBLE_LEFT_FACTOR_KEY,
+				walker.stampPredicandSubstitutionsInValueSubtree(subMap.get("3")));
+		function.put(MUMBLE_RIGHT_FACTOR_KEY,
+				walker.stampPredicandSubstitutionsInValueSubtree(subMap.get("4")));
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, function);
+	}
+
+	@Override
+	public void exitSnowflake_datetime_diff_function(
+			SQLSelectParserParser.Snowflake_datetime_diff_functionContext ctx) {
+	}
+
+	@Override
 	public void exitDatetime_part(SQLSelectParserParser.Datetime_partContext ctx) {
 	}
 
