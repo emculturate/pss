@@ -1480,6 +1480,13 @@ Still to add for this family (**not covered yet**):
 - [ ] **TE-R31..TE-R38:** set-op branch isolation and multi-layer derived/CTE rename-chain regression.
 - [ ] **TE-R39..TE-R44:** schema-qualified same-name UDF controls + SCRIPT statement-reset/mixed-affinity regression.
 
+Minimum parity implementation update (2026-11-14):
+- [x] Implemented a dedicated parity batch in `SqlEventWalkerDatetimeTruncExtractTests` covering:
+  - **TE-C08..TE-C12** core DATE_TRUNC/datetime TRUNC placement (WHERE/HAVING/ORDER BY/window + derived/CTE producer-consumer).
+  - **TE-M01..TE-M24** malformed/diagnostic guards for invalid part fatal positions/messages, ambiguous/unqualified value behavior, hidden/missing derived outputs, and TRUNC generic-vs-datetime controls.
+  - **TE-R19..TE-R30** DML placement guards (INSERT/UPDATE/DELETE) for TRUNC/EXTRACT signatures.
+  - **TE-R39..TE-R44** schema-qualified same-name UDF controls, SCRIPT statement-reset, and mixed Snowflake/Postgres affinity fatal coverage.
+
 Current effective status estimate for this family plan:
 - **Completed:** 28 planned scenarios (core-heavy EXTRACT/DATE_PART + initial DATE_TRUNC/TRUNC happy path)
 - **Remaining:** 68 planned scenarios (malformed + deep regression + DATE_TRUNC/TRUNC placement/diagnostic depth)
@@ -1574,10 +1581,19 @@ Current effective status estimate for this family plan:
 - **Default dialect hook note:** keep zero-arg timestamp family on the standard statement-dialect hooks (Postgres warning by position for these forms; neutral controls for shared `CURRENT_TIMESTAMP`), plus mixed-dialect fatal checks in script/statement reset coverage.
 
 **Per-scenario assertion contract**
+- Use exactly one SQL/query string per JUnit test method. Do not bundle multiple
+  independent queries in one test method; split them so each failure maps to a
+  single query and a single golden set.
 - Full literal `assertEquals` goldens for AST/interface/substitutions/table
   dictionary/query dictionary/symbol table.
 - Exact diagnostic assertions (code, severity, message, token text, line/char,
   diagnostic count) for all negative/edge cases.
+- Do not use permissive assertions (`assertTrue`/`assertFalse` with `contains`,
+  partial substring checks) as a substitute for full-object goldens or exact
+  diagnostic assertions.
+- For every query that intentionally exercises Snowflake-only or PostgreSQL-only
+  grammar, assert the dialect warning by source position (code/severity/message
+  fragment/token/line/char) with the standard diagnostic helpers.
 - Symbol-path checks for key left/right scope buckets and set-op interfaces.
 74. **Build/test DATE_TRUNC (primary, D).** Primary for leading part metadata
     plus one expression: `level/value`. Use valid parts and date-valued formula
