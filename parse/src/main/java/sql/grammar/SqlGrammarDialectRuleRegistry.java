@@ -45,6 +45,14 @@ public final class SqlGrammarDialectRuleRegistry {
 				"snowflake_date_trunc_expression");
 		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_datetime_trunc_expression,
 				"snowflake_datetime_trunc_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_time_slice_expression,
+				"snowflake_time_slice_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_last_day_expression,
+				"snowflake_last_day_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_next_day_expression,
+				"snowflake_next_day_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_previous_day_expression,
+				"snowflake_previous_day_expression");
 	}
 
 	private SqlGrammarDialectRuleRegistry() {

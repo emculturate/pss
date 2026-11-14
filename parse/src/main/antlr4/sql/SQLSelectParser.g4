@@ -1585,6 +1585,8 @@ datetime_function
   | date_part_expression
   | snowflake_date_trunc_expression
   | snowflake_datetime_trunc_expression
+  | snowflake_time_slice_expression
+  | snowflake_day_boundary_expression
   ;
 
 snowflake_datetime_add_expression
@@ -1619,6 +1621,48 @@ snowflake_datetime_trunc_expression
   : function=TRUNC
     LEFT_PAREN datetime_value=value_expression
     COMMA level=datetime_part RIGHT_PAREN
+  ;
+
+snowflake_time_slice_expression
+  : function=TIME_SLICE
+    LEFT_PAREN datetime_value=value_expression
+    COMMA slice_length=value_expression
+    COMMA level=datetime_part
+    (COMMA boundary=snowflake_time_slice_boundary)? RIGHT_PAREN
+  ;
+
+snowflake_time_slice_boundary
+  : character_literal
+  | identifier
+  ;
+
+snowflake_day_boundary_expression
+  : snowflake_last_day_expression
+  | snowflake_next_day_expression
+  | snowflake_previous_day_expression
+  ;
+
+snowflake_last_day_expression
+  : function=LAST_DAY
+    LEFT_PAREN datetime_value=value_expression
+    (COMMA level=datetime_part)? RIGHT_PAREN
+  ;
+
+snowflake_next_day_expression
+  : function=NEXT_DAY
+    LEFT_PAREN datetime_value=value_expression
+    COMMA weekday=snowflake_weekday_token RIGHT_PAREN
+  ;
+
+snowflake_previous_day_expression
+  : function=PREVIOUS_DAY
+    LEFT_PAREN datetime_value=value_expression
+    COMMA weekday=snowflake_weekday_token RIGHT_PAREN
+  ;
+
+snowflake_weekday_token
+  : character_literal
+  | identifier
   ;
 
 sign

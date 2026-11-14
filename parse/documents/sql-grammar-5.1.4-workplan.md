@@ -1511,6 +1511,28 @@ Current effective status estimate for this family plan:
 - **Build/test plan note:** implement in `SqlEventWalkerDatetimeBoundarySliceTests`; keep family-specific negative diagnostics goldened in this class.
 - **Default dialect hook note:** register each Snowflake-only grammar path in `SqlGrammarDialectRuleRegistry`, assert the Snowflake warning at its source position in every diagnostic test, and include mixed-dialect fatal checks in regression coverage.
 
+Minimum parity implementation update (2026-11-14):
+- [x] Added dedicated grammar + walker coverage for `TIME_SLICE`, `LAST_DAY`,
+  `NEXT_DAY`, and `PREVIOUS_DAY` under `datetime_function`.
+- [x] Registered Snowflake-only grammar paths for this family in
+  `SqlGrammarDialectRuleRegistry` so statement-dialect warnings/fatals follow
+  the standard counter/affinity mechanism.
+- [x] Implemented minimum parity suite in
+  `SqlEventWalkerDatetimeBoundarySliceTests` using one query per test method
+  and full literal goldens for AST/interface/substitutions/table dictionary/
+  query dictionary/symbol table/array collectors.
+- [x] Implemented core placement parity set for boundary/slice family:
+  WHERE/HAVING/ORDER BY/window + derived/CTE producer-consumer.
+- [x] Implemented malformed/diagnostic parity set for boundary/slice family:
+  invalid level, invalid boundary, invalid weekday, ambiguous unqualified value,
+  and missing derived output diagnostics (with position/message assertions).
+- [x] Implemented minimum regression parity set for boundary/slice family:
+  INSERT/UPDATE/DELETE placements, schema-qualified same-name UDF generic-path
+  control, SCRIPT statement reset behavior, and mixed-affinity fatal checks.
+- [x] Moved boundary/weekday value sets into shared grammar registry
+  (`SnowflakeDatetimeValueRegistry`) so external consumers can access these
+  validity lists independently of the event walker implementation.
+
 ### Postgres difference/bin/age family plan (DATE_BIN, AGE)
 - **Core functionality scenarios (PG-C01..PG-C18)**
   - DATE_BIN stride/source/origin slot ordering and lineage

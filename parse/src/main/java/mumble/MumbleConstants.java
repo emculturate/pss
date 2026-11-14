@@ -60,6 +60,9 @@ public final class MumbleConstants {
     public static final String MUMBLE_DATETIME_FUNCTION_KEY = "datetime_function";
     public static final String MUMBLE_DATETIME_LEVEL_KEY = "level";
     public static final String MUMBLE_DATETIME_INCREMENT_KEY = "increment";
+    public static final String MUMBLE_DATETIME_SLICE_LENGTH_KEY = "slice_length";
+    public static final String MUMBLE_DATETIME_BOUNDARY_KEY = "boundary";
+    public static final String MUMBLE_DATETIME_WEEKDAY_KEY = "weekday";
     public static final String MUMBLE_DATETIME_PART_CANONICAL_KEY = "canonical";
     public static final String MUMBLE_DATETIME_PART_TEXT_KEY = "text";
     public static final String MUMBLE_DATETIME_PART_FORM_KEY = "form";

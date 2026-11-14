@@ -51,6 +51,7 @@ import sql.SQLSelectParserParser;
 import sql.diagnostics.ExtractDatetimeFieldAffinity;
 import sql.diagnostics.SqlParseDiagnosticService;
 import sql.grammar.DatetimePartRegistry;
+import sql.grammar.SnowflakeDatetimeValueRegistry;
 import sql.grammar.SqlGrammarDialect;
 import sql.grammar.SqlGrammarDialectRuleRegistry;
 import sql.latency.WalkerHotspotProfiler;
@@ -11261,6 +11262,137 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildDatetimeLevelValueFunction(functionName, levelObj, valueObj));
 	}
 
+	@Override
+	public void exitSnowflake_time_slice_expression(
+			SQLSelectParserParser.Snowflake_time_slice_expressionContext ctx) {
+		String functionName = ctx.function.getText();
+		int ruleIndex = ctx.getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object valueObj = subMap.remove("datetime_value");
+		if (valueObj == null) {
+			valueObj = subMap.remove("1");
+		}
+		Object sliceLengthObj = subMap.remove("slice_length");
+		if (sliceLengthObj == null) {
+			sliceLengthObj = subMap.remove("2");
+		}
+		Object levelObj = subMap.remove("level");
+		if (levelObj == null) {
+			levelObj = subMap.remove("3");
+		}
+		Object boundaryObj = subMap.remove("boundary");
+		if (boundaryObj == null) {
+			boundaryObj = subMap.remove("4");
+		}
+		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+		}
+		if (boundaryObj != null && !isSupportedSnowflakeTimeSliceBoundary(boundaryObj)) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT),
+					ctx.boundary == null ? ctx.getStart() : ctx.boundary.getStart());
+		}
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftExtractSourceNode(valueObj)));
+		function.put(MUMBLE_DATETIME_SLICE_LENGTH_KEY,
+				walker.stampPredicandSubstitutionsInValueSubtree(liftExtractSourceNode(sliceLengthObj)));
+		function.put(MUMBLE_DATETIME_LEVEL_KEY, buildDatetimeMetadata(levelObj, true));
+		if (boundaryObj != null) {
+			function.put(MUMBLE_DATETIME_BOUNDARY_KEY, buildDatetimeMetadata(boundaryObj, false));
+		}
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, function);
+	}
+
+	@Override
+	public void exitSnowflake_day_boundary_expression(
+			SQLSelectParserParser.Snowflake_day_boundary_expressionContext ctx) {
+		walker.handleOneChild(ctx.getRuleIndex());
+	}
+
+	@Override
+	public void exitSnowflake_last_day_expression(
+			SQLSelectParserParser.Snowflake_last_day_expressionContext ctx) {
+		String functionName = ctx.function.getText();
+		int ruleIndex = ctx.getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object valueObj = subMap.remove("datetime_value");
+		if (valueObj == null) {
+			valueObj = subMap.remove("1");
+		}
+		Object levelObj = subMap.remove("level");
+		if (levelObj == null) {
+			levelObj = subMap.remove("2");
+		}
+		if (levelObj == null) {
+			levelObj = subMap.remove("3");
+		}
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftExtractSourceNode(valueObj)));
+		if (levelObj != null) {
+			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+				diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+			}
+			function.put(MUMBLE_DATETIME_LEVEL_KEY, buildDatetimeMetadata(levelObj, true));
+		}
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, function);
+	}
+
+	@Override
+	public void exitSnowflake_next_day_expression(
+			SQLSelectParserParser.Snowflake_next_day_expressionContext ctx) {
+		exitSnowflakeWeekdayBoundaryExpression(ctx.function.getText(), ctx.getRuleIndex(),
+				ctx.weekday == null ? null : ctx.weekday.getStart(), ctx.getStart());
+	}
+
+	@Override
+	public void exitSnowflake_previous_day_expression(
+			SQLSelectParserParser.Snowflake_previous_day_expressionContext ctx) {
+		exitSnowflakeWeekdayBoundaryExpression(ctx.function.getText(), ctx.getRuleIndex(),
+				ctx.weekday == null ? null : ctx.weekday.getStart(), ctx.getStart());
+	}
+
+	private void exitSnowflakeWeekdayBoundaryExpression(
+			String functionName,
+			int ruleIndex,
+			Token weekdayToken,
+			Token fallbackToken) {
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object valueObj = subMap.remove("datetime_value");
+		if (valueObj == null) {
+			valueObj = subMap.remove("1");
+		}
+		Object weekdayObj = subMap.remove("weekday");
+		if (weekdayObj == null) {
+			weekdayObj = subMap.remove("2");
+		}
+		if (!isSupportedSnowflakeWeekday(weekdayObj)) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT),
+					weekdayToken == null ? fallbackToken : weekdayToken);
+		}
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftExtractSourceNode(valueObj)));
+		function.put(MUMBLE_DATETIME_WEEKDAY_KEY, buildDatetimeMetadata(weekdayObj, false));
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, function);
+	}
+
+	private boolean isSupportedSnowflakeTimeSliceBoundary(Object boundaryObj) {
+		String text = normalizeExtractPartText(boundaryObj);
+		return SnowflakeDatetimeValueRegistry.isSupportedTimeSliceBoundary(text);
+	}
+
+	private boolean isSupportedSnowflakeWeekday(Object weekdayObj) {
+		String text = normalizeExtractPartText(weekdayObj);
+		return SnowflakeDatetimeValueRegistry.isSupportedWeekday(text);
+	}
+
 	private Map<String, Object> buildExtractDatetimeFunction(String functionName, Object fieldObj, Object sourceObj) {
 		Map<String, Object> function = new LinkedHashMap<>();
 		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
@@ -11274,15 +11406,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private Map<String, Object> buildDatetimeLevelValueFunction(String functionName, Object fieldObj, Object sourceObj) {
 		Map<String, Object> function = new LinkedHashMap<>();
 		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
-		String text = normalizeExtractPartText(fieldObj);
-		Map<String, Object> level = new LinkedHashMap<>();
-		level.put(MUMBLE_DATETIME_PART_CANONICAL_KEY, DatetimePartRegistry.canonicalize(text));
-		level.put(MUMBLE_DATETIME_PART_TEXT_KEY, text);
-		level.put(MUMBLE_DATETIME_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
-		function.put(MUMBLE_DATETIME_LEVEL_KEY, level);
+		function.put(MUMBLE_DATETIME_LEVEL_KEY, buildDatetimeMetadata(fieldObj, true));
 		Object liftedSource = liftExtractSourceNode(sourceObj);
 		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftedSource));
 		return function;
+	}
+
+	private Map<String, Object> buildDatetimeMetadata(Object metadataObj, boolean canonicalizeAsPart) {
+		Map<String, Object> metadata = new LinkedHashMap<>();
+		String text = normalizeExtractPartText(metadataObj);
+		String canonicalText = text == null ? null : text.toUpperCase(Locale.ROOT);
+		metadata.put(MUMBLE_DATETIME_PART_CANONICAL_KEY,
+				canonicalizeAsPart && text != null ? DatetimePartRegistry.canonicalize(text) : canonicalText);
+		metadata.put(MUMBLE_DATETIME_PART_TEXT_KEY, text);
+		metadata.put(MUMBLE_DATETIME_PART_FORM_KEY, classifyExtractPartForm(metadataObj));
+		return metadata;
 	}
 
 	private void emitExtractFieldDialectAffinityWarning(Token anchor, String part) {
