@@ -1420,6 +1420,159 @@ next milestone: `DATEDIFF` / `TIMEDIFF` / `TIMESTAMPDIFF` with
 - DF-95 Schema-qualified same-name UDF remains generic.
 - DF-96 SCRIPT multi-statement reset and per-statement affinity isolation.
 
+**Remaining datetime-family scenario catalogs (planning checkpoint, 2026-11-14)**
+
+> **Test-hosting recommendation (applies to all blocks below):**
+> split the current large datetime placement class into family-focused classes.
+> Suggested classes:
+> - `SqlEventWalkerDatetimeTruncExtractTests`
+> - `SqlEventWalkerDatetimeBoundarySliceTests`
+> - `SqlEventWalkerDatetimePostgresDiffBinAgeTests`
+> - `SqlEventWalkerDatetimeMakeConstructorTests`
+> - `SqlEventWalkerDatetimeJustifyTests`
+> - `SqlEventWalkerDatetimeClockTimestampTests`
+> Keep only shared helpers in the existing placement base/test utilities.
+
+### TRUNC/EXTRACT family plan (DATE_TRUNC, datetime TRUNC, DATE_PART, EXTRACT)
+- **Core functionality scenarios (TE-C01..TE-C28)**
+  - Invocation-shape ASTs for DATE_TRUNC/ TRUNC (`value/level`) and DATE_PART/EXTRACT (`level/value`)
+  - Comma and FROM forms for DATE_PART/EXTRACT with syntax discriminator assertions
+  - Canonical/text/form metadata coverage for keyword/identifier/string part forms
+  - Column lineage for single-source, qualified multi-source, formula-wrapped value expressions
+  - Placement core: SELECT/WHERE/HAVING/ORDER BY + derived/CTE producer-consumer
+- **Malformed/failure scenarios (TE-M01..TE-M24)**
+  - Invalid part diagnostics per invocation (no cross-function collapse)
+  - Ambiguous/unqualified value diagnostics and unresolved behavior checks
+  - Hidden/missing export failures through derived/CTE boundaries
+  - TRUNC one-arg/numeric controls (must remain generic or numeric path as applicable)
+- **Complete regression scenarios (TE-R01..TE-R44)**
+  - Nested/sibling isolation, substitution typing, set-op branch isolation
+  - DML placements (INSERT/UPDATE/DELETE), window wrappers where legal
+  - UDF same-name controls, multi-statement reset, mixed-dialect affinity checks
+  - **Total planned: 96 (TE-01..TE-96)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimeTruncExtractTests`; keep parser/walker regressions targeted to this class while iterating.
+
+**TRUNC/EXTRACT coverage reconciliation (2026-11-14, based on currently passing pre-existing suites)**
+
+Validated suites:
+- `SqlEventWalkerExtractTests`
+- `SqlEventWalkerDatetimeFunctionPlacementTests`
+- `SqlEventWalkerDatetimeFunctionSnippetTests`
+- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
+
+Covered now (**mark complete**):
+- [x] **TE-C01** Invocation-shape AST for EXTRACT/DATE_PART (FROM and comma forms) under `datetime_function`.
+- [x] **TE-C02** Basic DATE_TRUNC and datetime TRUNC happy-path AST shape (`level/value` and `value/level` order normalization).
+- [x] **TE-C03** EXTRACT/DATE_PART part-form coverage (`KEYWORD` + `STRING`) and broad part vocabulary (Snowflake/Postgres/timezone/epoch families).
+- [x] **TE-C04** EXTRACT/DATE_PART source-shape coverage (column, qualified column, typed literal, parentheses, arithmetic, CAST, nested extract).
+- [x] **TE-C05** Predicand substitution coverage for EXTRACT/DATE_PART source trees.
+- [x] **TE-C06** Dialect-affinity warning coverage for EXTRACT/DATE_PART (including comma-form and nested combinations).
+- [x] **TE-C07** Snippet endpoint presence for datetime-function family behavior (via datetime snippet suite; mostly DATEADD, but confirms endpoint compatibility with datetime_function nodes).
+
+Still to add for this family (**not covered yet**):
+- [ ] **TE-C08..TE-C12 (core placement expansion):** explicit WHERE/HAVING/ORDER BY/window/derived+CTE producer-consumer coverage for DATE_TRUNC and datetime TRUNC (not just EXTRACT/DATE_PART).
+- [ ] **TE-M01..TE-M08:** invalid-part fatal diagnostics per invocation for DATE_TRUNC and datetime TRUNC, including token/position/message goldens.
+- [ ] **TE-M09..TE-M14:** ambiguous/unqualified VALUE diagnostics for DATE_TRUNC/TRUNC across one-source/two-source/derived contexts.
+- [ ] **TE-M15..TE-M20:** hidden-export and missing-output visibility failures for DATE_TRUNC/TRUNC through derived/CTE chains.
+- [ ] **TE-M21..TE-M24:** TRUNC controls proving numeric/one-arg TRUNC remains generic (non-datetime) while datetime signature promotes.
+- [ ] **TE-R01..TE-R18:** nested/sibling isolation for mixed EXTRACT/DATE_PART/DATE_TRUNC/TRUNC compositions.
+- [ ] **TE-R19..TE-R30:** DML placement coverage (INSERT/UPDATE/DELETE) for TRUNC/EXTRACT signatures.
+- [ ] **TE-R31..TE-R38:** set-op branch isolation and multi-layer derived/CTE rename-chain regression.
+- [ ] **TE-R39..TE-R44:** schema-qualified same-name UDF controls + SCRIPT statement-reset/mixed-affinity regression.
+
+Current effective status estimate for this family plan:
+- **Completed:** 28 planned scenarios (core-heavy EXTRACT/DATE_PART + initial DATE_TRUNC/TRUNC happy path)
+- **Remaining:** 68 planned scenarios (malformed + deep regression + DATE_TRUNC/TRUNC placement/diagnostic depth)
+
+### Snowflake boundary/slice family plan (TIME_SLICE, LAST_DAY, NEXT_DAY, PREVIOUS_DAY)
+- **Core functionality scenarios (BS-C01..BS-C24)**
+  - TIME_SLICE signature (`value/slice_length/level/[boundary]`) with omitted/explicit boundary
+  - LAST_DAY optional level behavior with omitted-level semantics preserved
+  - NEXT_DAY/PREVIOUS_DAY weekday handling with dedicated weekday metadata
+  - Normal column lineage/visibility in each expression slot
+  - Core placement and two-level derived/CTE propagation
+- **Malformed/failure scenarios (BS-M01..BS-M20)**
+  - Invalid level diagnostics for TIME_SLICE/LAST_DAY only
+  - Invalid boundary diagnostics for TIME_SLICE
+  - Invalid weekday diagnostics for NEXT_DAY/PREVIOUS_DAY
+  - Ambiguous/unqualified value and export-visibility failures
+- **Complete regression scenarios (BS-R01..BS-R36)**
+  - Substitutions in value/length/weekday slots, nested function wrappers
+  - Clause/DML/set-op placement and sibling isolation
+  - UDF controls and statement reset
+  - **Total planned: 80 (BS-01..BS-80)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimeBoundarySliceTests`; keep family-specific negative diagnostics goldened in this class.
+- **Default dialect hook note:** register each Snowflake-only grammar path in `SqlGrammarDialectRuleRegistry`, assert the Snowflake warning at its source position in every diagnostic test, and include mixed-dialect fatal checks in regression coverage.
+
+### Postgres difference/bin/age family plan (DATE_BIN, AGE)
+- **Core functionality scenarios (PG-C01..PG-C18)**
+  - DATE_BIN stride/source/origin slot ordering and lineage
+  - AGE one-arg and two-arg forms with preserved arity semantics
+  - Qualified/unqualified/formula inputs across all slots
+  - Core placement and producer-consumer propagation
+- **Malformed/failure scenarios (PG-M01..PG-M14)**
+  - Ambiguous source/origin for DATE_BIN
+  - AGE left/right ambiguity and hidden-export failures
+  - Invalid-shape controls (arity/signature mismatch paths)
+- **Complete regression scenarios (PG-R01..PG-R24)**
+  - Substitution typing per slot, nested/sibling isolation
+  - DML/set-op placement and mixed-source visibility proofs
+  - UDF controls + statement reset
+  - **Total planned: 56 (PG-01..PG-56)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimePostgresDiffBinAgeTests`; run targeted selectors for AGE vs DATE_BIN sub-batches.
+- **Default dialect hook note:** register each Postgres-only grammar path in `SqlGrammarDialectRuleRegistry`, assert the Postgres warning at its source position in every diagnostic test, and include mixed-dialect fatal checks in regression coverage.
+
+### MAKE constructor family plan (MAKE_DATE, MAKE_TIME, MAKE_TIMESTAMP, MAKE_TIMESTAMPTZ, MAKE_INTERVAL)
+- **Core functionality scenarios (MK-C01..MK-C30)**
+  - Ordered-field AST/lineage for 3-field, 6-field, 6+timezone variants
+  - MAKE_INTERVAL positional and named forms with source-form retention
+  - Field-by-field column/formula/substitution collection
+  - Core placement, derived/CTE propagation, and basic DML wrappers
+- **Malformed/failure scenarios (MK-M01..MK-M24)**
+  - Field-local ambiguity/unqualified failures for each constructor shape
+  - MAKE_INTERVAL component misuse/missing-field shape controls
+  - Hidden-export visibility failures through derived/CTE chains
+- **Complete regression scenarios (MK-R01..MK-R42)**
+  - Full field matrix permutations, nested wrappers, set-op isolation
+  - Multi-layer rename chains and substitution typing in each field family
+  - UDF controls + statement reset
+  - **Total planned: 96 (MK-01..MK-96)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimeMakeConstructorTests`; keep helper builders for repetitive field-matrix assertions local to this class.
+- **Default dialect hook note:** wire constructor-specific dialect affinity through the default statement-dialect collector (rule/semantic registry as applicable), assert by-position warnings where emitted, and cover mixed-dialect fatal behavior.
+
+### JUSTIFY family plan (JUSTIFY_INTERVAL, JUSTIFY_DAYS, JUSTIFY_HOURS)
+- **Core functionality scenarios (JY-C01..JY-C14)**
+  - One-argument interval-expression AST/lineage across all three invocations
+  - Qualified/unqualified/formula/substitution value coverage
+  - Core placement and producer-consumer propagation
+- **Malformed/failure scenarios (JY-M01..JY-M10)**
+  - Ambiguous/unqualified value failures
+  - Hidden-export and missing-output visibility failures
+  - Invocation routing controls (no part-diagnostic mislabeling)
+- **Complete regression scenarios (JY-R01..JY-R20)**
+  - Nested/sibling isolation, DML/set-op placement, statement reset
+  - UDF same-name controls and dialect-affinity checks
+  - **Total planned: 44 (JY-01..JY-44)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimeJustifyTests`; use compact sibling coverage for JUSTIFY_DAYS/HOURS after full JUSTIFY_INTERVAL primaries.
+- **Default dialect hook note:** treat JUSTIFY* as Postgres-only for default affinity registration, assert by-position Postgres warnings in parser-access tests, and include mixed-dialect fatal regression scenarios.
+
+### Clock timestamp family plan (CLOCK_TIMESTAMP, STATEMENT_TIMESTAMP, TRANSACTION_TIMESTAMP, TIMEOFDAY)
+- **Core functionality scenarios (CK-C01..CK-C14)**
+  - Zero-argument AST construction and invocation identity per function
+  - Independent alias outputs and no-input lineage invariants
+  - Core placement in SELECT/ORDER/GROUP-compatible wrappers
+- **Malformed/failure scenarios (CK-M01..CK-M10)**
+  - Signature misuse / argument-introduction rejection paths
+  - UDF same-name controls and function-routing protections
+  - Mixed-affinity fatal checks where statement rules require
+- **Complete regression scenarios (CK-R01..CK-R20)**
+  - Derived/CTE propagation, DML/set-op placement where valid
+  - Multi-statement reset and sibling isolation
+  - CURRENT_TIMESTAMP neutral controls to prevent false family extension
+  - **Total planned: 44 (CK-01..CK-44)**
+- **Build/test plan note:** implement in `SqlEventWalkerDatetimeClockTimestampTests`; enforce explicit “no argument columns/substitutions” assertions in every core case.
+- **Default dialect hook note:** keep zero-arg timestamp family on the standard statement-dialect hooks (Postgres warning by position for these forms; neutral controls for shared `CURRENT_TIMESTAMP`), plus mixed-dialect fatal checks in script/statement reset coverage.
+
 **Per-scenario assertion contract**
 - Full literal `assertEquals` goldens for AST/interface/substitutions/table
   dictionary/query dictionary/symbol table.

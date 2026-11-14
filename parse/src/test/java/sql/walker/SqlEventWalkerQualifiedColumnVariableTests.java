@@ -268,6 +268,9 @@ public class SqlEventWalkerQualifiedColumnVariableTests extends AbstractSqlParse
 	public void qualifiedColumnVariableDatetimeArgumentGoldenTest() {
 		final String query = "SELECT DATEADD(day, 1, sub.<Contact ID>) AS shifted FROM (SELECT id FROM t) sub";
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertDiagnosticAtPosition(extractor.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_add_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
 		assertDiagnosticAtPosition(extractor.getSnippet(), BINDING_WARNING, ParseDiagnostic.Severity.WARNING,
 				"Column variable '<Contact ID>' at (l:1 c:23) must be explicitly bound to a column exported by query alias 'sub'; this binding has not been validated.",
 				"sub.<Contact ID>", 1, 23);
@@ -278,7 +281,7 @@ public class SqlEventWalkerQualifiedColumnVariableTests extends AbstractSqlParse
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@16,65:66='id',<419>,1:65]]}, query1={shifted=[[@12,44:50='shifted',<419>,1:44]]}}", extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={shifted=[[@12,44:50='shifted',<419>,1:44]]}, def_query0={query_dictionary={id=[[@16,65:66='id',<419>,1:65]]}, table_dictionary={t={id=[[@16,65:66='id',<419>,1:65]]}}, interface={id=[{name=id, table_ref=t}]}}, interface={shifted=[{substitution={name=<Contact ID>, type=column}, table_ref=sub}]}, table_alias={sub=query0}}}", extractor.getSymbolTable().toString());
 		Assert.assertEquals("Array Output Collectors are wrong", "{SQL={queryInterface=[shifted]}}", extractor.getArrayOutputCollectorsMap().toString());
-		Assert.assertEquals(1, extractor.getSnippet().getParserDiagnosticList().size());
+		Assert.assertEquals(2, extractor.getSnippet().getParserDiagnosticList().size());
 	}
 
 	@Test

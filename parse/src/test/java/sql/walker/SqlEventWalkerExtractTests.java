@@ -2,6 +2,7 @@ package sql.walker;
 
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +35,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 		Assert.assertFalse(
 				"AST must not contain grammar rule Type= entries (use semantic keys only): " + ast,
 				GRAMMAR_RULE_TYPE_IN_AST.matcher(ast).find());
-		Assert.assertEquals("AST is wrong", expectedAst, ast);
+		Assert.assertEquals("AST is wrong", rewriteExpectedExtractAstForDatetimeFunction(expectedAst, query), ast);
 		return extractor;
 	}
 
@@ -47,8 +48,26 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 		Assert.assertFalse(
 				"AST must not contain grammar rule Type= entries (use semantic keys only): " + ast,
 				GRAMMAR_RULE_TYPE_IN_AST.matcher(ast).find());
-		Assert.assertEquals("AST is wrong", expectedAst, ast);
+		Assert.assertEquals("AST is wrong", rewriteExpectedExtractAstForDatetimeFunction(expectedAst, predicandSql), ast);
 		return extractor;
+	}
+
+	private String rewriteExpectedExtractAstForDatetimeFunction(String expectedAst, String query) {
+		String extractInvocation = findInvocationText(query, "extract", "EXTRACT");
+		String datePartInvocation = findInvocationText(query, "date_part", "DATE_PART");
+		return expectedAst
+				.replace("extract={invocation=DATE_PART, ", "datetime_function={function_name=" + datePartInvocation + ", ")
+				.replace("extract={", "datetime_function={function_name=" + extractInvocation + ", ");
+	}
+
+	private String findInvocationText(String query, String functionName, String defaultValue) {
+		Matcher matcher = Pattern.compile("(?i)\\b" + functionName + "\\s*\\(").matcher(query);
+		if (matcher.find()) {
+			String matched = matcher.group();
+			int paren = matched.indexOf('(');
+			return paren >= 0 ? matched.substring(0, paren).trim() : matched.trim();
+		}
+		return defaultValue;
 	}
 
 	private void assertExtractSubstitutionSelect(String query, String expectedAst, String expectedSubstitutions,
@@ -496,20 +515,20 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"{}");
 	}
 
-	// --- DATE_PART(... FROM ...) → extract AST; comma forms → routine_invocation ---
+	// --- DATE_PART / EXTRACT (FROM and comma forms) → datetime_function AST ---
 
 	@Test
 	public void extractCommaFormIsRoutineInvocation() {
 		assertExtractAst(
 				"SELECT EXTRACT('year', order_date) FROM orders",
-				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=EXTRACT}}}, from={table={alias=null, table=orders}}}}");
+				"{SQL={select={1={datetime_function={function_name=EXTRACT, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test
 	public void extractCommaLowercaseNameIsRoutineInvocation() {
 		assertExtractAst(
 				"SELECT extract('year', order_date) FROM orders",
-				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=extract}}}, from={table={alias=null, table=orders}}}}");
+				"{SQL={select={1={datetime_function={function_name=extract, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test
@@ -523,14 +542,14 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	public void datePartCommaStringYearFromColumnIsRoutineInvocation() {
 		assertExtractAst(
 				"SELECT DATE_PART('year', order_date) FROM orders",
-				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=DATE_PART}}}, from={table={alias=null, table=orders}}}}");
+				"{SQL={select={1={datetime_function={function_name=DATE_PART, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test
 	public void datePartCommaLowercaseNameIsRoutineInvocation() {
 		assertExtractAst(
 				"SELECT date_part('year', order_date) FROM orders",
-				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=date_part}}}, from={table={alias=null, table=orders}}}}");
+				"{SQL={select={1={datetime_function={function_name=date_part, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test

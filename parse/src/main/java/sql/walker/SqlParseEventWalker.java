@@ -11189,9 +11189,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (sourceObj == null) {
 			sourceObj = subMap.remove("2");
 		}
-
 		subMap.clear();
-		subMap.put(MUMBLE_EXTRACT_KEY, buildExtractMumbleItem(fieldObj, sourceObj, null));
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY,
+				buildExtractDatetimeFunction(ctx.getStart().getText(), fieldObj, sourceObj));
 		emitExtractFieldDialectAffinityWarning(ctx.getStart(), normalizeExtractPartText(fieldObj));
 	}
 
@@ -11212,9 +11212,77 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		subMap.clear();
-		subMap.put(MUMBLE_EXTRACT_KEY,
-				buildExtractMumbleItem(fieldObj, sourceObj, MUMBLE_EXTRACT_INVOCATION_DATE_PART));
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY,
+				buildExtractDatetimeFunction(ctx.getStart().getText(), fieldObj, sourceObj));
 		emitExtractFieldDialectAffinityWarning(ctx.getStart(), normalizeExtractPartText(fieldObj));
+	}
+
+	@Override
+	public void exitSnowflake_date_trunc_expression(
+			SQLSelectParserParser.Snowflake_date_trunc_expressionContext ctx) {
+		String functionName = ctx.function.getText();
+		int ruleIndex = ctx.getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object levelObj = subMap.remove("level");
+		if (levelObj == null) {
+			levelObj = subMap.remove("1");
+		}
+		Object valueObj = subMap.remove("datetime_value");
+		if (valueObj == null) {
+			valueObj = subMap.remove("2");
+		}
+		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+		}
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildDatetimeLevelValueFunction(functionName, levelObj, valueObj));
+	}
+
+	@Override
+	public void exitSnowflake_datetime_trunc_expression(
+			SQLSelectParserParser.Snowflake_datetime_trunc_expressionContext ctx) {
+		String functionName = ctx.function.getText();
+		int ruleIndex = ctx.getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, walker.currentStackLevel(ruleIndex));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object valueObj = subMap.remove("datetime_value");
+		if (valueObj == null) {
+			valueObj = subMap.remove("1");
+		}
+		Object levelObj = subMap.remove("level");
+		if (levelObj == null) {
+			levelObj = subMap.remove("2");
+		}
+		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
+		}
+		subMap.clear();
+		subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildDatetimeLevelValueFunction(functionName, levelObj, valueObj));
+	}
+
+	private Map<String, Object> buildExtractDatetimeFunction(String functionName, Object fieldObj, Object sourceObj) {
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		function.put(MUMBLE_EXTRACT_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
+		function.put(MUMBLE_EXTRACT_PART_KEY, normalizeExtractPartText(fieldObj));
+		Object liftedSource = liftExtractSourceNode(sourceObj);
+		attachExtractSource(function, walker.stampPredicandSubstitutionsInValueSubtree(liftedSource));
+		return function;
+	}
+
+	private Map<String, Object> buildDatetimeLevelValueFunction(String functionName, Object fieldObj, Object sourceObj) {
+		Map<String, Object> function = new LinkedHashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		String text = normalizeExtractPartText(fieldObj);
+		Map<String, Object> level = new LinkedHashMap<>();
+		level.put(MUMBLE_DATETIME_PART_CANONICAL_KEY, DatetimePartRegistry.canonicalize(text));
+		level.put(MUMBLE_DATETIME_PART_TEXT_KEY, text);
+		level.put(MUMBLE_DATETIME_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
+		function.put(MUMBLE_DATETIME_LEVEL_KEY, level);
+		Object liftedSource = liftExtractSourceNode(sourceObj);
+		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftedSource));
+		return function;
 	}
 
 	private void emitExtractFieldDialectAffinityWarning(Token anchor, String part) {
@@ -11234,92 +11302,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void maybeEmitExtractDatetimeCommaFormDialectDiagnostics(Token anchor, Object functionObj) {
-		if (!(functionObj instanceof Map)) {
-			return;
-		}
-		Map<String, Object> function = (Map<String, Object>) functionObj;
-		String functionName = (String) function.get(MUMBLE_FUNCTION_NAME_KEY);
-		if (functionName == null) {
-			return;
-		}
-		if (!functionName.equalsIgnoreCase("EXTRACT") && !functionName.equalsIgnoreCase("DATE_PART")) {
-			return;
-		}
-		Object parametersObj = function.get(MUMBLE_PARAMETERS_KEY);
-		if (!(parametersObj instanceof Map)) {
-			return;
-		}
-		Map<String, Object> parameters = (Map<String, Object>) parametersObj;
-		String part = resolveExtractPartFromCommaFormArgument(parameters.get("1"));
-		if (part == null || part.isBlank()) {
-			return;
-		}
-		emitExtractFieldDialectAffinityWarning(anchor, part);
-	}
-
-	@SuppressWarnings("unchecked")
-	private static String resolveExtractPartFromCommaFormArgument(Object firstArg) {
-		if (firstArg == null) {
-			return null;
-		}
-		if (firstArg instanceof String) {
-			return normalizeExtractPartText(firstArg);
-		}
-		if (!(firstArg instanceof Map)) {
-			return null;
-		}
-		Map<String, Object> map = (Map<String, Object>) firstArg;
-		Object literal = map.get(MUMBLE_LITERAL_KEY);
-		if (literal != null) {
-			return normalizeExtractPartText(literal.toString());
-		}
-		Object columnObj = map.get(MUMBLE_COLUMN_KEY);
-		if (columnObj instanceof Map) {
-			Object name = ((Map<String, Object>) columnObj).get(MUMBLE_NAME_KEY);
-			if (name != null) {
-				return normalizeExtractPartText(name.toString());
-			}
-		}
-		return normalizeExtractPartText(firstArg);
-	}
-
-	private Map<String, Object> buildExtractMumbleItem(Object fieldObj, Object sourceObj, String invocation) {
-		Map<String, Object> item = new HashMap<String, Object>();
-		item.put(MUMBLE_EXTRACT_PART_KEY, normalizeExtractPartText(fieldObj));
-		item.put(MUMBLE_EXTRACT_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
-		if (invocation != null) {
-			item.put(MUMBLE_EXTRACT_INVOCATION_KEY, invocation);
-		}
-		Object liftedSource = liftExtractSourceNode(sourceObj);
-		liftedSource = stampPredicandSubstitutionsInExtractSource(liftedSource);
-		attachExtractSource(item, liftedSource);
-		return item;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Object stampPredicandSubstitutionsInExtractSource(Object node) {
-		node = walker.stampPredicandSubstitutionsInValueSubtree(node);
-		if (!(node instanceof Map)) {
-			return node;
-		}
-		Map<String, Object> map = (Map<String, Object>) node;
-		if (map.containsKey(MUMBLE_EXTRACT_KEY)) {
-			Map<String, Object> extract = (Map<String, Object>) map.get(MUMBLE_EXTRACT_KEY);
-			Object source = extract.get(MUMBLE_EXTRACT_SOURCE_KEY);
-			extract.put(MUMBLE_EXTRACT_SOURCE_KEY, stampPredicandSubstitutionsInExtractSource(source));
-			map.put(MUMBLE_EXTRACT_KEY, extract);
-		}
-		if (map.containsKey(MUMBLE_FUNCTION_KEY)) {
-			Map<String, Object> function = (Map<String, Object>) map.get(MUMBLE_FUNCTION_KEY);
-			Object value = function.get(MUMBLE_VALUE_KEY);
-			function.put(MUMBLE_VALUE_KEY, stampPredicandSubstitutionsInExtractSource(value));
-			map.put(MUMBLE_FUNCTION_KEY, function);
-		}
-		return map;
-	}
-
-	@SuppressWarnings("unchecked")
 	private static void attachExtractSource(Map<String, Object> extractItem, Object sourceObj) {
 		if (!(sourceObj instanceof Map)) {
 			extractItem.put(MUMBLE_EXTRACT_SOURCE_KEY, sourceObj);
@@ -11327,10 +11309,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		Map<String, Object> sourceMap = (Map<String, Object>) sourceObj;
 		Object sourceType = sourceMap.remove(MUMBLE_EXTRACT_SOURCE_TYPE_KEY);
-		extractItem.put(MUMBLE_EXTRACT_SOURCE_KEY, sourceMap);
 		if (sourceType != null) {
 			extractItem.put(MUMBLE_EXTRACT_SOURCE_TYPE_KEY, sourceType);
 		}
+		extractItem.put(MUMBLE_EXTRACT_SOURCE_KEY, sourceMap);
 	}
 
 	private static void populateTypedDatetimeLiteralSourceMap(Map<String, Object> subMap, String sourceType,
@@ -11706,8 +11688,60 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Wrong number of entries
 		}
-		maybeEmitExtractDatetimeCommaFormDialectDiagnostics(ctx.getStart(), subMap.get(MUMBLE_FUNCTION_KEY));
+		maybePromoteRoutineInvocationToDatetimeFunction(ctx.getStart(), subMap);
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void maybePromoteRoutineInvocationToDatetimeFunction(Token anchor, Map<String, Object> subMap) {
+		Object functionObj = subMap.get(MUMBLE_FUNCTION_KEY);
+		if (!(functionObj instanceof Map)) {
+			return;
+		}
+		Map<String, Object> function = (Map<String, Object>) functionObj;
+		if (function.containsKey(MUMBLE_SCHEMA_KEY)) {
+			return;
+		}
+		Object functionNameObj = function.get(MUMBLE_FUNCTION_NAME_KEY);
+		if (!(functionNameObj instanceof String)) {
+			return;
+		}
+		String functionName = (String) functionNameObj;
+		Object parametersObj = function.get(MUMBLE_PARAMETERS_KEY);
+		if (!(parametersObj instanceof Map)) {
+			return;
+		}
+		Map<String, Object> parameters = (Map<String, Object>) parametersObj;
+		Object arg1 = parameters.get("1");
+		Object arg2 = parameters.get("2");
+		if (arg1 == null || arg2 == null || parameters.size() != 2) {
+			return;
+		}
+
+		String lower = functionName.toLowerCase(Locale.ROOT);
+		if (lower.equals("extract") || lower.equals("date_part")) {
+			subMap.remove(MUMBLE_FUNCTION_KEY);
+			subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildExtractDatetimeFunction(functionName, arg1, arg2));
+			emitExtractFieldDialectAffinityWarning(anchor, normalizeExtractPartText(arg1));
+			return;
+		}
+
+		if (lower.equals("date_trunc")) {
+			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(arg1)).isEmpty()) {
+				diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), anchor);
+			}
+			subMap.remove(MUMBLE_FUNCTION_KEY);
+			subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildDatetimeLevelValueFunction(functionName, arg1, arg2));
+			return;
+		}
+
+		if (lower.equals("trunc")) {
+			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(arg2)).isEmpty()) {
+				return;
+			}
+			subMap.remove(MUMBLE_FUNCTION_KEY);
+			subMap.put(MUMBLE_DATETIME_FUNCTION_KEY, buildDatetimeLevelValueFunction(functionName, arg2, arg1));
+		}
 	}
 
 	@Override

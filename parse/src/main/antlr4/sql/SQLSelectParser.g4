@@ -1214,9 +1214,7 @@ column_primary
 */
    
 predicand_primary
-  : extract_expression
-  | date_part_expression
-  | datetime_function
+  : datetime_function
   | value_expression_primary
   | string_value_expression
   | sign numeric_primary
@@ -1576,15 +1574,17 @@ factor
   ;
 
 numeric_primary
-  : extract_expression
-  | date_part_expression
-  | datetime_function
+  : datetime_function
   | value_expression_primary
   ;
 
 datetime_function
   : snowflake_datetime_add_expression
   | snowflake_datetime_diff_expression
+  | extract_expression
+  | date_part_expression
+  | snowflake_date_trunc_expression
+  | snowflake_datetime_trunc_expression
   ;
 
 snowflake_datetime_add_expression
@@ -1607,6 +1607,18 @@ snowflake_datetime_diff_expression
 
 snowflake_datetime_diff_function
   : DATEDIFF | TIMEDIFF | TIMESTAMPDIFF
+  ;
+
+snowflake_date_trunc_expression
+  : function=DATE_TRUNC
+    LEFT_PAREN level=datetime_part
+    COMMA datetime_value=value_expression RIGHT_PAREN
+  ;
+
+snowflake_datetime_trunc_expression
+  : function=TRUNC
+    LEFT_PAREN datetime_value=value_expression
+    COMMA level=datetime_part RIGHT_PAREN
   ;
 
 sign

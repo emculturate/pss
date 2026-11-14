@@ -26,10 +26,19 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		Assert.assertEquals("Symbol Table is wrong", symbolTable, snippet.getSymbolTable().toString());
 	}
 
+	private void assertSingleSnowflakeDatetimeAddWarning(SqlParserAccess parser, int line, int charPosition) {
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_add_expression at (l:" + line + " c:" + charPosition
+						+ ") is recognized as Snowflake-specific grammar.",
+				null, line, charPosition);
+	}
+
 	@Test
 	public void dateaddPredicandSnippet() {
 		SqlParserAccess parser = parseSnippet("DATEADD(day, <increment>, <date value>)", "PREDICAND");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 0);
 		assertOutputs(parser.getSnippet(),
 				"{PREDICAND={datetime_function={function_name=DATEADD, level={canonical=DAY, text=day, form=KEYWORD}, increment={substitution={name=<increment>, type=predicand}}, value={substitution={name=<date value>, type=predicand}}}}}",
 				"[]", "{<date value>=predicand, <increment>=predicand}", "{}", "{}", "{}");
@@ -38,7 +47,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddConditionSnippet() {
 		SqlParserAccess parser = parseSnippet("dateadd(day, <increment>, <date value>) > DATE '2026-01-01'", "CONDITION");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 0);
 		assertOutputs(parser.getSnippet(),
 				"{CONDITION={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={substitution={name=<increment>, type=predicand}}, value={substitution={name=<date value>, type=predicand}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}",
 				"[]", "{<date value>=predicand, <increment>=predicand}", "{}", "{}", "{}");
@@ -47,7 +56,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddQuerySnippet() {
 		SqlParserAccess parser = parseSnippet("select dateadd(day, 1, a.ts) as shifted from events a", "QUERY");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 7);
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
 				"[shifted]", "{}", "{events={ts=[[@7,23:23='a',<419>,1:23]]}}",
@@ -58,7 +67,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddTupleSnippet() {
 		SqlParserAccess parser = parseSnippet("(select dateadd(day, 1, a.ts) as shifted from events a)", "TUPLE");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 8);
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}}}",
 				"[shifted]", "{}", "{events={ts=[[@8,24:24='a',<419>,1:24]]}}",
@@ -69,7 +78,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddInListSnippet() {
 		SqlParserAccess parser = parseSnippet("(dateadd(day, 1, DATE '2026-01-01'))", "IN_LIST");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 1);
 		assertOutputs(parser.getSnippet(),
 				"{IN_LIST={list={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={source_type=DATE, literal=2026-01-01}}}}}}",
 				"[]", "{}", "{}", "{}", "{}");
@@ -78,7 +87,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddJoinExtensionSnippet() {
 		SqlParserAccess parser = parseSnippet("join accounts b on dateadd(day, 1, b.ts) > DATE '2026-01-01'", "JOIN_EXTENSION");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 19);
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=b}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}, 2={table={alias=b, table=accounts}}}}",
 				"[]", "{}", "{accounts={ts=[[@10,35:35='b',<419>,1:35]]}}", "{}",
@@ -88,7 +97,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddValuesSnippet() {
 		SqlParserAccess parser = parseSnippet("values (dateadd(day, 1, DATE '2026-01-01'))", "VALUES");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 8);
 		assertOutputs(parser.getSnippet(),
 				"{VALUES={values={matrix={1={row={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={source_type=DATE, literal=2026-01-01}}}}}}}}}",
 				"[$1]", "{}", "{}", "{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
@@ -98,7 +107,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddInsertSnippet() {
 		SqlParserAccess parser = parseSnippet("insert into target (shifted) select dateadd(day, 1, a.ts) as shifted from events a", "INSERT");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 36);
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=shifted, table_ref=null}}}}}}",
 				"[shifted]", "{}", "{events={ts=[[@13,52:52='a',<419>,1:52]]}, target={shifted=[[@4,20:26='shifted',<419>,1:20]]}}",
@@ -109,7 +118,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddUpdateSnippet() {
 		SqlParserAccess parser = parseSnippet("update events set ts = dateadd(day, 1, ts)", "UPDATE");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 23);
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=ts, table_ref=null}}, to={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=null}}}}}}}}}",
 				"[ts]", "{}", "{events={ts=[[@11,39:40='ts',<419>,1:39]]}}",
@@ -120,14 +129,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddDeleteSnippet() {
 		SqlParserAccess parser = parseSnippet("delete from events where dateadd(day, 1, ts) > DATE '2026-01-01'", "DELETE");
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
-		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"delete_snowflake_expression at (l:1 c:0) is recognized as Snowflake-specific grammar.", null, 1, 0);
-		ParseDiagnostic warning = findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "delete_snowflake_expression");
-		Assert.assertNotNull(warning);
-		Assert.assertEquals("delete_snowflake_expression at (l:1 c:0) is recognized as Snowflake-specific grammar.", warning.message());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 25);
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=null}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}}}",
 				"[]", "{}", "{events={ts=[[@10,41:42='ts',<419>,1:41]]}}", "{}",
@@ -137,7 +139,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddDdlSnippet() {
 		SqlParserAccess parser = parseSnippet("create view v as select dateadd(day, 1, a.ts) as shifted from events a", "DDL");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 24);
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}}}",
 				"[]", "{}", "{events={ts=[[@11,40:40='a',<419>,1:40]]}}",
@@ -148,7 +150,7 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 	@Test
 	public void dateaddScriptSnippet() {
 		SqlParserAccess parser = parseSnippet("select dateadd(day, 1, DATE '2026-01-01') as shifted;", "SCRIPT");
-		Assert.assertTrue(parser.getAllDiagnostics().toString(), parser.getAllDiagnostics().isEmpty());
+		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 7);
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={source_type=DATE, literal=2026-01-01}}}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",

@@ -37,6 +37,14 @@ public final class SqlGrammarDialectRuleRegistry {
 				"snowflake_dollar_function_identifier");
 		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_unpivot_clause, "unpivot_clause");
 		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_pivot_clause, "pivot_clause");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_datetime_add_expression,
+				"snowflake_datetime_add_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_datetime_diff_expression,
+				"snowflake_datetime_diff_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_date_trunc_expression,
+				"snowflake_date_trunc_expression");
+		register(SqlGrammarDialect.SNOWFLAKE, SQLSelectParserParser.RULE_snowflake_datetime_trunc_expression,
+				"snowflake_datetime_trunc_expression");
 	}
 
 	private SqlGrammarDialectRuleRegistry() {

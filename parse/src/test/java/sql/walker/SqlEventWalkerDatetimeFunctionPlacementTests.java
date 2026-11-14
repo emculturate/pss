@@ -14,6 +14,18 @@ import sql.grammar.DatetimePartRegistry;
 
 public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlParseEventWalkerTest {
 
+	private int invocationOffset(String sql, String invocationName) {
+		int offset = sql.toLowerCase().indexOf(invocationName.toLowerCase() + "(");
+		Assert.assertTrue("Expected invocation " + invocationName + " in query: " + sql, offset >= 0);
+		return offset;
+	}
+
+	private void assertSnowflakeGrammarWarningAt(SqlParserAccess parser, String ruleName, int charPosition) {
+		String warning = ruleName + " at (l:1 c:" + charPosition + ") is recognized as Snowflake-specific grammar.";
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING, warning, null, 1, charPosition);
+	}
+
 	@Test
 	public void timeaddAndTimestampaddRetainTheirOwnInvocationsAndExpressionArguments() {
 		final String query = "select timeadd(hr, a.offset_hours, a.start_time) as shifted_time, timestampadd(day, a.offset_days + 1, a.created_at) as shifted_timestamp from events a";
@@ -39,7 +51,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 			SqlParserAccess parser = new SqlParserAccess(false, false, false);
 			parser.executeTheParse(query, "SQL");
 			Assert.assertEquals(query, 0, parser.getParser().getNumberOfSyntaxErrors());
-			Assert.assertEquals(query + ": " + parser.getAllDiagnostics(), 1, parser.getAllDiagnostics().size());
+			Assert.assertEquals(query + ": " + parser.getAllDiagnostics(), 2, parser.getAllDiagnostics().size());
+			assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+					invocationOffset(query, invocation));
 			assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 					"Invalid date/time part bogus for " + invocation + " at (l:1 c:" + position + ").",
 					"bogus", 1, position);
@@ -107,6 +121,42 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query1.def_query0.interface", expectedTimestampdiffBaselineDefQuery1DefQuery0Interface_0);
 		final String expectedTimestampdiffBaselineDefQuery1Interface_1 = "{age_hours=[{name=created_at, table_ref=b}, {name=updated_at, table_ref=b}], id=[{name=id, table_ref=b}], priority=[{name=priority, table_ref=b}]}";
 		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query1.interface", expectedTimestampdiffBaselineDefQuery1Interface_1);
+	}
+
+	@Test
+	public void extractFromFormNowBuildsDatetimeFunctionNode() {
+		final String query = "select extract(year from a.created_at) as extracted_year from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=extracted_year, datetime_function={function_name=extract, part_form=KEYWORD, part=year, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void datePartFromFormNowBuildsDatetimeFunctionNode() {
+		final String query = "select date_part(month from a.created_at) as extracted_month from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=extracted_month, datetime_function={function_name=date_part, part_form=KEYWORD, part=month, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void dateTruncNowBuildsDatetimeFunctionNode() {
+		final String query = "select date_trunc(day, a.created_at) as truncated_day from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=truncated_day, datetime_function={function_name=date_trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void truncDatetimeVariantNowBuildsDatetimeFunctionNode() {
+		final String query = "select trunc(a.created_at, day) as truncated_day from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=truncated_day, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
 	}
 
 	@Test
@@ -192,7 +242,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 				"Invalid date/time part bogus for DATEDIFF at (l:1 c:16).",
 				"bogus", 1, 16);
@@ -205,7 +257,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 				"Invalid date/time part 'bogus' for DATEDIFF at (l:1 c:16).",
 				"bogus", 1, 16);
@@ -250,7 +304,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'created_at' at (l:1 c:39). Possible sources: [accounts, events]",
 				"created_at", 1, 39);
@@ -269,7 +325,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'resolved_at' at (l:1 c:53). Possible sources: [accounts, events]",
 				"resolved_at", 1, 53);
@@ -288,7 +346,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'created_at' at (l:1 c:39). Possible sources: [accounts, events]",
 				"created_at", 1, 39);
@@ -310,7 +370,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		Assert.assertEquals("{events={missing_left=[[@5,21:32='missing_left',<419>,1:21]], resolved_at=[[@7,35:35='a',<419>,1:35], [@21,90:90='a',<419>,1:90]], id=[[@14,65:65='a',<419>,1:65]]}}",
 				parser.getSnippet().getTableDictionary().toString());
 		Assert.assertEquals("{def_query0={query_dictionary={id=[[@16,67:68='id',<419>,1:67]], delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={missing_left=[[@5,21:32='missing_left',<419>,1:21]], resolved_at=[[@7,35:35='a',<419>,1:35], [@21,90:90='a',<419>,1:90]], id=[[@14,65:65='a',<419>,1:65]]}}, filters=[{name=resolved_at, table_ref=a}], interface={id=[{name=id, table_ref=a}], delta_days=[{name=missing_left, table_ref=events}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}",
@@ -323,7 +385,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		Assert.assertEquals("{events={created_at=[[@5,21:21='a',<419>,1:21], [@21,90:90='a',<419>,1:90]], missing_right=[[@9,35:47='missing_right',<419>,1:35]], id=[[@14,65:65='a',<419>,1:65]]}}",
 				parser.getSnippet().getTableDictionary().toString());
 		Assert.assertEquals("{def_query0={query_dictionary={id=[[@16,67:68='id',<419>,1:67]], delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21], [@21,90:90='a',<419>,1:90]], missing_right=[[@9,35:47='missing_right',<419>,1:35]], id=[[@14,65:65='a',<419>,1:65]]}}, filters=[{name=created_at, table_ref=a}], interface={id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=missing_right, table_ref=events}]}, table_alias={a=events}}}",
@@ -336,7 +400,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'created_at' at (l:1 c:21) was not found in output interface of query alias 'd'.",
 				"d.created_at", 1, 21);
@@ -352,7 +418,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'resolved_at' at (l:1 c:36) was not found in output interface of query alias 'd'.",
 				"d.resolved_at", 1, 36);
@@ -368,7 +436,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression",
+				invocationOffset(query, "datediff"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'resolved_at' at (l:1 c:100) was not found in output interface of query alias 'b'.",
 				"b.resolved_at", 1, 100);
@@ -819,7 +889,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'created_at' at (l:1 c:24). Possible sources: [accounts, events]",
@@ -844,7 +916,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'offset_days' at (l:1 c:20). Possible sources: [accounts, events]",
@@ -875,7 +949,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'offset_days' at (l:1 c:20). Possible sources: [accounts, events]", "offset_days", 1, 20);
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
@@ -953,7 +1029,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'extra_days' at (l:1 c:36). Possible sources: [accounts, events]", "extra_days", 1, 36);
 		ParseDiagnostic ambiguity = findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
@@ -978,7 +1056,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'base_days' at (l:1 c:39). Possible sources: [accounts, events]", "base_days", 1, 39);
 		ParseDiagnostic ambiguity = findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
@@ -1003,7 +1083,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'extra_days' at (l:1 c:36). Possible sources: [accounts, events]", "extra_days", 1, 36);
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
@@ -1066,7 +1148,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'offset_days' at (l:1 c:20). Possible sources: [query0, query1]", "offset_days", 1, 20);
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
@@ -1099,7 +1183,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
 				"Ambiguous column reference 'offset_days' at (l:1 c:129). Possible sources: [query0, query1]", "offset_days", 1, 129);
 		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
@@ -1132,7 +1218,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'created_at' at (l:1 c:23) was not found in output interface of query alias 'a'.",
 				"a.created_at", 1, 23);
@@ -1148,7 +1236,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'missing_ts' at (l:1 c:23) was not found in output interface of query alias 'a'.",
 				"a.missing_ts", 1, 23);
@@ -1164,7 +1254,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'missing_ts' at (l:1 c:65) was not found in output interface of query alias 'a'.",
 				"a.missing_ts", 1, 65);
@@ -1180,7 +1272,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
 				"Source Table not found for Column 'created_at' at (l:1 c:40). No alias or table called 'z'.",
 				"created_at", 1, 40);
@@ -1196,7 +1290,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getSnippet().getFatalErrorCount());
 		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2,
 				parser.getSnippet().getDiagnosticCountByCodeAndSeverity("QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.FATAL));
@@ -1217,7 +1313,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 4, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getSnippet().getFatalErrorCount());
 		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2,
 				parser.getSnippet().getDiagnosticCountByCodeAndSeverity("QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.SEVERE_WARNING));
@@ -1748,7 +1846,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'raw_days' at (l:1 c:20) was not found in output interface of query alias 'd'.",
 				"d.raw_days", 1, 20);
@@ -1763,7 +1863,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				"Qualified column 'raw_ts' at (l:1 c:34) was not found in output interface of query alias 'd'.",
 				"d.raw_ts", 1, 34);
@@ -2148,7 +2250,9 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 			SqlParserAccess parser = new SqlParserAccess(false, false, false);
 			parser.executeTheParse(query, "SQL");
 			Assert.assertEquals(query, 0, parser.getParser().getNumberOfSyntaxErrors());
-			Assert.assertEquals(query + ": " + parser.getAllDiagnostics(), 1, parser.getAllDiagnostics().size());
+			Assert.assertEquals(query + ": " + parser.getAllDiagnostics(), 2, parser.getAllDiagnostics().size());
+			assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression",
+					invocationOffset(query, "dateadd"));
 			assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 					"Invalid date/time part " + part + " for DATEADD at (l:1 c:15).", part, 1, 15);
 			Assert.assertEquals(part, findFatalDiagnosticByCodeAndFragment(
@@ -2246,11 +2350,8 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		parserAccess.executeTheParse(query, "SQL");
 		Assert.assertEquals(query, 0, parserAccess.getParser().getNumberOfSyntaxErrors());
 		Assert.assertEquals(parserAccess.getAllDiagnostics().toString(), 1, parserAccess.getAllDiagnostics().size());
-		String warning = "qualify_clause at (l:1 c:26) is recognized as Snowflake-specific grammar.";
-		assertDiagnosticAtPosition(parserAccess.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING, warning, null, 1, 26);
-		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parserAccess.getSnippet(),
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "qualify_clause").message());
+		assertSnowflakeGrammarWarningAt(parserAccess, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
@@ -2315,11 +2416,8 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		parserAccess.executeTheParse(query, "SQL");
 		Assert.assertEquals(query, 0, parserAccess.getParser().getNumberOfSyntaxErrors());
 		Assert.assertEquals(parserAccess.getAllDiagnostics().toString(), 1, parserAccess.getAllDiagnostics().size());
-		String warning = "delete_snowflake_expression at (l:1 c:0) is recognized as Snowflake-specific grammar.";
-		assertDiagnosticAtPosition(parserAccess.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING, warning, null, 1, 0);
-		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parserAccess.getSnippet(),
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "delete_snowflake_expression").message());
+		assertSnowflakeGrammarWarningAt(parserAccess, "snowflake_datetime_add_expression",
+				invocationOffset(query, "dateadd"));
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
@@ -2467,15 +2565,12 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(script, "SCRIPT");
 		Assert.assertEquals(script, 0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
-		String warning = "qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.";
-		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING, warning, null, 1, 89);
-		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "qualify_clause").message());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression", 7);
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_add_expression", 129);
 		Assert.assertEquals("AST is wrong", "{SCRIPT={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}, 2={select={1={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}, qualify={condition={left={window_function={over={partition_by={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=dateadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={column={name=offset_hours, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}, right={literal=1}, operator==}}}}}", parser.getSnippet().getSqlAbstractTree().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{SCRIPT={1={def_query0={query_dictionary={shifted=[[@12,40:46='shifted',<419>,1:40]]}, table_dictionary={events={created_at=[[@7,23:23='a',<419>,1:23]]}}, interface={shifted=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={window_ordered_by=[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}], query_dictionary={id=[[@20,72:73='id',<419>,1:72]]}, table_dictionary={events={created_at=[[@40,157:157='e',<419>,1:157], [@54,210:210='e',<419>,1:210]], offset_hours=[[@50,194:194='e',<419>,1:194]], offset_days=[[@36,142:142='e',<419>,1:142]], id=[[@18,70:70='e',<419>,1:70]]}}, window_partition_by=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}, {name=offset_hours, table_ref=e}], interface={id=[{name=id, table_ref=e}]}, table_alias={e=events}}}}}", parser.getSnippet().getSymbolTable().toString());
-		Assert.assertEquals("Array Output Collectors are wrong", "{SCRIPT={1={queryInterface=[shifted], Walker Warnings=[qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.]}, 2={queryInterface=[id], Walker Warnings=[qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.]}}}", parser.getSnippet().getArrayOutputCollectorsMap().toString());
+		Assert.assertEquals("Array Output Collectors are wrong", "{SCRIPT={1={queryInterface=[shifted], Walker Warnings=[snowflake_datetime_add_expression at (l:1 c:7) is recognized as Snowflake-specific grammar., snowflake_datetime_add_expression at (l:1 c:129) is recognized as Snowflake-specific grammar.]}, 2={queryInterface=[id], Walker Warnings=[snowflake_datetime_add_expression at (l:1 c:7) is recognized as Snowflake-specific grammar., snowflake_datetime_add_expression at (l:1 c:129) is recognized as Snowflake-specific grammar.]}}}", parser.getSnippet().getArrayOutputCollectorsMap().toString());
 
 		final String expectedScriptStatement2DefQuery0WindowOrderedBy_0 = "[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}]";
 		assertSymbolTreePathEquals(parser.getSnippet().getSymbolTable(), "SCRIPT.2.def_query0.window_ordered_by", expectedScriptStatement2DefQuery0WindowOrderedBy_0);
@@ -2526,7 +2621,8 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess dateadd = new SqlParserAccess(false, false, false);
 		dateadd.executeTheParse("select dateadd(epoch_second, 1, a.ts) as shifted from events a", "SQL");
 		Assert.assertEquals(0, dateadd.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(dateadd.getAllDiagnostics().toString(), 1, dateadd.getAllDiagnostics().size());
+		Assert.assertEquals(dateadd.getAllDiagnostics().toString(), 2, dateadd.getAllDiagnostics().size());
+		assertSnowflakeGrammarWarningAt(dateadd, "snowflake_datetime_add_expression", 7);
 		assertFatalDiagnosticAtPositionWithFullMessage(dateadd.getSnippet(), "INVALID_DATETIME_PART",
 				"Invalid date/time part epoch_second for DATEADD at (l:1 c:15).", "epoch_second", 1, 15);
 		Assert.assertEquals("{def_query0={query_dictionary={shifted=[[@12,41:47='shifted',<419>,1:41]]}, table_dictionary={events={ts=[[@7,32:32='a',<419>,1:32]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
@@ -2542,10 +2638,23 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 				ParseDiagnostic.Severity.WARNING, warning, null, 1, 7);
 		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(extract.getSnippet(),
 				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "epoch_second").message());
-		Assert.assertEquals("{SQL={select={1={extract={part_form=KEYWORD, part=epoch_second, source={column={name=ts, table_ref=a}}}, alias=seconds}}, from={table={alias=a, table=events}}}}",
+		Assert.assertEquals("{SQL={select={1={alias=seconds, datetime_function={function_name=extract, part_form=KEYWORD, part=epoch_second, source={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
 				extract.getSnippet().getSqlAbstractTree().toString());
 		Assert.assertEquals("{def_query0={query_dictionary={seconds=[[@10,42:48='seconds',<419>,1:42]]}, table_dictionary={events={ts=[[@5,33:33='a',<419>,1:33]]}}, interface={seconds=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
 				extract.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datePartEpochSecondEmitsSnowflakeDialectWarning() {
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse("select date_part(epoch_second from a.ts) as seconds from events a", "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		String warning = "EXTRACT/DATE_PART option 'epoch_second' at (l:1 c:7) is recognized as Snowflake-specific grammar.";
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING, warning, null, 1, 7);
+		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "epoch_second").message());
 	}
 
 	@Test
@@ -2559,7 +2668,7 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 			SqlParserAccess parser = new SqlParserAccess(false, false, false);
 			parser.executeTheParse(queries[i], "SQL");
 			Assert.assertEquals(queries[i], 0, parser.getParser().getNumberOfSyntaxErrors());
-			Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+			Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
 			assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 					"Invalid date/time part bogus for DATEADD at (l:1 c:" + positions[i] + ").",
 					"bogus", 1, positions[i]);
@@ -2575,7 +2684,7 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 				"Invalid date/time part bogus for DATEADD at (l:1 c:15).", "bogus", 1, 15);
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
@@ -2590,7 +2699,7 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		SqlParserAccess parser = new SqlParserAccess(false, false, false);
 		parser.executeTheParse(query, "SQL");
 		Assert.assertEquals(query, 0, parser.getParser().getNumberOfSyntaxErrors());
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
 		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
 				"Invalid date/time part bogus for DATEADD at (l:1 c:31).", "bogus", 1, 31);
 		Assert.assertEquals("bogus", findFatalDiagnosticByCodeAndFragment(
