@@ -5183,6 +5183,7 @@ public class SqlParseSymbolTreeHelper {
 			emitExplicitQualifiedUnknownDiagnostics(
 					explicitQualifiedUnknownEntries,
 					effectiveAliasMap,
+					localTableAliasMap,
 					effectiveTableCollection,
 					visibleQuerySourceCollection,
 					localUnresolvedColumnMap,
@@ -10977,7 +10978,11 @@ public class SqlParseSymbolTreeHelper {
 			if (refLocation[0] == null || refLocation[1] == null) {
 				refLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
 			}
-
+			if (isQualifiedColumnVariable(columnName)) {
+				emitQualifiedColumnVariableBindingWarning(columnName, tableRef, refLocation);
+				keysToRemove.add(unresolvedKey);
+				continue;
+			}
 			String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS);
 			String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS);
 			String diagMessage = (diagTemplate == null)
@@ -14031,6 +14036,10 @@ public class SqlParseSymbolTreeHelper {
 		if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
 			refLocation = new Integer[] { null, null };
 		}
+		if (isQualifiedColumnVariable(columnName)) {
+			emitQualifiedColumnVariableBindingWarning(columnName, tableRef, refLocation);
+			return;
+		}
 
 		String diagCode = walker.getDiagnosticCode(
 				SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS);
@@ -14063,6 +14072,42 @@ public class SqlParseSymbolTreeHelper {
 				refLocation[0],
 				refLocation[1],
 				unresolvedKey);
+	}
+
+	private boolean isQualifiedColumnVariable(String columnName) {
+		return MUMBLE_COLUMN_KEY.equals(walker.substitutionsMap.get(columnName));
+	}
+
+	private void emitQualifiedColumnVariableBindingWarning(
+			String columnName, String tableRef, Integer[] refLocation) {
+		String diagnosticKey = SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_VARIABLE_REQUIRES_BINDING;
+		String code = walker.getDiagnosticCode(diagnosticKey);
+		String tokenText = tableRef + "." + columnName;
+		for (ParseDiagnostic diagnostic : walker.getWalkerDiagnostics()) {
+			if (code.equals(diagnostic.code())
+					&& tokenText.equals(diagnostic.tokenText())
+					&& java.util.Objects.equals(refLocation[0], diagnostic.line())
+					&& ((refLocation[1] == null && diagnostic.charPositionInLine() == null)
+							|| (refLocation[1] != null && diagnostic.charPositionInLine() != null
+									&& Math.abs(refLocation[1] - diagnostic.charPositionInLine()) <= tableRef.length() + 1))) {
+				return;
+			}
+		}
+		String message = String.format(walker.getDiagnosticMessage(diagnosticKey),
+				columnName, refLocation[0], refLocation[1], tableRef);
+		walker.addWalkerDiagnostic(
+				ParseDiagnostic.Severity.WARNING,
+				code,
+				message,
+				refLocation[0],
+				refLocation[1],
+				walker.getClass().getSimpleName(),
+				null,
+				tokenText,
+				true,
+				"ast-walk",
+				null,
+				null);
 	}
 
 	/**
@@ -17110,6 +17155,7 @@ public class SqlParseSymbolTreeHelper {
 	public void emitExplicitQualifiedUnknownDiagnostics(
 			HashMap<String, Object> explicitQualifiedUnknownEntries,
 			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> scopedQueryCollection,
 			HashMap<String, Object> unresolvedCollector,
@@ -17132,9 +17178,27 @@ public class SqlParseSymbolTreeHelper {
 			}
 			String columnName = unresolvedKey;
 			String tableRef = null;
-			tableRef = unresolvedKey.substring(0, unresolvedKey.lastIndexOf('.'));
-			columnName = unresolvedKey.substring(unresolvedKey.lastIndexOf('.') + 1);
+			int separator = unresolvedKey.lastIndexOf('.');
+			for (Map.Entry<String, Object> substitution : walker.substitutionsMap.entrySet()) {
+				String name = substitution.getKey();
+				if (MUMBLE_COLUMN_KEY.equals(substitution.getValue())
+						&& name != null && unresolvedKey.endsWith("." + name)) {
+					separator = unresolvedKey.length() - name.length() - 1;
+					break;
+				}
+			}
+			tableRef = unresolvedKey.substring(0, separator);
+			columnName = unresolvedKey.substring(separator + 1);
 			if (tableRef == null) {
+				continue;
+			}
+			if (isQualifiedColumnVariable(columnName)
+					&& !containsKeyIgnoreCase(localTableAliasMap, tableRef)
+					&& resolveAliasToQuerySourceRefPreferDefinition(
+							tableRef, tableAliasCollection, scopedQueryCollection) != null) {
+				Integer[] location = walker.getLineAndCharacterFromEntry(unknownEntry.getValue());
+				emitQualifiedPhysicalColumnNotFoundFatal(columnName, tableRef, null, location);
+				walker.markEmittedQualifiedSourceNotFoundFatal(unresolvedKey);
 				continue;
 			}
 

@@ -397,7 +397,8 @@ The same acceptance applies to the remaining author-classified snippet issues
 in Patterns 1–5 and 7. The owner also accepts mirror-image snippets s8491 and
 s8492 for release with fixed-alias or concrete-column guidance. These
 dispositions do not mean the SQL has already been corrected or that unchanged
-records will pass. The variable-outside defect in Entry 20 remains open.
+records will pass. Entry 20 is now closed (2026-11-13) with the
+qualified-column-variable FATAL replaced by the approved warning behavior.
 
 Compared with the prior 5.1.4 run, 14 previously failing bound queries now
 have zero FATALs, including q5866; no clean query became FATAL. One query
@@ -493,8 +494,8 @@ Of the other 13, the current JAR reproduced the historical 5.1.4 FATAL counts:
   column-variable FATAL as a parser defect; fix and parity gate: **Entry 20**.
 
 **Snippet-comparison disposition:** The owner considers the reviewed snippet
-comparison satisfied except for the qualified column-variable defect in
-**Entry 20**, which remains the outstanding parity remediation. This disposition
+comparison satisfied; the qualified column-variable defect tracked in
+**Entry 20** is now resolved and no longer blocks parity. This disposition
 includes the eight records with unrecognized types (s37280–s37286 and s77528):
 the owner considers them invalid extract records and excludes them as parity
 blockers for either version. Neither parser was tested on these records, so
@@ -2042,8 +2043,10 @@ For **19.2**, assert AST, interface, dictionaries, symbol table, and `within_gro
 
 ## Entry 20 — Qualified column variables on visible query aliases
 
-**Status:** Not started — confirmed 2026-11-13; **required for 5.0.0 → 5.1.4
-extract parity**.  
+**Status:** Complete (closed 2026-11-13): core parser fix implemented,
+clause-position golden coverage added, targeted + full parser suites pass, and
+the last open bound-query parity issue for the 5.0.0 → 5.1.4 upgrade is
+resolved.  
 **Kind:** Defect / resolution and diagnostic enhancement.
 
 **Evidence:** The original s85047 TUPLE snippet uses

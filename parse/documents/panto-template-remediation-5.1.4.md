@@ -24,7 +24,8 @@ guidance in those sections. The separately approved q5314, q5335, s8491, and
 s8492 have Pattern 6 guidance below. Acceptance does not mean the SQL has
 already been corrected or that 5.1.4 will accept the unchanged records;
 authors must apply the applicable guidance and verify their SQL. Entry 20's
-variable-outside defect remains distinct.
+variable-outside defect is resolved and no longer an open bound-query
+upgrade blocker.
 
 | Pattern | What is wrong | Cases | Distinct templates / bundles |
 |---|---|---|---|
@@ -292,6 +293,10 @@ Each case has an ID such as `q862` or `s77918`:
 
 > **Identifier gap — action needed.** Neither extract carries a stable identifier. In the bound-query file, 590 (domain, entity, query name) combinations repeat across 3,695 of the 6,551 rows with no version, tenant, or query ID column to tell them apart. The snippet file has no snippet ID, no variable name, and no header. Record numbers are the only exact locator and will change with the next extract. **We should re-extract both lists with their Panto identifiers** — at minimum the bound query ID and version/tenant, and the snippet ID, snippet name, substitution variable name, and owning bundle ID. With those we can send each author a targeted instruction ("template 12345 v3, line 236: alias the second EAB_RACE_BLACK as eab_race") instead of a record number.
 
+<!-- Rollout reminder for future upgrade runs: before cutover, use parse/documents/panto-remediation-rollout-handoff.csv to hand query/bundle case mappings to source-system owners for targeted remediation tracking. -->
+
+> **Rollout reminder:** Use [panto-remediation-rollout-handoff.csv](./panto-remediation-rollout-handoff.csv) as the source-system handoff list for query/bundle identity mapping during upgrade rollout.
+
 ## Pattern 1 — duplicate output name inside a UNION branch (111 cases)
 
 **What the parser reports:** `DUPLICATE_INTERFACE_COLUMNS` for the branch, usually followed by `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` ("UNION has different column counts. Expected 3 … but there were 2 …").
@@ -380,15 +385,13 @@ Examples and fixes:
 
 ## Pattern 6 — column-name variables across a derived-table boundary (11 cases)
 
-**Status update (2026-11-13):** A qualified column variable used against a
-visible derived-table alias can be incorrectly rejected as a literal missing
-column. The owner identified this as a parser defect and a 5.0.0 parity gate:
-[workplan Entry 20](./sql-grammar-5.1.4-workplan.md#entry-20--qualified-column-variables-on-visible-query-aliases).
-The seven variable-outside bound queries below require re-evaluation when that
-fix lands. The owner approved the mirror-image bound queries q5314 and q5335
-and snippets s8491 and s8492 for release with the author guidance below. The
-original records still produce FATALs until their authors revise them; this
-disposition does not change the parser or claim the SQL has been corrected.
+**Status update (2026-11-13):** The variable-outside parser defect is fixed in
+[workplan Entry 20](./sql-grammar-5.1.4-workplan.md#entry-20--qualified-column-variables-on-visible-query-aliases):
+qualified column variables on visible query aliases now emit the approved
+warning instead of a FATAL. The mirror-image variable-inside cases (q5314,
+q5335, s8491, s8492) remain author-remediation guidance items as documented
+below. The original records are unchanged and still require author revision
+to eliminate their own diagnostics.
 
 **What the parser reports:** `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS` or `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` where one side is a column-name variable such as `<ACS Contact ID>`.
 
@@ -457,8 +460,8 @@ is to use the concrete exported name:
 on acs_act.acs_contact_id = …
 ```
 
-This workaround is not a requirement for the variable-outside form after the
-planned fix. Validate the actual binding against the query interface.
+This workaround is optional for the variable-outside form now that Entry 20 is
+complete. Validate the actual binding against the query interface.
 
 ## Pattern 7 — typos (2 cases)
 

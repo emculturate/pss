@@ -57,6 +57,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
+		public static final String DIAG_SQL_QUALIFIED_COLUMN_VARIABLE_REQUIRES_BINDING = "SQL_QUALIFIED_COLUMN_VARIABLE_REQUIRES_BINDING";
 		public static final String DIAG_SQL_JOIN_EXTENSION_REQUIRED = "SQL_JOIN_EXTENSION_REQUIRED";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
 		public static final String DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE =
@@ -259,6 +260,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				 "Qualified column '%s' at (l:%s c:%s) was not found in output interface of query alias '%s'.");
+		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_VARIABLE_REQUIRES_BINDING,
+				 "QUALIFIED_COLUMN_VARIABLE_REQUIRES_BINDING",
+				 "Column variable '%s' at (l:%s c:%s) must be explicitly bound to a column exported by query alias '%s'; this binding has not been validated.");
 		 registerDiagnostic(
 				 DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE,
 				 "AMBIGUOUS_COLUMN_REFERENCE",
