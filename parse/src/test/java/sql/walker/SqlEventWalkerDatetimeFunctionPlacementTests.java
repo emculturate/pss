@@ -50,6 +50,200 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 	}
 
 	@Test
+	public void datediffHappyPathBaselineRetainsLeftRightLineageWithNaturalContext() {
+		final String query = "select a.id as event_id, datediff(day, a.created_at, a.resolved_at) as days_open, coalesce(a.status, 'OPEN') as status_label from events a where a.active = 1 and a.resolved_at is not null order by days_open";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=a}, alias=event_id}, 2={alias=days_open, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 3={function={parameters={1={column={name=status, table_ref=a}}, 2={literal='OPEN'}}, function_name=coalesce}, alias=status_label}}, orderby={1={null_order=null, predicand={column={name=days_open, table_ref=null}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=resolved_at, table_ref=a}}, operator=is not null}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[status_label, event_id, days_open]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@15,53:53='a',<419>,1:53], [@42,162:162='a',<419>,1:162]], active=[[@36,145:145='a',<419>,1:145]], created_at=[[@11,39:39='a',<419>,1:39]], id=[[@1,7:7='a',<419>,1:7]], status=[[@24,91:91='a',<419>,1:91]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={status_label=[[@31,112:123='status_label',<419>,1:112]], days_open=[[@20,71:79='days_open',<419>,1:71], [@50,197:205='days_open',<419>,1:197]], event_id=[[@5,15:22='event_id',<419>,1:15]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={status_label=[[@31,112:123='status_label',<419>,1:112]], event_id=[[@5,15:22='event_id',<419>,1:15]], days_open=[[@20,71:79='days_open',<419>,1:71], [@50,197:205='days_open',<419>,1:197]]}, table_dictionary={events={resolved_at=[[@15,53:53='a',<419>,1:53], [@42,162:162='a',<419>,1:162]], active=[[@36,145:145='a',<419>,1:145]], created_at=[[@11,39:39='a',<419>,1:39]], id=[[@1,7:7='a',<419>,1:7]], status=[[@24,91:91='a',<419>,1:91]]}}, ordered_by=[{name=days_open, table_ref=query0}], filters=[{name=active, table_ref=a}, {name=resolved_at, table_ref=a}], interface={status_label=[{name=status, table_ref=a}], event_id=[{name=id, table_ref=a}], days_open=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedDatediffBaselineDefQuery0OrderedBy_0 = "[{name=days_open, table_ref=query0}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.ordered_by", expectedDatediffBaselineDefQuery0OrderedBy_0);
+		final String expectedDatediffBaselineDefQuery0Interface_1 = "{status_label=[{name=status, table_ref=a}], event_id=[{name=id, table_ref=a}], days_open=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.interface", expectedDatediffBaselineDefQuery0Interface_1);
+	}
+
+	@Test
+	public void timediffHappyPathBaselineRetainsLeftRightLineageWithNaturalContext() {
+		final String query = "select u.id as event_id, timediff(minute, u.started_at, u.ended_at) as elapsed_minutes, case when u.ended_at is null then 0 else 1 end as has_end from usage_events u where u.started_at is not null";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=u}, alias=event_id}, 2={alias=elapsed_minutes, datetime_function={function_name=timediff, level={canonical=MINUTE, text=minute, form=KEYWORD}, left={column={name=started_at, table_ref=u}}, right={column={name=ended_at, table_ref=u}}}}, 3={alias=has_end, case={clauses={1={then={literal=0}, when={condition={left={column={name=ended_at, table_ref=u}}, operator=is null}}}}, else={literal=1}}}}, from={table={alias=u, table=usage_events}}, where={condition={left={column={name=started_at, table_ref=u}}, operator=is not null}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, elapsed_minutes, has_end]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{usage_events={started_at=[[@11,42:42='u',<419>,1:42], [@40,172:172='u',<419>,1:172]], id=[[@1,7:7='u',<419>,1:7]], ended_at=[[@15,56:56='u',<419>,1:56], [@24,98:98='u',<419>,1:98]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={elapsed_minutes=[[@20,71:85='elapsed_minutes',<419>,1:71]], has_end=[[@35,138:144='has_end',<419>,1:138]], event_id=[[@5,15:22='event_id',<419>,1:15]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={event_id=[[@5,15:22='event_id',<419>,1:15]], elapsed_minutes=[[@20,71:85='elapsed_minutes',<419>,1:71]], has_end=[[@35,138:144='has_end',<419>,1:138]]}, table_dictionary={usage_events={started_at=[[@11,42:42='u',<419>,1:42], [@40,172:172='u',<419>,1:172]], id=[[@1,7:7='u',<419>,1:7]], ended_at=[[@15,56:56='u',<419>,1:56], [@24,98:98='u',<419>,1:98]]}}, filters=[{name=started_at, table_ref=u}], interface={event_id=[{name=id, table_ref=u}], elapsed_minutes=[{name=started_at, table_ref=u}, {name=ended_at, table_ref=u}], has_end=[{name=ended_at, table_ref=u}]}, table_alias={u=usage_events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedTimediffBaselineDefQuery0Filters_0 = "[{name=started_at, table_ref=u}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.filters", expectedTimediffBaselineDefQuery0Filters_0);
+		final String expectedTimediffBaselineDefQuery0Interface_1 = "{event_id=[{name=id, table_ref=u}], elapsed_minutes=[{name=started_at, table_ref=u}, {name=ended_at, table_ref=u}], has_end=[{name=ended_at, table_ref=u}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.interface", expectedTimediffBaselineDefQuery0Interface_1);
+	}
+
+	@Test
+	public void timestampdiffHappyPathBaselineRetainsLeftRightLineageWithNaturalContext() {
+		final String query = "with base as (select e.id, e.created_at, e.updated_at, e.priority from events e where e.updated_at is not null) select b.id, timestampdiff(hour, b.created_at, b.updated_at) as age_hours, b.priority from base b order by age_hours";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=id, table_ref=e}}, 2={column={name=created_at, table_ref=e}}, 3={column={name=updated_at, table_ref=e}}, 4={column={name=priority, table_ref=e}}}, from={table={alias=e, table=events}}, where={condition={left={column={name=updated_at, table_ref=e}}, operator=is not null}}}, alias=base}}, query={select={1={column={name=id, table_ref=b}}, 2={alias=age_hours, datetime_function={function_name=timestampdiff, level={canonical=HOUR, text=hour, form=KEYWORD}, left={column={name=created_at, table_ref=b}}, right={column={name=updated_at, table_ref=b}}}}, 3={column={name=priority, table_ref=b}}}, orderby={1={null_order=null, predicand={column={name=age_hours, table_ref=null}}, sort_order=ASC}}, from={table={alias=b, table=base}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[age_hours, id, priority]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={updated_at=[[@13,41:41='e',<419>,1:41], [@24,86:86='e',<419>,1:86]], created_at=[[@9,27:27='e',<419>,1:27]], id=[[@5,21:21='e',<419>,1:21]], priority=[[@17,55:55='e',<419>,1:55]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={created_at=[[@11,29:38='created_at',<419>,1:29], [@40,145:145='b',<419>,1:145]], id=[[@7,23:24='id',<419>,1:23], [@32,119:119='b',<419>,1:119]], updated_at=[[@15,43:52='updated_at',<419>,1:43], [@44,159:159='b',<419>,1:159]], priority=[[@19,57:64='priority',<419>,1:57], [@51,187:187='b',<419>,1:187]]}, query1={priority=[[@53,189:196='priority',<419>,1:189]], age_hours=[[@49,176:184='age_hours',<419>,1:176], [@59,219:227='age_hours',<419>,1:219]], id=[[@34,121:122='id',<419>,1:121]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={context_list={base=query0, b=query0}, query_dictionary={age_hours=[[@49,176:184='age_hours',<419>,1:176], [@59,219:227='age_hours',<419>,1:219]], id=[[@34,121:122='id',<419>,1:121]], priority=[[@53,189:196='priority',<419>,1:189]]}, def_query0={query_dictionary={updated_at=[[@15,43:52='updated_at',<419>,1:43], [@44,159:159='b',<419>,1:159]], created_at=[[@11,29:38='created_at',<419>,1:29], [@40,145:145='b',<419>,1:145]], id=[[@7,23:24='id',<419>,1:23], [@32,119:119='b',<419>,1:119]], priority=[[@19,57:64='priority',<419>,1:57], [@51,187:187='b',<419>,1:187]]}, table_dictionary={events={updated_at=[[@13,41:41='e',<419>,1:41], [@24,86:86='e',<419>,1:86]], created_at=[[@9,27:27='e',<419>,1:27]], id=[[@5,21:21='e',<419>,1:21]], priority=[[@17,55:55='e',<419>,1:55]]}}, filters=[{name=updated_at, table_ref=e}], interface={updated_at=[{name=updated_at, table_ref=e}], created_at=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}], priority=[{name=priority, table_ref=e}]}, table_alias={e=events}}, ordered_by=[{name=age_hours, table_ref=query1}], interface={age_hours=[{name=created_at, table_ref=b}, {name=updated_at, table_ref=b}], id=[{name=id, table_ref=b}], priority=[{name=priority, table_ref=b}]}, table_alias={b=query0, base=query0}}}", extractor.getSymbolTable().toString());
+
+		final String expectedTimestampdiffBaselineDefQuery1DefQuery0Interface_0 = "{updated_at=[{name=updated_at, table_ref=e}], created_at=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}], priority=[{name=priority, table_ref=e}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query1.def_query0.interface", expectedTimestampdiffBaselineDefQuery1DefQuery0Interface_0);
+		final String expectedTimestampdiffBaselineDefQuery1Interface_1 = "{age_hours=[{name=created_at, table_ref=b}, {name=updated_at, table_ref=b}], id=[{name=id, table_ref=b}], priority=[{name=priority, table_ref=b}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query1.interface", expectedTimestampdiffBaselineDefQuery1Interface_1);
+	}
+
+	@Test
+	public void datediffReportsAmbiguousUnqualifiedLeftOperand() {
+		String query = "select a.id as event_id, datediff(day, created_at, a.resolved_at) as delta_days from events a join accounts b on a.account_id = b.id where a.active = 1";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'created_at' at (l:1 c:39). Possible sources: [accounts, events]",
+				"created_at", 1, 39);
+		assertDiagnosticAtPosition(parser.getSnippet(), "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [created_at [(l:1 c:39)]]",
+				"created_at", 1, 39);
+		Assert.assertEquals("{accounts={id=[[@30,128:128='b',<419>,1:128]]}, events={account_id=[[@26,113:113='a',<419>,1:113]], resolved_at=[[@13,51:51='a',<419>,1:51]], active=[[@34,139:139='a',<419>,1:139]], id=[[@1,7:7='a',<419>,1:7]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query0={query_dictionary={event_id=[[@5,15:22='event_id',<419>,1:15]], delta_days=[[@18,69:78='delta_days',<419>,1:69]]}, table_dictionary={accounts={id=[[@30,128:128='b',<419>,1:128]]}, events={account_id=[[@26,113:113='a',<419>,1:113]], resolved_at=[[@13,51:51='a',<419>,1:51]], active=[[@34,139:139='a',<419>,1:139]], id=[[@1,7:7='a',<419>,1:7]]}}, filters=[{name=account_id, table_ref=a}, {name=id, table_ref=b}, {name=active, table_ref=a}], interface={event_id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=null}, {name=resolved_at, table_ref=a}]}, table_alias={a=events, b=accounts}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffReportsAmbiguousUnqualifiedRightOperand() {
+		String query = "select a.id as event_id, datediff(day, a.created_at, resolved_at) as delta_days from events a join accounts b on a.account_id = b.id where b.enabled = 1";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'resolved_at' at (l:1 c:53). Possible sources: [accounts, events]",
+				"resolved_at", 1, 53);
+		assertDiagnosticAtPosition(parser.getSnippet(), "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [resolved_at [(l:1 c:53)]]",
+				"resolved_at", 1, 53);
+		Assert.assertEquals("{accounts={id=[[@30,128:128='b',<419>,1:128]], enabled=[[@34,139:139='b',<419>,1:139]]}, events={account_id=[[@26,113:113='a',<419>,1:113]], created_at=[[@11,39:39='a',<419>,1:39]], id=[[@1,7:7='a',<419>,1:7]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query0={query_dictionary={event_id=[[@5,15:22='event_id',<419>,1:15]], delta_days=[[@18,69:78='delta_days',<419>,1:69]]}, table_dictionary={accounts={id=[[@30,128:128='b',<419>,1:128]], enabled=[[@34,139:139='b',<419>,1:139]]}, events={account_id=[[@26,113:113='a',<419>,1:113]], created_at=[[@11,39:39='a',<419>,1:39]], id=[[@1,7:7='a',<419>,1:7]]}}, filters=[{name=account_id, table_ref=a}, {name=id, table_ref=b}, {name=enabled, table_ref=b}], interface={event_id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=null}]}, table_alias={a=events, b=accounts}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffReportsAmbiguousColumnsInBothOperands() {
+		String query = "select a.id as event_id, datediff(day, created_at, resolved_at) as delta_days from events a join accounts b on a.account_id = b.id where a.active = 1";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 3, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'created_at' at (l:1 c:39). Possible sources: [accounts, events]",
+				"created_at", 1, 39);
+		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'resolved_at' at (l:1 c:51). Possible sources: [accounts, events]",
+				"resolved_at", 1, 51);
+		assertDiagnosticAtPosition(parser.getSnippet(), "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [resolved_at [(l:1 c:51)], created_at [(l:1 c:39)]]",
+				"resolved_at", 1, 51);
+		Assert.assertEquals("{accounts={id=[[@28,126:126='b',<419>,1:126]]}, events={account_id=[[@24,111:111='a',<419>,1:111]], active=[[@32,137:137='a',<419>,1:137]], id=[[@1,7:7='a',<419>,1:7]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query0={query_dictionary={event_id=[[@5,15:22='event_id',<419>,1:15]], delta_days=[[@16,67:76='delta_days',<419>,1:67]]}, table_dictionary={accounts={id=[[@28,126:126='b',<419>,1:126]]}, events={account_id=[[@24,111:111='a',<419>,1:111]], active=[[@32,137:137='a',<419>,1:137]], id=[[@1,7:7='a',<419>,1:7]]}}, filters=[{name=account_id, table_ref=a}, {name=id, table_ref=b}, {name=active, table_ref=a}], interface={event_id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=null}, {name=resolved_at, table_ref=null}]}, table_alias={a=events, b=accounts}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffReportsUnresolvedUnqualifiedLeftOperand() {
+		String query = "select datediff(day, missing_left, a.resolved_at) as delta_days, a.id from events a where a.resolved_at is not null";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		Assert.assertEquals("{events={missing_left=[[@5,21:32='missing_left',<419>,1:21]], resolved_at=[[@7,35:35='a',<419>,1:35], [@21,90:90='a',<419>,1:90]], id=[[@14,65:65='a',<419>,1:65]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query0={query_dictionary={id=[[@16,67:68='id',<419>,1:67]], delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={missing_left=[[@5,21:32='missing_left',<419>,1:21]], resolved_at=[[@7,35:35='a',<419>,1:35], [@21,90:90='a',<419>,1:90]], id=[[@14,65:65='a',<419>,1:65]]}}, filters=[{name=resolved_at, table_ref=a}], interface={id=[{name=id, table_ref=a}], delta_days=[{name=missing_left, table_ref=events}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffReportsUnresolvedUnqualifiedRightOperand() {
+		String query = "select datediff(day, a.created_at, missing_right) as delta_days, a.id from events a where a.created_at is not null";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		Assert.assertEquals("{events={created_at=[[@5,21:21='a',<419>,1:21], [@21,90:90='a',<419>,1:90]], missing_right=[[@9,35:47='missing_right',<419>,1:35]], id=[[@14,65:65='a',<419>,1:65]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query0={query_dictionary={id=[[@16,67:68='id',<419>,1:67]], delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21], [@21,90:90='a',<419>,1:90]], missing_right=[[@9,35:47='missing_right',<419>,1:35]], id=[[@14,65:65='a',<419>,1:65]]}}, filters=[{name=created_at, table_ref=a}], interface={id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=missing_right, table_ref=events}]}, table_alias={a=events}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffRejectsHiddenUnderlyingDerivedLeftOperand() {
+		String query = "select datediff(day, d.created_at, d.resolved_at) as delta_days, d.id from (select e.id, e.created_at as created_out, e.resolved_at from events e) d where d.id > 0";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'created_at' at (l:1 c:21) was not found in output interface of query alias 'd'.",
+				"d.created_at", 1, 21);
+		Assert.assertEquals("{events={resolved_at=[[@32,118:118='e',<419>,1:118]], created_at=[[@26,89:89='e',<419>,1:89]], id=[[@22,83:83='e',<419>,1:83]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query1={query_dictionary={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, def_query0={query_dictionary={created_out=[[@30,105:115='created_out',<419>,1:105]], resolved_at=[[@34,120:130='resolved_at',<419>,1:120], [@9,35:35='d',<419>,1:35]], id=[[@24,85:86='id',<419>,1:85], [@16,65:65='d',<419>,1:65], [@41,155:155='d',<419>,1:155]]}, table_dictionary={events={resolved_at=[[@32,118:118='e',<419>,1:118]], created_at=[[@26,89:89='e',<419>,1:89]], id=[[@22,83:83='e',<419>,1:83]]}}, interface={created_out=[{name=created_at, table_ref=e}], resolved_at=[{name=resolved_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, filters=[{name=id, table_ref=d}], interface={id=[{name=id, table_ref=d}], delta_days=[{name=created_at, table_ref=d}, {name=resolved_at, table_ref=d}]}, table_alias={d=query0}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffRejectsHiddenUnderlyingDerivedRightOperand() {
+		String query = "select datediff(day, d.created_out, d.resolved_at) as delta_days, d.id from (select e.id, e.created_at as created_out, e.resolved_at as resolved_out from events e) d where d.id > 0";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'resolved_at' at (l:1 c:36) was not found in output interface of query alias 'd'.",
+				"d.resolved_at", 1, 36);
+		Assert.assertEquals("{events={resolved_at=[[@32,119:119='e',<419>,1:119]], created_at=[[@26,90:90='e',<419>,1:90]], id=[[@22,84:84='e',<419>,1:84]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query1={query_dictionary={id=[[@18,68:69='id',<419>,1:68]], delta_days=[[@14,54:63='delta_days',<419>,1:54]]}, def_query0={query_dictionary={resolved_out=[[@36,136:147='resolved_out',<419>,1:136]], created_out=[[@30,106:116='created_out',<419>,1:106], [@5,21:21='d',<419>,1:21]], id=[[@24,86:87='id',<419>,1:86], [@16,66:66='d',<419>,1:66], [@43,172:172='d',<419>,1:172]]}, table_dictionary={events={resolved_at=[[@32,119:119='e',<419>,1:119]], created_at=[[@26,90:90='e',<419>,1:90]], id=[[@22,84:84='e',<419>,1:84]]}}, interface={resolved_out=[{name=resolved_at, table_ref=e}], created_out=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, filters=[{name=id, table_ref=d}], interface={id=[{name=id, table_ref=d}], delta_days=[{name=created_out, table_ref=d}, {name=resolved_at, table_ref=d}]}, table_alias={d=query0}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffRejectsMissingCteOutputInRightOperand() {
+		String query = "with base as (select e.id, e.created_at, e.status from events e) select datediff(day, b.created_at, b.resolved_at) as delta_days, b.id from base b where b.status is not null";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'resolved_at' at (l:1 c:100) was not found in output interface of query alias 'b'.",
+				"b.resolved_at", 1, 100);
+		Assert.assertEquals("{events={created_at=[[@9,27:27='e',<419>,1:27]], id=[[@5,21:21='e',<419>,1:21]], status=[[@13,41:41='e',<419>,1:41]]}}",
+				parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("{def_query1={context_list={base=query0, b=query0}, query_dictionary={id=[[@38,132:133='id',<419>,1:132]], delta_days=[[@34,118:127='delta_days',<419>,1:118]]}, def_query0={query_dictionary={created_at=[[@11,29:38='created_at',<419>,1:29], [@25,86:86='b',<419>,1:86]], id=[[@7,23:24='id',<419>,1:23], [@36,130:130='b',<419>,1:130]], status=[[@15,43:48='status',<419>,1:43], [@43,153:153='b',<419>,1:153]]}, table_dictionary={events={created_at=[[@9,27:27='e',<419>,1:27]], id=[[@5,21:21='e',<419>,1:21]], status=[[@13,41:41='e',<419>,1:41]]}}, interface={created_at=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}], status=[{name=status, table_ref=e}]}, table_alias={e=events}}, filters=[{name=status, table_ref=b}], interface={id=[{name=id, table_ref=b}], delta_days=[{name=created_at, table_ref=b}, {name=resolved_at, table_ref=b}]}, table_alias={b=query0, base=query0}}}",
+				parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
 	public void dateaddHasNamedArgumentsAndPartMetadata() {
 		final String query = "select dateadd(year, 1, a.created_at) as shifted from events a";
 		final SQLSelectParserParser parser = parse(query);
