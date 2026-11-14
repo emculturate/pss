@@ -1829,6 +1829,370 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 	}
 
 	@Test
+	public void dateaddCorrelatedScalarSubqueryRespectsNearestVisibleScopeWithShadowing() {
+		final String query = "select dateadd(day, (select max(o.delta_days) from offsets o where o.event_id = outer_e.id), outer_e.created_at) as correlated_shift, dateadd(day, (select max(e.delta_days) from offsets e where e.event_id = outer_e.id), outer_e.created_at) as shadowed_shift from events outer_e";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=correlated_shift, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={lookup={from={table={alias=o, table=offsets}}, where={condition={left={column={name=event_id, table_ref=o}}, right={column={name=id, table_ref=outer_e}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=delta_days, table_ref=o}}}}}}}, value={column={name=created_at, table_ref=outer_e}}}}, 2={alias=shadowed_shift, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={lookup={from={table={alias=e, table=offsets}}, where={condition={left={column={name=event_id, table_ref=e}}, right={column={name=id, table_ref=outer_e}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=delta_days, table_ref=e}}}}}}}, value={column={name=created_at, table_ref=outer_e}}}}}, from={table={alias=outer_e, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[correlated_shift, shadowed_shift]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{offsets={event_id=[[@17,67:67='o',<419>,1:67], [@49,194:194='e',<419>,1:194]], delta_days=[[@9,32:32='o',<419>,1:32], [@41,159:159='e',<419>,1:159]]}, events={created_at=[[@26,93:99='outer_e',<419>,1:93], [@58,220:226='outer_e',<419>,1:220]], id=[[@21,80:86='outer_e',<419>,1:80], [@53,207:213='outer_e',<419>,1:207]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={correlated_shift=[[@31,116:131='correlated_shift',<419>,1:116]], shadowed_shift=[[@63,243:256='shadowed_shift',<419>,1:243]]}, query0={unnamed_0=[[@12,44:44=')',<288>,1:44]]}, query2={unnamed_1=[[@44,171:171=')',<288>,1:171]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query4={query_dictionary={correlated_shift=[[@31,116:131='correlated_shift',<419>,1:116]], shadowed_shift=[[@63,243:256='shadowed_shift',<419>,1:243]]}, table_dictionary={events={created_at=[[@26,93:99='outer_e',<419>,1:93], [@58,220:226='outer_e',<419>,1:220]], id=[[@21,80:86='outer_e',<419>,1:80], [@53,207:213='outer_e',<419>,1:207]]}}, dependent_queries={predicand3={query=query2, type=interface}, predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@12,44:44=')',<288>,1:44]]}, table_dictionary={offsets={event_id=[[@17,67:67='o',<419>,1:67], [@49,194:194='e',<419>,1:194]], delta_days=[[@9,32:32='o',<419>,1:32], [@41,159:159='e',<419>,1:159]]}}, filters=[{name=event_id, table_ref=o}, {name=id, table_ref=outer_e}], interface={unnamed_0=[{name=delta_days, table_ref=o}]}, table_alias={o=offsets}}, interface={correlated_shift=[{name=created_at, table_ref=outer_e}], shadowed_shift=[{name=created_at, table_ref=outer_e}]}, table_alias={outer_e=events}, def_query2={query_dictionary={unnamed_1=[[@44,171:171=')',<288>,1:171]]}, table_dictionary={offsets={event_id=[[@49,194:194='e',<419>,1:194]], delta_days=[[@41,159:159='e',<419>,1:159]]}}, filters=[{name=event_id, table_ref=e}, {name=id, table_ref=outer_e}], interface={unnamed_1=[{name=delta_days, table_ref=e}]}, table_alias={e=offsets}}}}", extractor.getSymbolTable().toString());
+
+		final String expectedCorrelatedDefQuery4DependentQueries_0 = "{predicand3={query=query2, type=interface}, predicand1={query=query0, type=interface}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.dependent_queries", expectedCorrelatedDefQuery4DependentQueries_0);
+		final String expectedCorrelatedDefQuery4DefQuery0Filters_1 = "[{name=event_id, table_ref=o}, {name=id, table_ref=outer_e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query0.filters", expectedCorrelatedDefQuery4DefQuery0Filters_1);
+		final String expectedCorrelatedDefQuery4DefQuery2Filters_2 = "[{name=event_id, table_ref=e}, {name=id, table_ref=outer_e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2.filters", expectedCorrelatedDefQuery4DefQuery2Filters_2);
+	}
+
+	@Test
+	public void dateaddInWherePredicatesAndExistsSubqueryCollectsFilterAndDependentQueryLineage() {
+		final String query = "select e.id from events e where dateadd(day, e.offset_days, e.created_at) > DATE '2026-01-01' and exists (select 1 from adjustments a where a.event_id = e.id and a.updated_at > dateadd(day, a.delta_days, e.created_at))";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}, where={and={1={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=a, table=adjustments}}, where={and={1={condition={left={column={name=event_id, table_ref=a}}, right={column={name=id, table_ref=e}}, operator==}}, 2={condition={left={column={name=updated_at, table_ref=a}}, right={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=delta_days, table_ref=a}}, value={column={name=created_at, table_ref=e}}}}, operator=>}}}}, operator=exists}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{adjustments={event_id=[[@32,140:140='a',<419>,1:140]], updated_at=[[@40,162:162='a',<419>,1:162]], delta_days=[[@48,190:190='a',<419>,1:190]]}, events={created_at=[[@16,60:60='e',<419>,1:60], [@52,204:204='e',<419>,1:204]], offset_days=[[@12,45:45='e',<419>,1:45]], id=[[@1,7:7='e',<419>,1:7], [@36,153:153='e',<419>,1:153]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@27,113:113='1',<300>,1:113]]}, query2={id=[[@3,9:10='id',<419>,1:9]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={events={created_at=[[@16,60:60='e',<419>,1:60], [@52,204:204='e',<419>,1:204]], offset_days=[[@12,45:45='e',<419>,1:45]], id=[[@1,7:7='e',<419>,1:7], [@36,153:153='e',<419>,1:153]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@27,113:113='1',<300>,1:113]]}, table_dictionary={adjustments={event_id=[[@32,140:140='a',<419>,1:140]], updated_at=[[@40,162:162='a',<419>,1:162]], delta_days=[[@48,190:190='a',<419>,1:190]]}}, filters=[{name=event_id, table_ref=a}, {name=id, table_ref=e}, {name=updated_at, table_ref=a}, {name=delta_days, table_ref=a}, {name=created_at, table_ref=e}], interface={unnamed_0=[]}, table_alias={a=adjustments}}, filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], interface={id=[{name=id, table_ref=e}]}, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedWhereDefQuery2DependentQueries_0 = "{exists1={query=query0, type=filters}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query2.dependent_queries", expectedWhereDefQuery2DependentQueries_0);
+		final String expectedWhereDefQuery2Filters_1 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query2.filters", expectedWhereDefQuery2Filters_1);
+		final String expectedWhereDefQuery2DefQuery0Filters_2 = "[{name=event_id, table_ref=a}, {name=id, table_ref=e}, {name=updated_at, table_ref=a}, {name=delta_days, table_ref=a}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query2.def_query0.filters", expectedWhereDefQuery2DefQuery0Filters_2);
+	}
+
+	@Test
+	public void dateaddInGroupByAndHavingSeparatesGroupedAndFilterDependencies() {
+		final String query = "select dateadd(day, e.offset_days, e.created_at) as shifted, count(*) as total from events e group by dateadd(day, e.offset_days, e.created_at) having max(dateadd(day, e.offset_days, e.created_at)) > DATE '2026-01-01'";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=max, qualifier=null, parameters={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}, from={table={alias=e, table=events}}, groupby={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@9,35:35='e',<419>,1:35], [@35,130:130='e',<419>,1:130], [@50,183:183='e',<419>,1:183]], offset_days=[[@5,20:20='e',<419>,1:20], [@31,115:115='e',<419>,1:115], [@46,168:168='e',<419>,1:168]], *=[[@18,67:67='*',<291>,1:67]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@14,52:58='shifted',<419>,1:52]], total=[[@21,73:77='total',<419>,1:73]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={total=[[@21,73:77='total',<419>,1:73]], shifted=[[@14,52:58='shifted',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='e',<419>,1:35], [@35,130:130='e',<419>,1:130], [@50,183:183='e',<419>,1:183]], *=[[@18,67:67='*',<291>,1:67]], offset_days=[[@5,20:20='e',<419>,1:20], [@31,115:115='e',<419>,1:115], [@46,168:168='e',<419>,1:168]]}}, grouped_by=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], interface={total=[], shifted=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]}, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedGroupByDefQuery0GroupedBy_0 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.grouped_by", expectedGroupByDefQuery0GroupedBy_0);
+		final String expectedGroupByDefQuery0Filters_1 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.filters", expectedGroupByDefQuery0Filters_1);
+	}
+
+	@Test
+	public void dateaddInOrderByExpressionAndAliasTracksOrderedByDependencies() {
+		final String query = "select dateadd(day, e.offset_days, e.created_at) as shifted, e.id from events e order by dateadd(day, e.offset_days, e.created_at), shifted";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, 2={column={name=id, table_ref=e}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=shifted, table_ref=null}}, sort_order=ASC}}, from={table={alias=e, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@9,35:35='e',<419>,1:35], [@32,117:117='e',<419>,1:117]], offset_days=[[@5,20:20='e',<419>,1:20], [@28,102:102='e',<419>,1:102]], id=[[@16,61:61='e',<419>,1:61]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@14,52:58='shifted',<419>,1:52], [@37,132:138='shifted',<419>,1:132]], id=[[@18,63:64='id',<419>,1:63]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={id=[[@18,63:64='id',<419>,1:63]], shifted=[[@14,52:58='shifted',<419>,1:52], [@37,132:138='shifted',<419>,1:132]]}, table_dictionary={events={created_at=[[@9,35:35='e',<419>,1:35], [@32,117:117='e',<419>,1:117]], offset_days=[[@5,20:20='e',<419>,1:20], [@28,102:102='e',<419>,1:102]], id=[[@16,61:61='e',<419>,1:61]]}}, ordered_by=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}, {name=shifted, table_ref=query0}], interface={id=[{name=id, table_ref=e}], shifted=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]}, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedOrderByDefQuery0OrderedBy_0 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}, {name=shifted, table_ref=query0}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.ordered_by", expectedOrderByDefQuery0OrderedBy_0);
+	}
+
+	@Test
+	public void dateaddInWindowPartitionOrderAndQualifyCollectsWindowDependencies() {
+		final String query = "select e.id from events e qualify row_number() over (partition by dateadd(day, e.offset_days, e.created_at) order by dateadd(hour, e.offset_hours, e.created_at)) = 1";
+		SqlParserAccess parserAccess = new SqlParserAccess(false, false, false);
+		parserAccess.executeTheParse(query, "SQL");
+		Assert.assertEquals(query, 0, parserAccess.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parserAccess.getAllDiagnostics().toString(), 1, parserAccess.getAllDiagnostics().size());
+		String warning = "qualify_clause at (l:1 c:26) is recognized as Snowflake-specific grammar.";
+		assertDiagnosticAtPosition(parserAccess.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING, warning, null, 1, 26);
+		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parserAccess.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "qualify_clause").message());
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}, qualify={condition={left={window_function={over={partition_by={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=dateadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={column={name=offset_hours, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}, right={literal=1}, operator==}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@23,94:94='e',<419>,1:94], [@37,147:147='e',<419>,1:147]], offset_hours=[[@33,131:131='e',<419>,1:131]], offset_days=[[@19,79:79='e',<419>,1:79]], id=[[@1,7:7='e',<419>,1:7]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@3,9:10='id',<419>,1:9]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={window_ordered_by=[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}], query_dictionary={id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={events={created_at=[[@23,94:94='e',<419>,1:94], [@37,147:147='e',<419>,1:147]], offset_hours=[[@33,131:131='e',<419>,1:131]], offset_days=[[@19,79:79='e',<419>,1:79]], id=[[@1,7:7='e',<419>,1:7]]}}, window_partition_by=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}, {name=offset_hours, table_ref=e}], interface={id=[{name=id, table_ref=e}]}, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+		Assert.assertEquals("Array Output Collectors are wrong", "{SQL={queryInterface=[id]}}", extractor.getArrayOutputCollectorsMap().toString());
+
+		final String expectedWindowDefQuery0WindowPartitionBy_0 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.window_partition_by", expectedWindowDefQuery0WindowPartitionBy_0);
+		final String expectedWindowDefQuery0WindowOrderedBy_1 = "[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.window_ordered_by", expectedWindowDefQuery0WindowOrderedBy_1);
+	}
+
+	@Test
+	public void dateaddInInsertSelectSourceCollectsTargetAndSourceDependencies() {
+		final String query = "insert into archive_events (shifted_at, event_id) select dateadd(day, e.offset_days, e.created_at) as shifted_at, e.id from events e";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={insert={preamble=insert_into, from={from={table={alias=e, table=events}}, select={1={alias=shifted_at, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, 2={column={name=id, table_ref=e}}}}, target_table={table={alias=null, table=archive_events}}, columns={1={column={name=shifted_at, table_ref=null}}, 2={column={name=event_id, table_ref=null}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[shifted_at, event_id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{archive_events={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}, events={created_at=[[@17,85:85='e',<419>,1:85]], offset_days=[[@13,70:70='e',<419>,1:70]], id=[[@24,114:114='e',<419>,1:114]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted_at=[[@22,102:111='shifted_at',<419>,1:102]], id=[[@26,116:117='id',<419>,1:116]]}, insert1={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert1={query_dictionary={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}, table_dictionary={archive_events={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}}, def_query0={query_dictionary={shifted_at=[[@22,102:111='shifted_at',<419>,1:102]], id=[[@26,116:117='id',<419>,1:116]]}, table_dictionary={events={created_at=[[@17,85:85='e',<419>,1:85]], offset_days=[[@13,70:70='e',<419>,1:70]], id=[[@24,114:114='e',<419>,1:114]]}}, interface={shifted_at=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, interface={shifted_at=[{name=shifted_at, table_ref=query0}], event_id=[{name=id, table_ref=query0}]}}}", extractor.getSymbolTable().toString());
+
+		final String expectedInsertDefInsert1Interface_0 = "{shifted_at=[{name=shifted_at, table_ref=query0}], event_id=[{name=id, table_ref=query0}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_insert1.interface", expectedInsertDefInsert1Interface_0);
+		final String expectedInsertDefInsert1DefQuery0Interface_1 = "{shifted_at=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_insert1.def_query0.interface", expectedInsertDefInsert1DefQuery0Interface_1);
+	}
+
+	@Test
+	public void dateaddInUpdateSetAndWhereSeparatesAssignmentAndFilterDependencies() {
+		final String query = "update events e set shifted_at = dateadd(day, e.offset_days, e.created_at) where dateadd(day, e.offset_days, e.created_at) > DATE '2026-01-01'";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={table={alias=e, table=events}, where={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}, assignments={1={set={column={name=shifted_at, table_ref=null}}, to={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[shifted_at]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@14,61:61='e',<419>,1:61], [@27,109:109='e',<419>,1:109]], offset_days=[[@10,46:46='e',<419>,1:46], [@23,94:94='e',<419>,1:94]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={shifted_at=[[@4,20:29='shifted_at',<419>,1:20]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_update0={assignments={shifted_at=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]}, table_dictionary={events={created_at=[[@14,61:61='e',<419>,1:61], [@27,109:109='e',<419>,1:109]], offset_days=[[@10,46:46='e',<419>,1:46], [@23,94:94='e',<419>,1:94]]}}, update_dictionary={shifted_at=[[@4,20:29='shifted_at',<419>,1:20]]}, target_table={events={shifted_at=[[@4,20:29='shifted_at',<419>,1:20]]}}, filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], table_alias={e=events}, lhs_unresolved_columns={shifted_at={column={name=shifted_at, table_ref=null}, locations=[[@4,20:29='shifted_at',<419>,1:20]]}}}}", extractor.getSymbolTable().toString());
+
+		final String expectedUpdateDefUpdate0Assignments_0 = "{shifted_at=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_update0.assignments", expectedUpdateDefUpdate0Assignments_0);
+		final String expectedUpdateDefUpdate0Filters_1 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_update0.filters", expectedUpdateDefUpdate0Filters_1);
+	}
+
+	@Test
+	public void dateaddInDeleteWhereAndExistsSubqueryCollectsDeleteFilterDependencies() {
+		final String query = "delete from events e where dateadd(day, e.offset_days, e.created_at) > DATE '2026-01-01' and exists (select 1 from adjustments a where dateadd(day, a.delta_days, a.updated_at) > DATE '2026-01-01')";
+		SqlParserAccess parserAccess = new SqlParserAccess(false, false, false);
+		parserAccess.executeTheParse(query, "SQL");
+		Assert.assertEquals(query, 0, parserAccess.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parserAccess.getAllDiagnostics().toString(), 1, parserAccess.getAllDiagnostics().size());
+		String warning = "delete_snowflake_expression at (l:1 c:0) is recognized as Snowflake-specific grammar.";
+		assertDiagnosticAtPosition(parserAccess.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING, warning, null, 1, 0);
+		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parserAccess.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "delete_snowflake_expression").message());
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={delete={table={alias=e, table=events}, where={and={1={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=a, table=adjustments}}, where={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=delta_days, table_ref=a}}, value={column={name=updated_at, table_ref=a}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}, operator=exists}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{adjustments={updated_at=[[@37,162:162='a',<419>,1:162]], delta_days=[[@33,148:148='a',<419>,1:148]]}, events={created_at=[[@13,55:55='e',<419>,1:55]], offset_days=[[@9,40:40='e',<419>,1:40]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@24,108:108='1',<300>,1:108]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_delete2={query_dictionary={}, table_dictionary={events={created_at=[[@13,55:55='e',<419>,1:55]], offset_days=[[@9,40:40='e',<419>,1:40]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@24,108:108='1',<300>,1:108]]}, table_dictionary={adjustments={updated_at=[[@37,162:162='a',<419>,1:162]], delta_days=[[@33,148:148='a',<419>,1:148]]}}, filters=[{name=delta_days, table_ref=a}, {name=updated_at, table_ref=a}], interface={unnamed_0=[]}, table_alias={a=adjustments}}, filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], interface=null, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+		Assert.assertEquals("Array Output Collectors are wrong", "{SQL={queryInterface=[]}}", extractor.getArrayOutputCollectorsMap().toString());
+
+		final String expectedDeleteDefDelete2DependentQueries_0 = "{exists1={query=query0, type=filters}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_delete2.dependent_queries", expectedDeleteDefDelete2DependentQueries_0);
+		final String expectedDeleteDefDelete2Filters_1 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_delete2.filters", expectedDeleteDefDelete2Filters_1);
+		final String expectedDeleteDefDelete2DefQuery0Filters_2 = "[{name=delta_days, table_ref=a}, {name=updated_at, table_ref=a}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_delete2.def_query0.filters", expectedDeleteDefDelete2DefQuery0Filters_2);
+	}
+
+	@Test
+	public void dateaddAcrossUnionAllBranchesRetainsBranchLocalDependencies() {
+		final String query = "select dateadd(day, a.offset_days, a.created_at) as shifted, a.id as event_id from events a union all select dateadd(day, b.offset_days, b.created_at) as shifted, b.id as event_id from events_archive b union all select c.created_at as shifted, c.id as event_id from events c";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=a}}, value={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}, alias=event_id}}, from={table={alias=a, table=events}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=b}}, value={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}, alias=event_id}}, from={table={alias=b, table=events_archive}}}, 4={union={qualifier=all, operator=union}}, 5={select={1={column={name=created_at, table_ref=c}, alias=shifted}, 2={column={name=id, table_ref=c}, alias=event_id}}, from={table={alias=c, table=events}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={created_at=[[@35,137:137='b',<419>,1:137]], offset_days=[[@31,122:122='b',<419>,1:122]], id=[[@42,163:163='b',<419>,1:163]]}, events={created_at=[[@9,35:35='a',<419>,1:35], [@53,219:219='c',<419>,1:219]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61], [@59,244:244='c',<419>,1:244]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@14,52:58='shifted',<419>,1:52]], event_id=[[@20,69:76='event_id',<419>,1:69]]}, query1={shifted=[[@40,154:160='shifted',<419>,1:154]], event_id=[[@46,171:178='event_id',<419>,1:171]]}, query2={shifted=[[@57,235:241='shifted',<419>,1:235]], event_id=[[@63,252:259='event_id',<419>,1:252]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union3={def_query1={query_dictionary={event_id=[[@46,171:178='event_id',<419>,1:171]], shifted=[[@40,154:160='shifted',<419>,1:154]]}, table_dictionary={events_archive={created_at=[[@35,137:137='b',<419>,1:137]], offset_days=[[@31,122:122='b',<419>,1:122]], id=[[@42,163:163='b',<419>,1:163]]}}, setop=UNION, interface={event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={event_id=[[@20,69:76='event_id',<419>,1:69]], shifted=[[@14,52:58='shifted',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='a',<419>,1:35], [@53,219:219='c',<419>,1:219]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61], [@59,244:244='c',<419>,1:244]]}}, interface={event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events}}, interface={event_id=query_column, shifted=query_column}, def_query2={query_dictionary={event_id=[[@63,252:259='event_id',<419>,1:252]], shifted=[[@57,235:241='shifted',<419>,1:235]]}, table_dictionary={events={created_at=[[@53,219:219='c',<419>,1:219]], id=[[@59,244:244='c',<419>,1:244]]}}, setop=UNION, interface={event_id=[{name=id, table_ref=c}], shifted=[{name=created_at, table_ref=c}]}, table_alias={c=events}}}}", extractor.getSymbolTable().toString());
+
+		final String expectedUnionDefUnion3DefQuery0Interface_0 = "{event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union3.def_query0.interface", expectedUnionDefUnion3DefQuery0Interface_0);
+		final String expectedUnionDefUnion3DefQuery1Interface_1 = "{event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union3.def_query1.interface", expectedUnionDefUnion3DefQuery1Interface_1);
+		final String expectedUnionDefUnion3DefQuery2Interface_2 = "{event_id=[{name=id, table_ref=c}], shifted=[{name=created_at, table_ref=c}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union3.def_query2.interface", expectedUnionDefUnion3DefQuery2Interface_2);
+	}
+
+	@Test
+	public void dateaddAcrossExceptBranchesKeepsOperandIsolation() {
+		final String query = "select dateadd(day, a.offset_days, a.created_at) as shifted, a.id as event_id from events a except select dateadd(day, b.offset_days, b.created_at) as shifted, b.id as event_id from events_archive b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=a}}, value={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}, alias=event_id}}, from={table={alias=a, table=events}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=b}}, value={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}, alias=event_id}}, from={table={alias=b, table=events_archive}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={created_at=[[@34,134:134='b',<419>,1:134]], offset_days=[[@30,119:119='b',<419>,1:119]], id=[[@41,160:160='b',<419>,1:160]]}, events={created_at=[[@9,35:35='a',<419>,1:35]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@14,52:58='shifted',<419>,1:52]], event_id=[[@20,69:76='event_id',<419>,1:69]]}, query1={shifted=[[@39,151:157='shifted',<419>,1:151]], event_id=[[@45,168:175='event_id',<419>,1:168]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union2={def_query1={query_dictionary={event_id=[[@45,168:175='event_id',<419>,1:168]], shifted=[[@39,151:157='shifted',<419>,1:151]]}, table_dictionary={events_archive={created_at=[[@34,134:134='b',<419>,1:134]], offset_days=[[@30,119:119='b',<419>,1:119]], id=[[@41,160:160='b',<419>,1:160]]}}, setop=EXCEPT, interface={event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={event_id=[[@20,69:76='event_id',<419>,1:69]], shifted=[[@14,52:58='shifted',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='a',<419>,1:35]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61]]}}, interface={event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events}}, interface={event_id=query_column, shifted=query_column}}}", extractor.getSymbolTable().toString());
+
+		final String expectedExceptDefUnion2DefQuery0Interface_0 = "{event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union2.def_query0.interface", expectedExceptDefUnion2DefQuery0Interface_0);
+		final String expectedExceptDefUnion2DefQuery1Interface_1 = "{event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union2.def_query1.interface", expectedExceptDefUnion2DefQuery1Interface_1);
+	}
+
+	@Test
+	public void dateaddAcrossIntersectBranchesKeepsOperandIsolation() {
+		final String query = "select dateadd(day, a.offset_days, a.created_at) as shifted, a.id as event_id from events a intersect select dateadd(day, b.offset_days, b.created_at) as shifted, b.id as event_id from events_archive b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=a}}, value={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}, alias=event_id}}, from={table={alias=a, table=events}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=b}}, value={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}, alias=event_id}}, from={table={alias=b, table=events_archive}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={created_at=[[@34,137:137='b',<419>,1:137]], offset_days=[[@30,122:122='b',<419>,1:122]], id=[[@41,163:163='b',<419>,1:163]]}, events={created_at=[[@9,35:35='a',<419>,1:35]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@14,52:58='shifted',<419>,1:52]], event_id=[[@20,69:76='event_id',<419>,1:69]]}, query1={shifted=[[@39,154:160='shifted',<419>,1:154]], event_id=[[@45,171:178='event_id',<419>,1:171]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_intersect2={def_query1={query_dictionary={event_id=[[@45,171:178='event_id',<419>,1:171]], shifted=[[@39,154:160='shifted',<419>,1:154]]}, table_dictionary={events_archive={created_at=[[@34,137:137='b',<419>,1:137]], offset_days=[[@30,122:122='b',<419>,1:122]], id=[[@41,163:163='b',<419>,1:163]]}}, setop=INTERSECTION, interface={event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={event_id=[[@20,69:76='event_id',<419>,1:69]], shifted=[[@14,52:58='shifted',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='a',<419>,1:35]], offset_days=[[@5,20:20='a',<419>,1:20]], id=[[@16,61:61='a',<419>,1:61]]}}, interface={event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events}}, interface={event_id=query_column, shifted=query_column}}}", extractor.getSymbolTable().toString());
+
+		final String expectedIntersectDefIntersect2DefQuery0Interface_0 = "{event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_intersect2.def_query0.interface", expectedIntersectDefIntersect2DefQuery0Interface_0);
+		final String expectedIntersectDefIntersect2DefQuery1Interface_1 = "{event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_intersect2.def_query1.interface", expectedIntersectDefIntersect2DefQuery1Interface_1);
+	}
+
+	@Test
+	public void dateaddAcrossNestedMixedSetOperationsPublishesIntermediateInterfaces() {
+		final String query = "(select dateadd(day, a.offset_days, a.created_at) as shifted, a.id as event_id from events a union select dateadd(day, b.offset_days, b.created_at) as shifted, b.id as event_id from events_archive b) except select dateadd(day, c.offset_days, c.created_at) as shifted, c.id as event_id from events c";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=a}}, value={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}, alias=event_id}}, from={table={alias=a, table=events}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=b}}, value={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}, alias=event_id}}, from={table={alias=b, table=events_archive}}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=c}}, value={column={name=created_at, table_ref=c}}}}, 2={column={name=id, table_ref=c}, alias=event_id}}, from={table={alias=c, table=events}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={created_at=[[@35,134:134='b',<419>,1:134]], offset_days=[[@31,119:119='b',<419>,1:119]], id=[[@42,160:160='b',<419>,1:160]]}, events={created_at=[[@10,36:36='a',<419>,1:36], [@61,242:242='c',<419>,1:242]], offset_days=[[@6,21:21='a',<419>,1:21], [@57,227:227='c',<419>,1:227]], id=[[@17,62:62='a',<419>,1:62], [@68,268:268='c',<419>,1:268]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@15,53:59='shifted',<419>,1:53]], event_id=[[@21,70:77='event_id',<419>,1:70]]}, query1={shifted=[[@40,151:157='shifted',<419>,1:151]], event_id=[[@46,168:175='event_id',<419>,1:168]]}, query3={shifted=[[@66,259:265='shifted',<419>,1:259]], event_id=[[@72,276:283='event_id',<419>,1:276]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union4={def_union2={def_query1={query_dictionary={event_id=[[@46,168:175='event_id',<419>,1:168]], shifted=[[@40,151:157='shifted',<419>,1:151]]}, table_dictionary={events_archive={created_at=[[@35,134:134='b',<419>,1:134]], offset_days=[[@31,119:119='b',<419>,1:119]], id=[[@42,160:160='b',<419>,1:160]]}}, setop=UNION, interface={event_id=[{name=id, table_ref=b}], shifted=[{name=offset_days, table_ref=b}, {name=created_at, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={event_id=[[@21,70:77='event_id',<419>,1:70]], shifted=[[@15,53:59='shifted',<419>,1:53]]}, table_dictionary={events={created_at=[[@10,36:36='a',<419>,1:36], [@61,242:242='c',<419>,1:242]], offset_days=[[@6,21:21='a',<419>,1:21], [@57,227:227='c',<419>,1:227]], id=[[@17,62:62='a',<419>,1:62], [@68,268:268='c',<419>,1:268]]}}, interface={event_id=[{name=id, table_ref=a}], shifted=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events}}, interface={event_id=query_column, shifted=query_column}}, interface={event_id=query_column, shifted=query_column}, def_query3={query_dictionary={event_id=[[@72,276:283='event_id',<419>,1:276]], shifted=[[@66,259:265='shifted',<419>,1:259]]}, table_dictionary={events={created_at=[[@61,242:242='c',<419>,1:242]], offset_days=[[@57,227:227='c',<419>,1:227]], id=[[@68,268:268='c',<419>,1:268]]}}, setop=EXCEPT, interface={event_id=[{name=id, table_ref=c}], shifted=[{name=offset_days, table_ref=c}, {name=created_at, table_ref=c}]}, table_alias={c=events}}}}", extractor.getSymbolTable().toString());
+
+		final String expectedNestedDefUnion4DefUnion2Interface_0 = "{event_id=query_column, shifted=query_column}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union4.def_union2.interface", expectedNestedDefUnion4DefUnion2Interface_0);
+		final String expectedNestedDefUnion4DefQuery3Interface_1 = "{event_id=[{name=id, table_ref=c}], shifted=[{name=offset_days, table_ref=c}, {name=created_at, table_ref=c}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_union4.def_query3.interface", expectedNestedDefUnion4DefQuery3Interface_1);
+	}
+
+	@Test
+	public void dateaddConsumesSetOpResultInInsertSourcePreservingIntermediateExports() {
+		final String query = "insert into archive_events (shifted_at, event_id) select dateadd(day, u.delta_days, u.created_at) as shifted_at, u.id as event_id from (select a.offset_days as delta_days, a.created_at, a.id from events a union all select b.offset_days as delta_days, b.created_at, b.id from events_archive b) u";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={insert={preamble=insert_into, from={from={table={alias=u, query={union={1={select={1={column={name=offset_days, table_ref=a}, alias=delta_days}, 2={column={name=created_at, table_ref=a}}, 3={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={column={name=offset_days, table_ref=b}, alias=delta_days}, 2={column={name=created_at, table_ref=b}}, 3={column={name=id, table_ref=b}}}, from={table={alias=b, table=events_archive}}}}}}}, select={1={alias=shifted_at, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=delta_days, table_ref=u}}, value={column={name=created_at, table_ref=u}}}}, 2={column={name=id, table_ref=u}, alias=event_id}}}, target_table={table={alias=null, table=archive_events}}, columns={1={column={name=shifted_at, table_ref=null}}, 2={column={name=event_id, table_ref=null}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[shifted_at, event_id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{archive_events={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}, events_archive={created_at=[[@57,251:251='b',<419>,1:251]], offset_days=[[@51,222:222='b',<419>,1:222]], id=[[@61,265:265='b',<419>,1:265]]}, events={created_at=[[@38,172:172='a',<419>,1:172]], offset_days=[[@32,143:143='a',<419>,1:143]], id=[[@42,186:186='a',<419>,1:186]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={created_at=[[@17,84:84='u',<419>,1:84]], id=[[@24,113:113='u',<419>,1:113]], delta_days=[[@13,70:70='u',<419>,1:70]]}, query0={created_at=[[@40,174:183='created_at',<419>,1:174]], id=[[@44,188:189='id',<419>,1:188]], delta_days=[[@36,160:169='delta_days',<419>,1:160]]}, insert4={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}, query1={created_at=[[@59,253:262='created_at',<419>,1:253]], id=[[@63,267:268='id',<419>,1:267]], delta_days=[[@55,239:248='delta_days',<419>,1:239]]}, query3={shifted_at=[[@22,101:110='shifted_at',<419>,1:101]], event_id=[[@28,121:128='event_id',<419>,1:121]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert4={query_dictionary={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}, table_dictionary={archive_events={shifted_at=[[@4,28:37='shifted_at',<419>,1:28]], event_id=[[@6,40:47='event_id',<419>,1:40]]}}, interface={shifted_at=[{name=shifted_at, table_ref=query3}], event_id=[{name=event_id, table_ref=query3}]}, def_query3={def_union2={query_dictionary={created_at=[[@17,84:84='u',<419>,1:84]], id=[[@24,113:113='u',<419>,1:113]], delta_days=[[@13,70:70='u',<419>,1:70]]}, def_query1={query_dictionary={created_at=[[@59,253:262='created_at',<419>,1:253]], id=[[@63,267:268='id',<419>,1:267]], delta_days=[[@55,239:248='delta_days',<419>,1:239]]}, table_dictionary={events_archive={created_at=[[@57,251:251='b',<419>,1:251]], offset_days=[[@51,222:222='b',<419>,1:222]], id=[[@61,265:265='b',<419>,1:265]]}}, setop=UNION, interface={created_at=[{name=created_at, table_ref=b}], id=[{name=id, table_ref=b}], delta_days=[{name=offset_days, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={created_at=[[@40,174:183='created_at',<419>,1:174]], id=[[@44,188:189='id',<419>,1:188]], delta_days=[[@36,160:169='delta_days',<419>,1:160]]}, table_dictionary={events={created_at=[[@38,172:172='a',<419>,1:172]], offset_days=[[@32,143:143='a',<419>,1:143]], id=[[@42,186:186='a',<419>,1:186]]}}, interface={created_at=[{name=created_at, table_ref=a}], id=[{name=id, table_ref=a}], delta_days=[{name=offset_days, table_ref=a}]}, table_alias={a=events}}, interface={created_at=query_column, id=query_column, delta_days=query_column}}, query_dictionary={shifted_at=[[@22,101:110='shifted_at',<419>,1:101]], event_id=[[@28,121:128='event_id',<419>,1:121]]}, interface={shifted_at=[{name=delta_days, table_ref=u}, {name=created_at, table_ref=u}], event_id=[{name=id, table_ref=u}]}, table_alias={u=union2}}}}", extractor.getSymbolTable().toString());
+
+		final String expectedInsertDefInsert4DefQuery3DefUnion2Interface_0 = "{created_at=query_column, id=query_column, delta_days=query_column}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_insert4.def_query3.def_union2.interface", expectedInsertDefInsert4DefQuery3DefUnion2Interface_0);
+		final String expectedInsertDefInsert4DefQuery3Interface_1 = "{shifted_at=[{name=delta_days, table_ref=u}, {name=created_at, table_ref=u}], event_id=[{name=id, table_ref=u}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_insert4.def_query3.interface", expectedInsertDefInsert4DefQuery3Interface_1);
+	}
+
+	@Test
+	public void qualifiedSameNameDateaddUdfRemainsGenericAlongsideBuiltinDateadd() {
+		final String query = "select dateadd(day, 1, a.created_at) as built_in_shift, custom.dateadd(a.part, 1, a.created_at) as udf_shift from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=built_in_shift, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=created_at, table_ref=a}}}}, 2={function={schema=custom, parameters={1={column={name=part, table_ref=a}}, 2={literal=1}, 3={column={name=created_at, table_ref=a}}}, function_name=dateadd}, alias=udf_shift}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[built_in_shift, udf_shift]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={part=[[@18,71:71='a',<419>,1:71]], created_at=[[@7,23:23='a',<419>,1:23], [@24,82:82='a',<419>,1:82]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={built_in_shift=[[@12,40:53='built_in_shift',<419>,1:40]], udf_shift=[[@29,99:107='udf_shift',<419>,1:99]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={built_in_shift=[[@12,40:53='built_in_shift',<419>,1:40]], udf_shift=[[@29,99:107='udf_shift',<419>,1:99]]}, table_dictionary={events={part=[[@18,71:71='a',<419>,1:71]], created_at=[[@7,23:23='a',<419>,1:23], [@24,82:82='a',<419>,1:82]]}}, interface={built_in_shift=[{name=created_at, table_ref=a}], udf_shift=[{name=part, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+
+		final String expectedQualifiedNameDefQuery0Interface_0 = "{built_in_shift=[{name=created_at, table_ref=a}], udf_shift=[{name=part, table_ref=a}, {name=created_at, table_ref=a}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.interface", expectedQualifiedNameDefQuery0Interface_0);
+	}
+
+	@Test
+	public void dateaddScriptStatementsKeepDiagnosticsScopedPerStatement() {
+		final String script = "select dateadd(day, 1, a.created_at) as shifted from events a; select e.id from events e qualify row_number() over (partition by dateadd(day, e.offset_days, e.created_at) order by dateadd(hour, e.offset_hours, e.created_at)) = 1";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(script, "SCRIPT");
+		Assert.assertEquals(script, 0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		String warning = "qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.";
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING, warning, null, 1, 89);
+		Assert.assertEquals(warning, findDiagnosticByCodeAndFragmentAndSeverity(parser.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR", ParseDiagnostic.Severity.WARNING, "qualify_clause").message());
+		Assert.assertEquals("AST is wrong", "{SCRIPT={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}, 2={select={1={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}, qualify={condition={left={window_function={over={partition_by={1={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=dateadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={column={name=offset_hours, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}, right={literal=1}, operator==}}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{SCRIPT={1={def_query0={query_dictionary={shifted=[[@12,40:46='shifted',<419>,1:40]]}, table_dictionary={events={created_at=[[@7,23:23='a',<419>,1:23]]}}, interface={shifted=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={window_ordered_by=[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}], query_dictionary={id=[[@20,72:73='id',<419>,1:72]]}, table_dictionary={events={created_at=[[@40,157:157='e',<419>,1:157], [@54,210:210='e',<419>,1:210]], offset_hours=[[@50,194:194='e',<419>,1:194]], offset_days=[[@36,142:142='e',<419>,1:142]], id=[[@18,70:70='e',<419>,1:70]]}}, window_partition_by=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}], filters=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}, {name=offset_hours, table_ref=e}], interface={id=[{name=id, table_ref=e}]}, table_alias={e=events}}}}}", parser.getSnippet().getSymbolTable().toString());
+		Assert.assertEquals("Array Output Collectors are wrong", "{SCRIPT={1={queryInterface=[shifted], Walker Warnings=[qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.]}, 2={queryInterface=[id], Walker Warnings=[qualify_clause at (l:1 c:89) is recognized as Snowflake-specific grammar.]}}}", parser.getSnippet().getArrayOutputCollectorsMap().toString());
+
+		final String expectedScriptStatement2DefQuery0WindowOrderedBy_0 = "[{name=offset_hours, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(parser.getSnippet().getSymbolTable(), "SCRIPT.2.def_query0.window_ordered_by", expectedScriptStatement2DefQuery0WindowOrderedBy_0);
+		final String expectedScriptStatement2DefQuery0WindowPartitionBy_1 = "[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]";
+		assertSymbolTreePathEquals(parser.getSnippet().getSymbolTable(), "SCRIPT.2.def_query0.window_partition_by", expectedScriptStatement2DefQuery0WindowPartitionBy_1);
+	}
+
+	@Test
+	public void timeaddRepresentativeSubsetCoversJoinedOnAndNestedFunctionContexts() {
+		final String query = "select timeadd(hour, a.offset_hours, a.start_time) as shifted_time from events a join accounts b on timeadd(minute, b.offset_minutes, b.base_time) > a.start_time where timeadd(hour, a.offset_hours, a.start_time) > coalesce(a.start_time, b.base_time)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=shifted_time, datetime_function={function_name=timeadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={column={name=offset_hours, table_ref=a}}, value={column={name=start_time, table_ref=a}}}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={datetime_function={function_name=timeadd, level={canonical=MINUTE, text=minute, form=KEYWORD}, increment={column={name=offset_minutes, table_ref=b}}, value={column={name=base_time, table_ref=b}}}}, right={column={name=start_time, table_ref=a}}, operator=>}}}, 3={table={alias=b, table=accounts}}}}, where={condition={left={datetime_function={function_name=timeadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={column={name=offset_hours, table_ref=a}}, value={column={name=start_time, table_ref=a}}}}, right={function={parameters={1={column={name=start_time, table_ref=a}}, 2={column={name=base_time, table_ref=b}}}, function_name=coalesce}}, operator=>}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[shifted_time]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={base_time=[[@30,134:134='b',<419>,1:134], [@58,237:237='b',<419>,1:237]], offset_minutes=[[@26,116:116='b',<419>,1:116]]}, events={start_time=[[@9,37:37='a',<419>,1:37], [@35,149:149='a',<419>,1:149], [@47,198:198='a',<419>,1:198], [@54,223:223='a',<419>,1:223]], offset_hours=[[@5,21:21='a',<419>,1:21], [@43,182:182='a',<419>,1:182]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted_time=[[@14,54:65='shifted_time',<419>,1:54]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={shifted_time=[[@14,54:65='shifted_time',<419>,1:54]]}, table_dictionary={accounts={base_time=[[@30,134:134='b',<419>,1:134], [@58,237:237='b',<419>,1:237]], offset_minutes=[[@26,116:116='b',<419>,1:116]]}, events={start_time=[[@9,37:37='a',<419>,1:37], [@35,149:149='a',<419>,1:149], [@47,198:198='a',<419>,1:198], [@54,223:223='a',<419>,1:223]], offset_hours=[[@5,21:21='a',<419>,1:21], [@43,182:182='a',<419>,1:182]]}}, filters=[{name=offset_minutes, table_ref=b}, {name=base_time, table_ref=b}, {name=start_time, table_ref=a}, {name=offset_hours, table_ref=a}], interface={shifted_time=[{name=offset_hours, table_ref=a}, {name=start_time, table_ref=a}]}, table_alias={a=events, b=accounts}}}", extractor.getSymbolTable().toString());
+
+		final String expectedTimeaddDefQuery0Filters_0 = "[{name=offset_minutes, table_ref=b}, {name=base_time, table_ref=b}, {name=start_time, table_ref=a}, {name=offset_hours, table_ref=a}]";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query0.filters", expectedTimeaddDefQuery0Filters_0);
+	}
+
+	@Test
+	public void timestampaddRepresentativeSubsetCoversCteAndSetOperationContexts() {
+		final String query = "with base as (select timestampadd(day, e.offset_days, e.created_at) as shifted_ts, e.id from events e), recent as (select b.shifted_ts, b.id from base b union all select timestampadd(day, a.offset_days, a.created_at) as shifted_ts, a.id from events_archive a) select timestampadd(hour, 1, r.shifted_ts) as final_shift, r.id from recent r";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={alias=shifted_ts, datetime_function={function_name=timestampadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=e}}, value={column={name=created_at, table_ref=e}}}}, 2={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}}, alias=base}, 2={cte={union={1={select={1={column={name=shifted_ts, table_ref=b}}, 2={column={name=id, table_ref=b}}}, from={table={alias=b, table=base}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={alias=shifted_ts, datetime_function={function_name=timestampadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=offset_days, table_ref=a}}, value={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}}}, from={table={alias=a, table=events_archive}}}}}, alias=recent}}, query={select={1={alias=final_shift, datetime_function={function_name=timestampadd, level={canonical=HOUR, text=hour, form=KEYWORD}, increment={literal=1}, value={column={name=shifted_ts, table_ref=r}}}}, 2={column={name=id, table_ref=r}}}, from={table={alias=r, table=recent}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[final_shift, id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={created_at=[[@53,203:203='a',<419>,1:203]], offset_days=[[@49,188:188='a',<419>,1:188]], id=[[@60,232:232='a',<419>,1:232]]}, events={created_at=[[@13,54:54='e',<419>,1:54]], offset_days=[[@9,39:39='e',<419>,1:39]], id=[[@20,83:83='e',<419>,1:83]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union3={id=[[@81,319:319='r',<419>,1:319]], shifted_ts=[[@74,289:289='r',<419>,1:289]]}, query4={final_shift=[[@79,306:316='final_shift',<419>,1:306]], id=[[@83,321:322='id',<419>,1:321]]}, query0={id=[[@22,85:86='id',<419>,1:85], [@36,136:136='b',<419>,1:136]], shifted_ts=[[@18,71:80='shifted_ts',<419>,1:71], [@32,122:122='b',<419>,1:122]]}, query1={id=[[@38,138:139='id',<419>,1:138]], shifted_ts=[[@34,124:133='shifted_ts',<419>,1:124]]}, query2={id=[[@62,234:235='id',<419>,1:234]], shifted_ts=[[@58,220:229='shifted_ts',<419>,1:220]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query4={def_union3={context_list={base=query0}, query_dictionary={id=[[@81,319:319='r',<419>,1:319]], shifted_ts=[[@74,289:289='r',<419>,1:289]]}, def_query1={context_list={base=query0, b=query0}, query_dictionary={id=[[@38,138:139='id',<419>,1:138]], shifted_ts=[[@34,124:133='shifted_ts',<419>,1:124]]}, interface={id=[{name=id, table_ref=b}], shifted_ts=[{name=shifted_ts, table_ref=b}]}, table_alias={b=query0, base=query0}}, interface={id=query_column, shifted_ts=query_column}, table_alias={base=query0}, def_query2={context_list={base=query0}, query_dictionary={id=[[@62,234:235='id',<419>,1:234]], shifted_ts=[[@58,220:229='shifted_ts',<419>,1:220]]}, table_dictionary={events_archive={created_at=[[@53,203:203='a',<419>,1:203]], offset_days=[[@49,188:188='a',<419>,1:188]], id=[[@60,232:232='a',<419>,1:232]]}}, setop=UNION, interface={id=[{name=id, table_ref=a}], shifted_ts=[{name=offset_days, table_ref=a}, {name=created_at, table_ref=a}]}, table_alias={a=events_archive, base=query0}}}, context_list={base=query0, recent=union3, r=union3}, query_dictionary={final_shift=[[@79,306:316='final_shift',<419>,1:306]], id=[[@83,321:322='id',<419>,1:321]]}, def_query0={query_dictionary={id=[[@22,85:86='id',<419>,1:85], [@36,136:136='b',<419>,1:136]], shifted_ts=[[@18,71:80='shifted_ts',<419>,1:71], [@32,122:122='b',<419>,1:122]]}, table_dictionary={events={created_at=[[@13,54:54='e',<419>,1:54]], offset_days=[[@9,39:39='e',<419>,1:39]], id=[[@20,83:83='e',<419>,1:83]]}}, interface={id=[{name=id, table_ref=e}], shifted_ts=[{name=offset_days, table_ref=e}, {name=created_at, table_ref=e}]}, table_alias={e=events}}, interface={final_shift=[{name=shifted_ts, table_ref=r}], id=[{name=id, table_ref=r}]}, table_alias={r=union3, recent=union3, base=query0}}}", extractor.getSymbolTable().toString());
+
+		final String expectedTimestampAddDefQuery4DefUnion3Interface_0 = "{id=query_column, shifted_ts=query_column}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_union3.interface", expectedTimestampAddDefQuery4DefUnion3Interface_0);
+		final String expectedTimestampAddDefQuery4Interface_1 = "{final_shift=[{name=shifted_ts, table_ref=r}], id=[{name=id, table_ref=r}]}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.interface", expectedTimestampAddDefQuery4Interface_1);
+	}
+
+	@Test
 	public void dateaddRejectsEpochSecondWhileExtractAcceptsIt() {
 		SqlParserAccess dateadd = new SqlParserAccess(false, false, false);
 		dateadd.executeTheParse("select dateadd(epoch_second, 1, a.ts) as shifted from events a", "SQL");
