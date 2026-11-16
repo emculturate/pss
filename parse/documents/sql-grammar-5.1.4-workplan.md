@@ -25,7 +25,7 @@
 
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
-| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Phase 1 / Slice A complete; testing-extension full suite on configured JDK 21: 2,643 passed, 0 failed; Slice B next |
+| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slice A complete; add family complete through scenario 65; EXTRACT/DATE_PART unification, diff/trunc, and boundary/slice implementations delivered with closure coverage still open; PostgreSQL Slice E and delivery Slice F remain |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
@@ -248,11 +248,12 @@ Part-like values use `{canonical, text, form}`:
 - canonicalization must never silently replace authored text during ordinary regeneration.
 
 `function_name` preserves the authored case, as ordinary routine calls do.
-Generators dispatch once on `datetime_function`, then compare `function_name`
+`function_name` is the approved discriminator; there is no `invocation` AST
+key. Generators dispatch once on `datetime_function`, then compare `function_name`
 case-insensitively to select an ordered signature. Preserve the authored name
 when generating SQL; never infer argument order from map insertion order.
 
-| Invocation family | Permitted subtree keys in SQL argument order |
+| `function_name` value(s) | Permitted subtree keys in SQL argument order |
 |-------------------|-----------------------------------------------|
 | `DATEADD`, `TIMEADD`, `TIMESTAMPADD` | `level`, `increment`, `value` |
 | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF` | `level`, `left`, `right` |
@@ -604,7 +605,7 @@ detailed AST/symbol-table/dialect assertions specified above.
 
 #### Phase 1 follow-up substep: invalid DATEADD level diagnostic
 
-**Added 2026-11-12; DATEADD validation implemented, expanded suite pending.**
+**Implemented 2026-11-12; DATEADD family milestone complete through scenario 65.**
 This is a prerequisite to the expanded DATEADD test suite, not a reopening of
 the completed lexer baseline. No new lexer tokens or token-ID changes are required.
 DATEADD now reports `INVALID_DATETIME_PART` FATAL at the authored level token
@@ -644,7 +645,7 @@ unvalidated by this add-family change.
 
 #### Phase 1 follow-up action: unify DATE_PART and EXTRACT grammar and AST
 
-**Approved 2026-11-12; pending implementation.** Unify built-in
+**Implemented; closure coverage and consumer/generator updates remain.** Built-in
 `DATE_PART(part, expression)`, `DATE_PART(part FROM expression)`, and
 `EXTRACT(part FROM expression)` as specialized alternatives beneath
 `datetime_function`. Include the parser's already accepted EXTRACT comma form
@@ -710,7 +711,7 @@ DATE_PART AST shapes. Both invocations now use datetime-family subtrees.
 
 #### Phase 1 follow-up test suite: formulation and assertion instructions
 
-**Consolidated 2026-11-12; pending development.** The single numbered inventory
+**Consolidated 2026-11-12; partially implemented by family.** The single numbered inventory
 below combines the agreed argument, placement, substitution, level, and nesting
 coverage. Numbers identify coverage scenarios, not a promised count of JUnit
 methods: a scenario may require several concrete cases. The DATEADD inventory
@@ -1195,7 +1196,7 @@ Reduced alias sampling does not authorize an incomplete production registry.
 
 #### Phase 1 additional steps: per-function build and test actions
 
-**Approved 2026-11-12; pending implementation.** This section defines the
+**Approved 2026-11-12; partially implemented.** This section defines the
 execution scope for each function individually. Scenarios 1-65 remain the
 case-formulation reference; the profiles below govern which functions repeat
 deep context coverage. Do not interpret the earlier reduced-family examples as
@@ -1288,8 +1289,10 @@ next milestone: `DATEDIFF` / `TIMEDIFF` / `TIMESTAMPDIFF` with
 **Status at checkpoint**
 - DATEADD family milestone is complete through the scenario-65 boundary and
   validated in `SqlEventWalkerDatetimeFunctionPlacementTests`.
-- Next executable slice is the diff-family block before starting truncation
-  families.
+- Diff-family grammar, walker shaping, validation, and affinity are now present,
+  with initial focused tests. The DF-01..DF-96 closure catalog below remains
+  largely open and is the next verification target; truncation implementation
+  no longer depends on waiting for that closure.
 
 **Implementation plan (code changes)**
 1. **Grammar routing and parser productions**
@@ -1487,9 +1490,11 @@ Minimum parity implementation update (2026-11-14):
   - **TE-R19..TE-R30** DML placement guards (INSERT/UPDATE/DELETE) for TRUNC/EXTRACT signatures.
   - **TE-R39..TE-R44** schema-qualified same-name UDF controls, SCRIPT statement-reset, and mixed Snowflake/Postgres affinity fatal coverage.
 
-Current effective status estimate for this family plan:
-- **Completed:** 28 planned scenarios (core-heavy EXTRACT/DATE_PART + initial DATE_TRUNC/TRUNC happy path)
-- **Remaining:** 68 planned scenarios (malformed + deep regression + DATE_TRUNC/TRUNC placement/diagnostic depth)
+Current effective status after the minimum-parity batch:
+- **Completed:** the 12 core scenarios, all 24 malformed/diagnostic scenarios,
+  DML scenarios TE-R19..TE-R30, and UDF/reset/affinity scenarios TE-R39..TE-R44.
+- **Remaining:** TE-R01..TE-R18 nested/sibling isolation and TE-R31..TE-R38
+  set-operation plus multi-layer rename-chain regression (26 scenarios).
 
 ### Snowflake boundary/slice family plan (TIME_SLICE, LAST_DAY, NEXT_DAY, PREVIOUS_DAY)
 - **Core functionality scenarios (BS-C01..BS-C24)**
@@ -1532,6 +1537,12 @@ Minimum parity implementation update (2026-11-14):
 - [x] Moved boundary/weekday value sets into shared grammar registry
   (`SnowflakeDatetimeValueRegistry`) so external consumers can access these
   validity lists independently of the event walker implementation.
+
+Remaining boundary/slice closure is the deep regression portion of the planned
+80-scenario profile: broader substitutions and nested/sibling compositions,
+set-operation branch isolation, and any unimplemented multi-layer scope cases.
+The grammar, walker, registries, core placements, malformed diagnostics, DML,
+UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
 
 ### Postgres difference/bin/age family plan (DATE_BIN, AGE)
 - **Core functionality scenarios (PG-C01..PG-C18)**
@@ -1748,14 +1759,14 @@ Minimum parity implementation update (2026-11-14):
 
 ### Delivery slices
 
-| Slice | Scope |
-|-------|--------|
-| **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate and provide sorted token substitutions; golden token-ID edits are user-only (2026-11-11 clarification supersedes earlier bulk-update approval). Run the full suite after the user's edits. No later slice may change lexer numbering without separate review. |
-| **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage |
-| **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` |
-| **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` |
-| **E — PostgreSQL symmetry** | `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions, named `MAKE_INTERVAL`, shared/target part-affinity tests |
-| **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred |
+| Slice | Scope | Current status |
+|-------|-------|----------------|
+| **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate and provide sorted token substitutions; golden token-ID edits are user-only (2026-11-11 clarification supersedes earlier bulk-update approval). Run the full suite after the user's edits. No later slice may change lexer numbering without separate review. | **Complete** — 26 late tokens; user-applied golden migration; configured JDK 21 suite 2,643 passed |
+| **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage | **Functionally complete through scenario 65** — q5866 and DATEADD bound/snippet AST audits complete; retain cross-family endpoint/generator closure under F |
+| **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` | **Partial** — grammar/walker/affinity implemented; trunc/extract minimum parity delivered; diff DF catalog and 26 trunc/extract deep regressions remain |
+| **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` | **Partial** — grammar/walker/registries and minimum parity delivered; deep nested/substitution/set-op closure remains |
+| **E — PostgreSQL symmetry** | `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions, named `MAKE_INTERVAL`, shared/target part-affinity tests | **Not started beyond lexer entries and planning catalogs** |
+| **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred | **Partial evidence only** — q5866 and DATEADD AST/corpus audits complete; generator, consumer docs, complete datetime corpus gate, release notes, and final full regression remain |
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
 
@@ -1790,9 +1801,10 @@ After the user's manual golden edits, the full workspace suite was run through
 the VS Code testing extension using its configured JDK 21 execution settings:
 **2,643 passed, 0 failed**. This satisfies the Phase 1 / Slice A full-suite gate;
 the counts come from a different runner than the earlier Maven run. No golden
-edits were made by the agent. Date/time AST, symbol-table, and affinity
-implementation have not begun; Phase 2 starts with Slice B's add family and
-shared registries.
+edits were made by the agent. This paragraph records the Slice A checkpoint;
+subsequent checkpoints below supersede its then-current implementation state:
+add, extraction, diff/trunc, and boundary/slice grammar/walker work has since
+been delivered as described in the slice-status table.
 
 ### Acceptance
 
