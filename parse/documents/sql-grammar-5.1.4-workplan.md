@@ -1934,7 +1934,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | Sub | Construction | Status (2026-11-15) | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
 | **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Not started | Add dedicated grammar/AST tests for VARIANT argument forms and column lineage rules. |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Partial | Added routine-level Snowflake dialect affinity + csv-guided walker parity tests for SELECT and JOIN/ON expression shapes; expand parity matrix (placement/snippet/DML) before closure. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Partial | Added routine-level Snowflake dialect affinity + expanded SQL endpoint parity coverage (core happy paths + placement + column/reference + dialect controls). Remaining closure work is snippet-endpoint parity, SCRIPT/DDL coverage, and malformed-call syntax controls. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Partial | Baseline parse coverage exists; complete Snowflake-specific parity matrix and integration scenarios remain open (see Entry 19 linkage). |
 | **4.4** | Array literals and subscripts | Partial | `expr[n]` subscript is delivered; array literal value-expression syntax `[expr, ...]` remains open. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
@@ -1948,8 +1948,10 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 
-**Current state:** not complete. The csv-guided tests added so far cover only two
-happy-path SQL statement shapes plus one mixed-dialect control.
+**Current state:** partial. SQL endpoint parity was expanded across core
+happy-path, placement (including DML), and reference/dialect controls.
+Remaining closure items are snippet endpoint parity plus SCRIPT/DDL and
+malformed syntax-control coverage.
 
 **Definition of done for 4.2:** complete this checklist with one-query-per-method
 tests, exact `assertEquals` goldens for all extractor objects, and explicit
