@@ -1423,6 +1423,23 @@ next milestone: `DATEDIFF` / `TIMEDIFF` / `TIMESTAMPDIFF` with
 - DF-95 Schema-qualified same-name UDF remains generic.
 - DF-96 SCRIPT multi-statement reset and per-statement affinity isolation.
 
+#### Diff-family verification update (2026-11-16)
+
+Added focused verification coverage for the remaining highest-risk diff behavior
+(independent `left`/`right` operand resolution) in
+`SqlEventWalkerDatetimeFunctionPlacementTests`:
+
+- [x] TIMEDIFF alias sample in HAVING with predicand substitution in `right`.
+- [x] TIMESTAMPDIFF alias sample in CTE-over-INTERSECT with predicand substitution in `right`.
+- [x] TIMEDIFF invalid part fatal with exact token/position/message assertions.
+- [x] TIMESTAMPDIFF invalid part fatal with exact token/position/message assertions.
+- [x] Completed Section A closure for diff family: quoted-level metadata and mixed-case invocation preservation for TIMEDIFF/TIMESTAMPDIFF, plus quoted invalid-part fatal coverage per invocation.
+- [x] Completed Section B (`DF-13..DF-37`) 25-case left/right shape matrix with strict goldens (`L/CQ/CU/FQ/FU` × `L/CQ/CU/FQ/FU`).
+
+These close the representative Entry 1 item-52 gaps for alias+substitution and
+per-invocation invalid-part verification, and close Sections A+B of the
+DF-01..DF-96 catalog. Remaining closure scope is Sections C-H as listed above.
+
 **Remaining datetime-family scenario catalogs (planning checkpoint, 2026-11-14)**
 
 > **Test-hosting recommendation (applies to all blocks below):**
