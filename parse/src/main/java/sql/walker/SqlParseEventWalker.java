@@ -52,6 +52,7 @@ import sql.diagnostics.ExtractDatetimeFieldAffinity;
 import sql.diagnostics.SqlParseDiagnosticService;
 import sql.grammar.DatetimePartRegistry;
 import sql.grammar.SnowflakeDatetimeValueRegistry;
+import sql.grammar.SnowflakeRoutineDialectRegistry;
 import sql.grammar.SqlGrammarDialect;
 import sql.grammar.SqlGrammarDialectRuleRegistry;
 import sql.latency.WalkerHotspotProfiler;
@@ -11845,6 +11846,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 		String functionName = (String) functionNameObj;
+		if (anchor != null && SnowflakeRoutineDialectRegistry.isSnowflakeDialectRoutine(functionName)) {
+			recordStatementDialectGrammarHit(
+					SqlGrammarDialect.SNOWFLAKE,
+					anchor.getLine(),
+					anchor.getCharPositionInLine(),
+					"routine '" + functionName + "'");
+		}
 		Object parametersObj = function.get(MUMBLE_PARAMETERS_KEY);
 		if (!(parametersObj instanceof Map)) {
 			return;

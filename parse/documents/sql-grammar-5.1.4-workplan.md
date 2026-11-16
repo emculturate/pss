@@ -28,7 +28,7 @@
 | **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Phase 1 / Slice A complete; testing-extension full suite on configured JDK 21: 2,643 passed, 0 failed; Slice B next |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
-| **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Not started** |
+| **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
 | **5** | Simple Jinja / dbt substitutions (6.1–6.4) | Enhancement | **Not started** |
 | **6** | Deep Jinja / SCRIPT prefix *(optional)* (7.x) | Enhancement | **Not started** |
 | **7** | Panto variable types × parser endpoints — test backlog (8.1–8.2) | Test / docs | **Not started** |
@@ -1902,22 +1902,125 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 ## Entry 4 — Snowflake ARRAY syntax and functions
 
-**Status:** Not started — implement **5.x independently** unless syntax shares one production.
+**Status:** Partial — implement remaining **4.x** independently unless syntax shares one production.
 
-| Sub | Construction |
-|-----|----------------|
-| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) |
-| **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` |
-| **4.4** | Array literals and subscripts *(overlaps delivered `expr[n]` — verify gap only)* |
-| **4.5** | `FLATTEN` / `LATERAL FLATTEN` |
-| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` |
-| **4.7** | Binary / set array operations |
-| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) |
-| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, …) |
-| **4.11** | Conversion, predicates, split-to-array |
-| **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order |
+### Entry 4 checkpoint (2026-11-15)
+
+The codebase already contains ARRAY-adjacent capabilities that were not reflected
+in the earlier "Not started" status:
+
+- **Delivered baseline A:** postfix subscript `expr[index]` parsing + AST/walker
+  support (see `value_expression_primary_suffix` and
+  `SqlEventWalkerArraySubscriptTests`).
+- **Delivered baseline B:** `ARRAY_AGG` function parsing and ordered-aggregate
+  grammar path (`WITHIN GROUP`) with test coverage in aggregate suites.
+- **Delivered baseline C:** `FLATTEN` / `LATERAL FLATTEN` table-function support
+  with parser-access and symbol-table coverage.
+
+These baselines do **not** close the full Snowflake ARRAY family scope below.
+
+| Sub | Construction | Status (2026-11-15) | Notes / remaining decision |
+|-----|--------------|---------------------|-----------------------------|
+| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Not started | Add dedicated grammar/AST tests for VARIANT argument forms and column lineage rules. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Partial | Added routine-level Snowflake dialect affinity + csv-guided walker parity tests for SELECT and JOIN/ON expression shapes; expand parity matrix (placement/snippet/DML) before closure. |
+| **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Partial | Baseline parse coverage exists; complete Snowflake-specific parity matrix and integration scenarios remain open (see Entry 19 linkage). |
+| **4.4** | Array literals and subscripts | Partial | `expr[n]` subscript is delivered; array literal value-expression syntax `[expr, ...]` remains open. |
+| **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
+| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Not started | No dedicated grammar/semantic parity coverage yet. |
+| **4.7** | Binary / set array operations | Not started | Define supported operator/function set and add grammar + walker + diagnostics coverage. |
+| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Not started | Function-family parity not yet implemented. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | Not started | Add signature-specific AST/lineage coverage for multi-argument transform family. |
+| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, …) | Not started | Add unary family routing and output-shape coverage. |
+| **4.11** | Conversion, predicates, split-to-array | Not started | Identify exact Snowflake target set; add function-shape and diagnostic contracts. |
+| **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
+
+### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
+
+**Current state:** not complete. The csv-guided tests added so far cover only two
+happy-path SQL statement shapes plus one mixed-dialect control.
+
+**Definition of done for 4.2:** complete this checklist with one-query-per-method
+tests, exact `assertEquals` goldens for all extractor objects, and explicit
+diagnostic-by-position assertions.
+
+#### 4.2.A Core happy-path matrix (SQL endpoint)
+
+1. `ARRAY_CONSTRUCT` in SELECT projection with mixed literal + qualified column
+   + predicand substitution arguments (existing baseline; keep as control).
+2. `ARRAY_CONSTRUCT` nested inside `TO_VARCHAR`/`MD5` in JOIN `ON`
+   comparison (existing baseline; keep as control).
+3. `ARRAY_CONSTRUCT` with unqualified columns from a single source table.
+4. `ARRAY_CONSTRUCT` with repeated column references in argument list.
+5. `ARRAY_CONSTRUCT` nested inside CASE arm(s) and returned as expression.
+6. `ARRAY_CONSTRUCT` nested in derived-table SELECT and consumed by parent
+   SELECT alias reference.
+
+#### 4.2.B Placement matrix (required SQL/DML/snippet sites)
+
+7. SELECT list expression.
+8. WHERE clause predicate operand.
+9. JOIN `ON` clause operand (existing baseline; keep).
+10. HAVING clause operand.
+11. QUALIFY clause operand (Snowflake site).
+12. ORDER BY expression.
+13. GROUP BY expression (if accepted by grammar path).
+14. VALUES row/cell expression.
+15. INSERT…SELECT projection expression.
+16. UPDATE assignment RHS expression.
+17. DELETE WHERE expression.
+18. DDL query body expression (`CREATE VIEW … AS SELECT …`).
+19. SCRIPT with two statements: Snowflake warning should be statement-scoped
+    (collector reset semantics).
+20. Snippet endpoint parity set (`PREDICAND`, `CONDITION`, `QUERY`, `TUPLE`,
+    `IN_LIST`, `JOIN_EXTENSION`, `VALUES`, `INSERT`, `UPDATE`, `DELETE`,
+    `DDL`, `SCRIPT`) following existing datetime snippet contracts.
+
+#### 4.2.C Column/reference verification matrix
+
+21. Qualified column args resolve and land in table dictionary/filter/interface
+    per site.
+22. Unqualified column args resolve against visible source when unambiguous.
+23. Unresolved unqualified column in args emits expected unresolved diagnostic
+    and source position.
+24. Ambiguous unqualified column in args emits expected ambiguous diagnostic.
+25. Hidden/invalid table alias in qualified arg emits expected fatal or severe
+    warning behavior (join-extension exception path where applicable).
+26. Substitution variable arguments are typed/recorded like existing predicand
+    variables in other function arguments.
+
+#### 4.2.D Dialect diagnostics matrix
+
+27. Snowflake statement warning emitted once per statement at first
+    `array_construct` site with exact position.
+28. Mixed-dialect fatal when `ARRAY_CONSTRUCT` is combined with PostgreSQL-only
+    feature in same statement (existing baseline; keep and extend at least one
+    additional placement site).
+29. Multi-statement SCRIPT: warning appears on each statement that actually
+    contains `ARRAY_CONSTRUCT`; no spillover.
+
+#### 4.2.E Negative/malformed controls
+
+30. Parser syntax error controls for malformed calls (missing right paren,
+    missing comma between args, trailing comma) with full syntax-diagnostic
+    assertions.
+31. Regression control proving ordinary non-ARRAY routine invocation remains
+    unchanged by 4.2 warning hook.
+
+### Known happy-path syntax targets still not supported (sample authoring set)
+
+These are representative positive-shape examples to use when implementing the
+open subentries:
+
+```sql
+-- 4.4 array literal value expression (not subscript)
+select ['a', 'b', 'c'] as arr from events e;
+
+-- 4.1 array contains with variant-ish construction
+select array_contains('a', array_construct('a','b')) as has_a from events e;
+
+-- 4.6 union/unique aggregate family
+select array_union_agg(e.tags) as merged_tags from events e;
+```
 
 **Test contract (each subtask):** Happy path without FATAL; six extractor goldens where applicable; column ref matrix (qualified, unqualified, unresolved, ambiguous); required SQL/DML sites per construction; compound nest test once **4.3**, **4.9**, **4.10** exist (see former Phase 5.6 compound SELECT in git history).
 
