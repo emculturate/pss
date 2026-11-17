@@ -1,8 +1,8 @@
 package sql.walker;
 
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -94,7 +94,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"SELECT EXTRACT(YEAR FROM order_date) FROM orders",
 				"{SQL={select={1={extract={part_form=KEYWORD, part=YEAR, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={unnamed_0=[[@6,35:35=')',<288>,1:35]]}, table_dictionary={orders={order_date=[[@5,25:34='order_date',<419>,1:25]]}}, interface={unnamed_0=[{name=order_date, table_ref=orders}]}}}",
+				"{def_query0={query_dictionary={unnamed_0=[[@6,35:35=')',<288>,1:35]]}, table_dictionary={orders={order_date=[[@5,25:34='order_date',<433>,1:25]]}}, interface={unnamed_0=[{name=order_date, table_ref=orders}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 

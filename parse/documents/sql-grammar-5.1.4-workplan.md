@@ -1942,7 +1942,7 @@ permission and restored. Subsequent IDE output interference is avoided with the
 opt-in `isolated-build` Maven profile (`target-maven/` output); Java auto-build
 remains enabled. Regeneration, compilation, and the five focused baseline tests
 are verified. The earlier isolated full suite ran 2,199 tests: 1,680 passed, 498
-failed on remaining `<393>` versus `<419>` expectations, 0 errors, 21 skipped.
+failed on remaining `<393>` versus `<433>` expectations, 0 errors, 21 skipped.
 After the user's manual golden edits, the full workspace suite was run through
 the VS Code testing extension using its configured JDK 21 execution settings:
 **2,643 passed, 0 failed**. This satisfies the Phase 1 / Slice A full-suite gate;
@@ -2121,6 +2121,14 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 ## Entry 4 — Snowflake ARRAY syntax and functions
 
 **Status:** Partial — implement remaining **4.x** independently unless syntax shares one production.
+
+### Slice A implementation decision (2026-11-17)
+
+- Implement Slice A with **parser/walker-first changes and no new lexer tokens**
+  unless an unavoidable ambiguity is proven.
+- Treat array literal support (`[expr, ...]`) as expression-grammar work with
+  strict diagnostic controls and golden extractor assertions, while preserving
+  subscript behavior (`expr[index]`) as a non-regression invariant.
 
 ### Entry 4 staged execution slices (A-F)
 

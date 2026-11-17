@@ -1252,6 +1252,7 @@ parenthesized_value_expression
 
 nonparenthesized_value_expression_primary
   : unsigned_literal
+  | array_literal_expression
   | column_reference
   | variable_identifier
   | aggregate_function
@@ -1263,6 +1264,14 @@ nonparenthesized_value_expression_primary
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
+  ;
+
+array_literal_expression
+  : LEFT_BRACKET array_literal_elements? RIGHT_BRACKET
+  ;
+
+array_literal_elements
+  : value_expression (COMMA value_expression)*
   ;
 
 predicand_subquery
@@ -2634,6 +2643,21 @@ nonreserved_keywords
   | STATEMENT_TIMESTAMP
   | TRANSACTION_TIMESTAMP
   | TIMEOFDAY
+  // Entry 4 array-family function identifiers
+  | ARRAY_CONSTRUCT
+  | ARRAY_CONSTRUCT_COMPACT
+  | ARRAY_CONTAINS
+  | ARRAY_UNION_AGG
+  | ARRAY_UNIQUE_AGG
+  | ARRAY_APPEND
+  | ARRAY_PREPEND
+  | ARRAY_INSERT
+  | ARRAY_REMOVE
+  | ARRAY_REMOVE_AT
+  | ARRAY_TO_STRING
+  | ARRAY_DISTINCT
+  | TRANSFORM
+  | REDUCE
   ;
 
 /*
@@ -3465,6 +3489,21 @@ VALIDATE : V A L I D A T E;
 RESULT_SCAN : R E S U L T UNDERLINE S C A N;
 QUERY_HISTORY : Q U E R Y UNDERLINE H I S T O R Y;
 QUERY_HSTORY : Q U E R Y UNDERLINE H S T O R Y;
+// Entry 4 array-family function keywords.
+ARRAY_CONSTRUCT : A R R A Y UNDERLINE C O N S T R U C T;
+ARRAY_CONSTRUCT_COMPACT : A R R A Y UNDERLINE C O N S T R U C T UNDERLINE C O M P A C T;
+ARRAY_CONTAINS : A R R A Y UNDERLINE C O N T A I N S;
+ARRAY_UNION_AGG : A R R A Y UNDERLINE U N I O N UNDERLINE A G G;
+ARRAY_UNIQUE_AGG : A R R A Y UNDERLINE U N I Q U E UNDERLINE A G G;
+ARRAY_APPEND : A R R A Y UNDERLINE A P P E N D;
+ARRAY_PREPEND : A R R A Y UNDERLINE P R E P E N D;
+ARRAY_INSERT : A R R A Y UNDERLINE I N S E R T;
+ARRAY_REMOVE : A R R A Y UNDERLINE R E M O V E;
+ARRAY_REMOVE_AT : A R R A Y UNDERLINE R E M O V E UNDERLINE A T;
+ARRAY_TO_STRING : A R R A Y UNDERLINE T O UNDERLINE S T R I N G;
+ARRAY_DISTINCT : A R R A Y UNDERLINE D I S T I N C T;
+TRANSFORM : T R A N S F O R M;
+REDUCE : R E D U C E;
 // Entry 18 contextual identifiers that retain their FLATTEN argument roles.
 INPUT : I N P U T;
 PATH : P A T H;

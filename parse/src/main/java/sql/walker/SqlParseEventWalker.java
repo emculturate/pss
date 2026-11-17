@@ -9217,6 +9217,61 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitArray_literal_elements(SQLSelectParserParser.Array_literal_elementsContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> args = new HashMap<String, Object>();
+		int argumentIndex = 1;
+		for (int index = 1; subMap.containsKey(String.valueOf(index)); index++) {
+			Object value = subMap.get(String.valueOf(index));
+			if (value instanceof String stringValue && ",".equals(stringValue)) {
+				continue;
+			}
+			args.put(String.valueOf(argumentIndex++), value);
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, args);
+	}
+
+	@Override
+	public void exitArray_literal_expression(SQLSelectParserParser.Array_literal_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> function = new HashMap<String, Object>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, "array_construct");
+		if (subMap.size() == 1 && subMap.get("1") instanceof Map<?, ?> paramsObj) {
+			function.put(MUMBLE_PARAMETERS_KEY, paramsObj);
+		} else {
+			function.put(MUMBLE_PARAMETERS_KEY, new HashMap<String, Object>());
+		}
+
+		Map<String, Object> wrapped = new HashMap<String, Object>();
+		wrapped.put(MUMBLE_FUNCTION_KEY, function);
+
+		if (ctx.getStart() != null) {
+			recordStatementDialectGrammarHit(
+					SqlGrammarDialect.SNOWFLAKE,
+					ctx.getStart().getLine(),
+					ctx.getStart().getCharPositionInLine(),
+					"array literal");
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, wrapped);
+	}
+
+	@Override
 	public void exitNonparenthesized_value_expression_primary(
 			 SQLSelectParserParser.Nonparenthesized_value_expression_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
