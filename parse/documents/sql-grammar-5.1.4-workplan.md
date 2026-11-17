@@ -2079,6 +2079,15 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 **Repro / detail:** git history — former `parser-defects-enhancements-workplan.md` Phase 3.
 
+### Entry 3 staged execution plan (A-D)
+
+| Stage | Scope | Exit gate |
+|------|-------|-----------|
+| **A — repro + guards** | Add failing repro tests for `PARSE_URL(url, 1):scheme::varchar` plus controls for existing `::` cast behavior and colon-adjacent non-target forms. | Repro fails for the right reason; controls remain stable. |
+| **B — grammar acceptance** | Minimal parser production changes to allow post-call `:field` access while preserving `::` cast precedence. Avoid new lexer keywords unless evidence forces it. | Repro parse succeeds with no parser/listener fatal diagnostics; cast controls still pass. |
+| **C — walker/AST + resolution** | Wire AST/walker handling for post-call field access and confirm function-argument column collection/resolution/diagnostics stay on normal paths. | No walker fatal diagnostics; unresolved/ambiguous controls produce expected diagnostics. |
+| **D — family expansion + closeout** | Expand shared coverage across `PARSE_JSON`, `PARSE_XML`, `PARSE_IP`, `TRY_PARSE_JSON` where grammar path is shared; add placement coverage and non-regression bundle. | Focused suite + guard bundle green; Entry 3 acceptance evidence recorded for closure. |
+
 ---
 
 ## Entry 4 — Snowflake ARRAY syntax and functions
