@@ -263,9 +263,6 @@ public class SqlParseSymbolTreeHelper {
 		return false;
 	}
 
-	/** @deprecated use {@link #ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS} */
-	private static final String[] SCOPE_CLAUSE_COLUMN_LIST_KEYS = ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS;
-
 	// --- normalizeTableRef delegate (mirrors event-walker static helper) ---
 
 	public static String normalizeTableRef(String tableRef) {

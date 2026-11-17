@@ -36,7 +36,7 @@
 | **9** | DDL structured options (`IF NOT EXISTS`, `OR REPLACE`, …) | Enhancement | **Not started** |
 | **10** | SQL statement generator — post-milestone completion | Enhancement | **Not started** (milestone ✅) |
 | **11** | Walker `exit*` JaCoCo coverage — Tier 2 / 3 residuals | Test / hygiene | **Optional** (Tier 1 ✅) |
-| **12** | Helper dead-code hygiene — Phases C–D | Hygiene | **Optional** (A–B ✅) |
+| **12** | Helper dead-code hygiene — Phases C–D | Hygiene | **Complete** (closed 2026-11-16) |
 | **13** | SELECT-list subquery alias scope (false `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`) + operand `lookup` wrapper | Defect | **Complete** (2026-11-10) |
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
@@ -2330,7 +2330,7 @@ deferred here (Entry 10) per release-scoping decision.
 
 ## Entry 12 — Helper dead-code hygiene
 
-**Status:** Phases **A–B** ✅ (Aug 2026); **C–D** optional
+**Status:** Complete (closed 2026-11-16): Phases **A–D** complete.
 
 **Policy:** Caller audit before delete; JaCoCo is heat map only, not delete oracle. Gate: `mvn -Psmoketest-quality-gate test`.
 
@@ -2338,8 +2338,17 @@ deferred here (Entry 10) per release-scoping decision.
 |-------|------|--------|
 | **12.A** | Tier-1 dead public API in symbol-tree helpers | ✅ |
 | **12.B** | Cascading private orphans + walker orphans | ✅ |
-| **12.C** | Fresh JaCoCo heat map on megaclass helpers | Optional |
-| **12.D** | Wrapper hygiene (deprecated zero-caller stubs only) | Optional — mostly skip |
+| **12.C** | Fresh JaCoCo heat map on megaclass helpers | ✅ (2026-11-16) |
+| **12.D** | Wrapper hygiene (deprecated zero-caller stubs only) | ✅ (2026-11-16) |
+
+**12.C/12.D closeout record (2026-11-16):**
+
+- Gate run (post-change): `mvn -Psmoketest-quality-gate test`
+  - `SmoketestQualityGateTestSuite`: 263 tests, 0 failures, 0 errors, 0 skipped (`BUILD SUCCESS`)
+- Wrapper hygiene audit:
+  - Removed zero-caller deprecated private wrapper constant
+    `SCOPE_CLAUSE_COLUMN_LIST_KEYS` from
+    `SqlParseSymbolTreeHelper` (alias of `ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS`).
 
 **Detail:** git — former `helper-dead-code-hygiene-workplan.md`.
 
