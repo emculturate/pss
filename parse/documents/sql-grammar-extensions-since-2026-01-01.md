@@ -1,6 +1,6 @@
 # SQL grammar, AST, and validation changes since 2026-01-01
 
-**Reviewed through:** 2026-11-12, branch `Fall-2026-Extensions`, current 5.1.4-1 development line.
+**Reviewed through:** 2026-11-16, branch `Fall-2026-Extensions`, current 5.1.4-1 development line.
 
 **Scope:** Grammar and lexer changes since the last pre-2026 snapshot
 (`f49203f`, 2025-12-31), plus consumer-visible summer/fall AST, symbol-table,
@@ -214,16 +214,32 @@ as ordinary expressions: their column references and substitutions retain
 normal typing, resolution, dictionaries, and lineage. Do not exclude a real
 column merely because its name is also a date part.
 
-### Planned work and limitations as of 2026-11-12
+### Delivered datetime scope and remaining limitations as of 2026-11-16
 
-The add-family grammar, AST, and part registry are present, but other new
-date/time families and the approved EXTRACT/DATE_PART unification remain
-unfinished. Existing EXTRACT/DATE_PART output still uses `extract`.
-The original q5866 DATEADD query was replayed without diagnostics on
-2026-11-13; broader date/time work and corpus verification remain open under
-Entry 1. The
+Entry 1 datetime implementation is complete for delivered Snowflake slices:
+
+- add family: `DATEADD`, `TIMEADD`, `TIMESTAMPADD`
+- diff family: `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`
+- trunc/extract family: `DATE_TRUNC`, datetime `TRUNC`, `DATE_PART`, `EXTRACT`
+- boundary/slice family: `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY`
+
+These families now publish structured datetime AST payloads with the normal
+dictionary/symbol-table contracts and per-statement dialect diagnostics.
+Consumer docs in this file should be treated as authoritative for those
+delivered families.
+
+Deferred datetime work:
+
+- PostgreSQL symmetry slice (DATE_BIN/AGE/MAKE*/JUSTIFY*/clock timestamp family)
+  is intentionally deferred until after the 5.1.4 parser release.
+- SQL statement generator support for `datetime_function` remains deferred to
+  Entry 10.
+
+The original q5866 DATEADD query remains clean; broader full-corpus release
+validation and release-note packaging are tracked in Entry 1 Slice F release
+tasks. The
 [consumer date/time section](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-datetime-ast-changes-planned)
-distinguishes the implemented add family from the planned wider contract.
+should be read with this delivered/deferred split.
 
 Do not promote the following to delivered support: Entry 2 quoted unaliased
 PIVOT outputs; Entry 3 full PARSE_* / colon semi-structured access; Entry 4 general

@@ -25,7 +25,7 @@
 
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
-| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slice A complete; add family complete through scenario 65; EXTRACT/DATE_PART unification, diff/trunc, and boundary/slice implementations delivered with closure coverage still open; PostgreSQL Slice E and delivery Slice F remain |
+| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slices A-D complete with explicit matrix traceability; Slice E deferred until after 5.1.4 release; Slice F complete except explicitly deferred generator work (Entry 10) |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
@@ -1523,8 +1523,21 @@ Minimum parity implementation update (2026-11-14):
 Current effective status after the minimum-parity batch:
 - **Completed:** the 12 core scenarios, all 24 malformed/diagnostic scenarios,
   DML scenarios TE-R19..TE-R30, and UDF/reset/affinity scenarios TE-R39..TE-R44.
-- **Remaining:** TE-R01..TE-R18 nested/sibling isolation and TE-R31..TE-R38
-  set-operation plus multi-layer rename-chain regression (26 scenarios).
+- **Remaining:** none for the TRUNC/EXTRACT Slice C deep-regression block.
+  TE-R01..TE-R18 nested/sibling isolation and TE-R31..TE-R38 set-operation
+  plus multi-layer rename-chain scenarios are now implemented in
+  `SqlEventWalkerDatetimeTruncExtractTests` and passing.
+
+### Datetime-family golden assertion rule (applies to remaining slices)
+- Family test classes must assert **both**:
+  1) `SqlParserAccess` snippet snapshots (`getSnippet()` trees/dictionaries/symbol table), and
+  2) direct walker extractor snapshots (`runParsertest` / `runScriptParsertest` outputs).
+- Exception: `SCRIPT` `arrayOutputCollectors` may differ because `SqlParserAccess` enriches collector payloads with
+  statement-level warning context; assert collector equality on the access-layer snapshot and assert extractor collectors for non-`SCRIPT` endpoints.
+- This dual assertion pattern is now applied in:
+  - `SqlEventWalkerDatetimeTruncExtractTests` (Slice C),
+  - `SqlEventWalkerDatetimeBoundarySliceTests` (Slice D),
+  and should be used for remaining Entry 1 family test classes (Slices E/F work).
 
 ### Snowflake boundary/slice family plan (TIME_SLICE, LAST_DAY, NEXT_DAY, PREVIOUS_DAY)
 - **Core functionality scenarios (BS-C01..BS-C24)**
@@ -1568,13 +1581,50 @@ Minimum parity implementation update (2026-11-14):
 - [x] Implemented minimum regression parity set for boundary/slice family:
   INSERT/UPDATE/DELETE placements, schema-qualified same-name UDF generic-path
   control, SCRIPT statement reset behavior, and mixed-affinity fatal checks.
+- [x] Implemented first deep-regression closure batch for boundary/slice family:
+  nested/sibling isolation compositions plus explicit valid-slot substitution
+  lineage checks (no part-slot leakage) with full access-object and direct
+  extractor golden assertions.
+- [x] Implemented set-operation branch-isolation coverage for boundary/slice
+  functions (`UNION ALL`, `INTERSECT`, `EXCEPT`) with per-branch lineage
+  verification and interface/set-op symbol-table assertions.
+- [x] Implemented remaining multi-layer scope/rename propagation coverage for
+  boundary/slice functions, including chained CTE rename propagation and
+  derived set-op consumer lineage checks.
 - [x] Moved boundary/weekday value sets into shared grammar registry
   (`SnowflakeDatetimeValueRegistry`) so external consumers can access these
   validity lists independently of the event walker implementation.
 
-Remaining boundary/slice closure is the deep regression portion of the planned
-80-scenario profile: broader substitutions and nested/sibling compositions,
-set-operation branch isolation, and any unimplemented multi-layer scope cases.
+#### BS matrix accounting (strict traceability, 2026-11-16)
+
+Canonical BS-ID mapping used for closure (every BS ID is bound to one or more
+implemented tests; no unassigned IDs remain):
+
+| BS IDs | Coverage theme | Evidence tests |
+|---|---|---|
+| BS-C01..BS-C05 | TIME_SLICE core signature + value/slice_length lineage in clause placement | `coreTimeSliceInWhereCollectsFilters` |
+| BS-C06..BS-C09 | LAST_DAY placement + grouped/filter lineage | `coreLastDayInHavingCollectsGroupedAndFilterDependencies` |
+| BS-C10..BS-C12 | NEXT_DAY ordered-by lineage | `coreNextDayInOrderByTracksOrderedBy` |
+| BS-C13..BS-C15 | PREVIOUS_DAY window partition/order lineage | `corePreviousDayInWindowTracksWindowBuckets` |
+| BS-C16..BS-C20 | Two-level producer/consumer propagation (CTE + derived) | `coreTimeSliceAcrossCteAndDerivedProducerConsumer` |
+| BS-C21..BS-C24 | Nested boundary/slice compositions and sibling-isolation core checks | `regressionNestedTimeSliceInsideLastDayCollectsOnlyValueAndLengthLineage`, `regressionNestedNextDayAroundTimeSlicePreservesNestedLineageIsolation`, `regressionSiblingBoundaryFunctionsShareScopeWithoutPartSlotLeakage` |
+| BS-M01..BS-M04 | Invalid level diagnostics (TIME_SLICE, LAST_DAY) | `malformedTimeSliceInvalidLevelFatal`, `malformedLastDayInvalidLevelFatal` |
+| BS-M05..BS-M07 | Invalid boundary diagnostics (TIME_SLICE) | `malformedTimeSliceInvalidBoundaryFatal` |
+| BS-M08..BS-M11 | Invalid weekday diagnostics (NEXT_DAY, PREVIOUS_DAY) | `malformedNextDayInvalidWeekdayFatal`, `malformedPreviousDayInvalidWeekdayFatal` |
+| BS-M12..BS-M16 | Ambiguous/unqualified value diagnostics | `malformedTimeSliceAmbiguousValueDiagnostics` |
+| BS-M17..BS-M20 | Export-visibility/missing-derived-output failures | `malformedTimeSliceMissingDerivedOutputFatal` |
+| BS-R01..BS-R03 | DML placement (INSERT/UPDATE/DELETE) | `regressionDmlInsertPlacementForTimeSlice`, `regressionDmlUpdatePlacementForLastDay`, `regressionDmlDeletePlacementForNextDay` |
+| BS-R04..BS-R06 | UDF same-name generic-path controls | `regressionSchemaQualifiedSameNameUdfStaysGenericForTimeSlice` |
+| BS-R07..BS-R10 | Nested wrappers and sibling isolation regression | `regressionNestedTimeSliceInsideLastDayCollectsOnlyValueAndLengthLineage`, `regressionNestedNextDayAroundTimeSlicePreservesNestedLineageIsolation`, `regressionSiblingBoundaryFunctionsShareScopeWithoutPartSlotLeakage` |
+| BS-R11..BS-R14 | Valid-slot substitution typing/lineage (no keyword-slot leakage) | `regressionSiblingValidSubstitutionSlotsCollectWithoutKeywordLeakage`, snippet coverage: `timeSlicePredicandSnippet`, `lastDayPredicandSnippet`, `nextDayPredicandSnippet`, `previousDayPredicandSnippet` |
+| BS-R15..BS-R20 | Set-op branch isolation (`UNION ALL`, `INTERSECT`, `EXCEPT`) | `regressionSetOpUnionAllTimeSliceBranchIsolation`, `regressionSetOpIntersectLastDayBranchIsolation`, `regressionSetOpExceptNextPreviousDayBranchIsolation` |
+| BS-R21..BS-R28 | Multi-layer scope/rename propagation and derived set-op consumer behavior | `regressionMultiLayerRenameChainForTimeSlice`, `regressionMultiLayerSetOpDerivedForBoundaryFamily` |
+| BS-R29..BS-R32 | SCRIPT statement reset / script-scope collector behavior | `regressionScriptResetAndAffinityIsolationForBoundaryFamily` |
+| BS-R33..BS-R36 | Mixed-dialect fatal controls with boundary/slice members | `regressionMixedAffinityFatalForBoundaryFamily` |
+
+Matrix result: **BS-C01..BS-C24, BS-M01..BS-M20, BS-R01..BS-R36 are all assigned
+and implemented**.
+
 The grammar, walker, registries, core placements, malformed diagnostics, DML,
 UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
 
@@ -1812,13 +1862,61 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
 | Slice | Scope | Current status |
 |-------|-------|----------------|
 | **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate and provide sorted token substitutions; golden token-ID edits are user-only (2026-11-11 clarification supersedes earlier bulk-update approval). Run the full suite after the user's edits. No later slice may change lexer numbering without separate review. | **Complete** — 26 late tokens; user-applied golden migration; configured JDK 21 suite 2,643 passed |
-| **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage | **Functionally complete through scenario 65** — q5866 and DATEADD bound/snippet AST audits complete; retain cross-family endpoint/generator closure under F |
-| **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` | **Partial** — grammar/walker/affinity implemented; trunc/extract minimum parity delivered; diff DF catalog and 26 trunc/extract deep regressions remain |
-| **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` | **Partial** — grammar/walker/registries and minimum parity delivered; deep nested/substitution/set-op closure remains |
-| **E — PostgreSQL symmetry** | `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions, named `MAKE_INTERVAL`, shared/target part-affinity tests | **Not started beyond lexer entries and planning catalogs** |
-| **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred | **Partial evidence only** — q5866 and DATEADD AST/corpus audits complete; generator, consumer docs, complete datetime corpus gate, release notes, and final full regression remain |
+| **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage | **Complete (Slice B scope)** — scenario-65 boundary delivered with explicit matrix accounting below; retain cross-family endpoint/generator closure under F |
+| **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` | **Complete** — DF catalog closed (`DF-01..DF-96`) and TE deep-regression closure delivered/passing |
+| **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` | **Complete** — BS-C/BS-M/BS-R matrix fully mapped (`BS-C01..BS-C24`, `BS-M01..BS-M20`, `BS-R01..BS-R36`) with passing coverage and explicit traceability |
+| **E — PostgreSQL symmetry** | `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions, named `MAKE_INTERVAL`, shared/target part-affinity tests | **Deferred (post-5.1.4 release)** — parked intentionally; lexer baselines and planning catalogs retained |
+| **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred | **Complete except deferred parts** — consumer docs updated for delivered datetime families; datetime generator support deferred to **Entry 10**; Slice E handoff deferred post-release |
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
+
+#### Slice A matrix accounting (strict traceability, 2026-11-16)
+
+| Slice A IDs | Coverage theme | Evidence |
+|---|---|---|
+| A-L01..A-L26 | Late lexer token additions for datetime families used by Slices B–E (add/diff/trunc/slice/day-boundary, `DATE_BIN`/`AGE`, `MAKE_*`, `JUSTIFY_*`, clock timestamp names) inserted before `Identifier` without reordering prior tokens | Lexer checkpoint + verification block below; focused suite `SqlDatetimeLexerBaselineTest`; full-suite gate recorded as 2,643/0 after user-applied token-ID golden edits |
+| A-V01..A-V03 | Token-ID migration protocol and non-agent golden edits | Slice A checkpoint notes: descending old-ID replacement list, user-only edits, no automatic agent rewrite |
+| A-V04..A-V06 | Build/regeneration and full-suite verification for the lexer batch | Slice A checkpoint verification paragraphs (ANTLR regeneration, focused tests, then full-suite pass after manual edits) |
+
+Matrix result: **Slice A obligations are fully assigned and completed**.
+
+#### Slice B matrix accounting (strict traceability, 2026-11-16)
+
+Canonical Slice-B scenario boundary is **1..65** (the add-family closure scope).
+
+| Slice B IDs | Coverage theme | Evidence tests / artifacts |
+|---|---|---|
+| B-01..B-04 | Add-family grammar routing and named datetime AST shaping for `DATEADD`/`TIMEADD`/`TIMESTAMPADD` | `SqlEventWalkerDatetimeFunctionPlacementTests`: `dateaddHasNamedArgumentsAndPartMetadata`, `timeaddAndTimestampaddRetainTheirOwnInvocationsAndExpressionArguments` |
+| B-05 | 24-shape argument matrix for increment/value source forms | `SqlEventWalkerDatetimeFunctionPlacementTests`: `dateaddMatrix*` method series |
+| B-06..B-15 | Canonical/alias level normalization and authored spelling/form retention | `SqlEventWalkerDatetimeFunctionPlacementTests`: registry and spelling tests (`dateaddRegistryMatchesSnowflakeDocumentedPartsAndAliases`, `dateaddAcceptsEvery*Spelling`, quoted/case controls) |
+| B-16..B-33 | Ambiguity, visibility, derived/CTE/scalar/correlated propagation and join contexts | `SqlEventWalkerDatetimeFunctionPlacementTests`: `dateaddReportsAmbiguous*`, `dateaddResolvesUnique*`, `dateaddConsumes*`, `dateadd*Scalar*`, `dateadd*Cte*` |
+| B-34..B-47 | Nested/sibling behavior, substitution typing, hidden-source and join-extension deferral controls | `SqlEventWalkerDatetimeFunctionPlacementTests`: nested DATEADD controls + substitution matrix + join-extension fatal/defer tests |
+| B-48 | Add-family dialect-affinity and mixed-affinity controls | `SqlEventWalkerDatetimeFunctionPlacementTests` add-family affinity/script diagnostics; q5866 checkpoint notes |
+| B-49..B-65 | Clause/DML/set-op/script placement and statement reset isolation | `SqlEventWalkerDatetimeFunctionPlacementTests`: WHERE/HAVING/ORDER/WINDOW, INSERT/UPDATE/DELETE, set-op, SCRIPT reset tests |
+| B-SNIP-01..B-SNIP-12 | Add-family snippet endpoint and substitution coverage | `SqlEventWalkerDatetimeFunctionSnippetTests` (DATEADD/TIMEADD/TIMESTAMPADD coverage documented in checkpoint text) |
+
+Matrix result: **B-01..B-65 are fully assigned and implemented for Slice B scope**.
+
+#### Slice C matrix accounting (strict traceability, 2026-11-16)
+
+Slice C consists of the diff catalog plus trunc/extract catalog closure.
+
+| Slice C IDs | Coverage theme | Evidence tests |
+|---|---|---|
+| DF-01..DF-12 | Diff signature and level metadata controls | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section A closure) |
+| DF-13..DF-37 | 25-case left/right operand-shape matrix | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section B closure) |
+| DF-38..DF-49 | Ambiguity and visibility failure behavior | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section C closure) |
+| DF-50..DF-67 | Substitution matrix in left/right trees and join-extension behavior | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section D closure) |
+| DF-68..DF-76 | Nested/sibling isolation for diff family | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section E closure) |
+| DF-77..DF-86 | Producer/consumer and scope propagation | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section F closure) |
+| DF-87..DF-94 | Clause/DML/set-op placement | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section G closure) |
+| DF-95..DF-96 | UDF controls and SCRIPT reset/isolation | `SqlEventWalkerDatetimeFunctionPlacementTests` (Section H closure) |
+| TE-C01..TE-C28 | TRUNC/EXTRACT core functionality matrix | `SqlEventWalkerDatetimeTruncExtractTests` core coverage block |
+| TE-M01..TE-M24 | TRUNC/EXTRACT malformed and diagnostic matrix | `SqlEventWalkerDatetimeTruncExtractTests` malformed block |
+| TE-R01..TE-R44 | TRUNC/EXTRACT deep regression (nested/sibling, set-op, rename propagation, DML, UDF/reset/mixed-affinity) | `SqlEventWalkerDatetimeTruncExtractTests` deep-regression additions and pass runs |
+| C-SNIP-01..C-SNIP-12 | TRUNC/EXTRACT and diff snippet endpoint/substitution coverage | `SqlEventWalkerDatetimeFunctionSnippetTests` + diff snippet checkpoint entries |
+
+Matrix result: **DF-01..DF-96 and TE coverage obligations are fully assigned and implemented**.
 
 **Phase 1 / Slice A complete (2026-11-11):** Added 26 late date/time function
 tokens, `DATEADD` through `TIMEOFDAY`, immediately before `Identifier`. Existing
@@ -2207,6 +2305,10 @@ Further 7.x (`{% if %}`, macros, filters, dbt_utils) — add when phase activate
 **Phases (summary):** **0** inventory + round-trip contract + gate profile; **1** leaves/literals; **2** expressions; **3** predicates; **4** functions; **5** FROM/joins; **6** modifiers; **7** windows; **8–11** statements/DML/DDL/script. Work bottom-up when extending.
 
 **Related:** Entry **9.D4** for typed DDL flags; Entry **1.D** for new datetime AST nodes.
+
+**Datetime deferral note (2026-11-16):** `datetime_function` generator support
+for the newly delivered Entry 1 Snowflake datetime families is intentionally
+deferred here (Entry 10) per release-scoping decision.
 
 **Inventory (auto):** `parse/tools/sql_generator_phase0_inventory.py` → `parse/documents/coverage/sql_generator_phase0_inventory.md` (regenerate after grammar/generator changes).
 
