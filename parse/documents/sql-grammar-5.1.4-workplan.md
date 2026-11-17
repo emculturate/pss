@@ -43,7 +43,7 @@
 | **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Complete** (2026-11-11) |
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
-| **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
+| **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Complete** (closed 2026-11-16) |
 | **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Complete** (closed 2026-11-13) — targeted fix + warning policy + parity re-evaluation delivered; see Entry 20 section |
 
 **5.0.0 → 5.1.4 parity gate update:** Entry **20** is closed (2026-11-13) and
@@ -2077,11 +2077,11 @@ in the earlier "Not started" status:
 
 These baselines do **not** close the full Snowflake ARRAY family scope below.
 
-| Sub | Construction | Status (2026-11-15) | Notes / remaining decision |
+| Sub | Construction | Status (2026-11-16) | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
 | **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Not started | Add dedicated grammar/AST tests for VARIANT argument forms and column lineage rules. |
 | **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Partial | Added routine-level Snowflake dialect affinity + expanded SQL endpoint parity coverage (core happy paths + placement + column/reference + dialect controls). Remaining closure work is snippet-endpoint parity, SCRIPT/DDL coverage, and malformed-call syntax controls. |
-| **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Partial | Baseline parse coverage exists; complete Snowflake-specific parity matrix and integration scenarios remain open (see Entry 19 linkage). |
+| **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Partial | `expr[n]` subscript is delivered; array literal value-expression syntax `[expr, ...]` remains open. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Not started | No dedicated grammar/semantic parity coverage yet. |
@@ -2629,21 +2629,69 @@ manifest are retained in the local archive's
 
 ## Entry 19 — RMCP Phase 2 acceptance-test closure
 
-**Status:** Partial — parser implementation is present; close the residual test promises from the September 2026 RMCP plan before retiring its duplicate copy.
+**Status:** Complete (closed 2026-11-16) — residual acceptance promises from the September 2026 RMCP plan are now closed without new parser/grammar/walker defects.
 **Kind:** Test / verification (implement a parser fix only if these fixtures expose a real regression)
 
 The old Phase 2 plan is otherwise accounted for: wildcard set-op handling (2.1), `VALUES` aliases (2.2), `WITHIN GROUP` grammar and `LISTAGG` coverage (2.3), nested / product `CASE` and function-result subscripts (2.4 / 2.6), CTE dictionary policy (2.7 / 2.9), and the 74-query timeout program (2.8 / 2.11) are delivered or closed. The Jinja-authored DNC rollup (2.5) remains explicitly tracked as **Entry 5.4**.
 
 | Sub | Residual acceptance work | Evidence / boundary | Status |
 |-----|--------------------------|---------------------|--------|
-| **19.1** | Add the exact 2.2 shape: an explicit-column UNION branch over `FROM VALUES (…) AS default_stream (cols)` followed by a joined source, with `COALESCE(pso.sort_order, 999)` and `default_stream.*` reads | `SqlEventWalkerUnparenthesizedValuesTests` covers parser endpoints and alias columns; JOIN tests cover parenthesized `VALUES`, but not this full unparenthesized UNION-branch construction | Not started |
-| **19.2** | Complete shared `WITHIN GROUP` aggregate coverage for `PERCENTILE_CONT` and `PERCENTILE_DISC`; verify multiple sort keys and null ordering | Grammar already admits both; `SqlEventWalkerWithinGroupOrderedAggregateTests` currently exercises only `LISTAGG` | Not started |
-| **19.3** | Complete `ARRAY_AGG … WITHIN GROUP` / `OVER` and compound-array coverage | Owned by **Entry 4.3**, not duplicated here; close this row when 4.3 accepts | Not started (Entry 4.3) |
-| **19.4** | Run the focused Phase 2 regression classes and record whether 19.1–19.3 required code changes | Include wildcard set-op controls, unresolved aliases/columns, and concrete set-op width mismatch negatives | Not started |
+| **19.1** | Retire the invalid 2.2 fixture variant (mismatched alias usage) and keep the acceptance shape as a valid alias-consistent unparenthesized `FROM VALUES` UNION branch with joined source and `COALESCE(pso.sort_order, 999)` | Existing `VALUES` alias coverage plus manual replay confirm parser behavior is correct when aliasing is valid; unresolved-alias form remains a negative control | Complete (no parser change) |
+| **19.2** | Complete shared `WITHIN GROUP` aggregate coverage for `PERCENTILE_CONT` and `PERCENTILE_DISC`; verify multiple sort keys and null ordering | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes location-matrix coverage for both percentile functions (SELECT-clause matrix, JOIN ON, UPDATE SET/WHERE, INSERT SELECT, DELETE WHERE, prior-select-list alias lineage), with explicit multi-key ordering and `NULLS FIRST/LAST` assertions | Complete |
+| **19.3** | Complete `ARRAY_AGG … WITHIN GROUP` / `OVER` and compound-array coverage | Implemented in `SqlEventWalkerWithinGroupOrderedAggregateTests`: full location matrix, column-resolution diagnostics, set-op integration, and compound-array (`ARRAY_AGG(ARRAY_CONSTRUCT(...))`) control | Complete (Entry 4.3 accepted) |
+| **19.4** | Run the focused Phase 2 regression classes and record whether 19.1–19.3 required code changes | Focused bundle passed: `SqlEventWalkerUnparenthesizedValuesTests` (19.1 shape), `SqlEventWalkerWithinGroupOrderedAggregateTests` (19.2 matrix), `SqlEventWalkerSetOpScopingGateTests` (wildcard/set-op controls + width-mismatch negatives), and `SqlEventWalkerSetOpQueryVariableTests` (unresolved alias/column fatal controls + width mismatch with variable members) | Complete |
 
-For **19.1**, use a physical table in place of `{{ ref('sort_orders') }}` so the Phase 2 grammar/walker behavior is independently testable. Add the Jinja-authored variant when **Entry 5.1** lands. Require no syntax recovery, no `QUALIFIED_COLUMN_NOT_FOUND` for `pso` or `default_stream`, and a seven-column set-op interface. Keep a missing-alias negative control.
+For **19.1**, use a physical table in place of `{{ ref('sort_orders') }}` so the Phase 2 grammar/walker behavior is independently testable. Add the Jinja-authored variant when **Entry 5.1** lands. The previously discussed failing variant was invalid SQL (alias mismatch) and is retired as a positive fixture. Keep it only as a negative control. The valid alias-consistent variant parses correctly and requires no parser/grammar/walker change.
+
+Candidate SQL skeleton for **19.1** (physical-table variant):
+
+```sql
+SELECT
+    default_stream.partner_id,
+    default_stream.partner_name,
+    default_stream.segment,
+    default_stream.region,
+    default_stream.status,
+    COALESCE(pso.sort_order, 999) AS sort_order,
+    default_stream.is_default
+FROM VALUES
+    (1001, 'Unknown Partner', 'GEN', 'NA', 'active', 1),
+    (1002, 'Other Partner',   'GEN', 'NA', 'active', 1)
+AS default_stream (partner_id, partner_name, segment, region, status, is_default)
+LEFT JOIN partner_sort_orders pso
+    ON pso.partner_id = default_stream.partner_id
+
+UNION ALL
+
+SELECT
+    live.partner_id,
+    live.partner_name,
+    live.segment,
+    live.region,
+    live.status,
+    COALESCE(pso.sort_order, 999) AS sort_order,
+    0 AS is_default
+FROM live_partner_stream live
+LEFT JOIN partner_sort_orders pso
+    ON pso.partner_id = live.partner_id
+```
 
 For **19.2**, assert AST, interface, dictionaries, symbol table, and `within_group_ordered_by` lineage. Do not add unsupported aggregate names merely to satisfy the old prose; test the four aggregates admitted by `ordered_aggregate_function` (`LISTAGG`, `ARRAY_AGG`, `PERCENTILE_CONT`, `PERCENTILE_DISC`) and align dialect restrictions with current target documentation.
+
+**19.4 execution record (2026-11-16):**
+
+- Command:
+  - `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerUnparenthesizedValuesTests,sql.walker.SqlEventWalkerWithinGroupOrderedAggregateTests,sql.walker.SqlEventWalkerSetOpScopingGateTests,sql.walker.SqlEventWalkerSetOpQueryVariableTests test`
+- Result:
+  - `SqlEventWalkerWithinGroupOrderedAggregateTests`: 21/21 pass
+  - `SqlEventWalkerSetOpScopingGateTests`: 17/17 pass
+  - `SqlEventWalkerSetOpQueryVariableTests`: 7/7 pass
+  - `SqlEventWalkerUnparenthesizedValuesTests`: 4/4 pass
+  - Bundle total: 49 tests, 0 failures, 0 errors, 0 skipped
+- Code-change conclusion for 19.1–19.3:
+  - **19.1:** invalid-alias fixture retired; no parser/grammar/walker change required.
+  - **19.2:** test expansion only (location/resolution matrix for `PERCENTILE_CONT`/`PERCENTILE_DISC`); no parser/grammar/walker change required.
+  - **19.3:** completed via Entry 4.3 test expansion (`ARRAY_AGG` location/resolution matrix + set-op/compound-array integration); no parser/grammar/walker change required.
 
 ---
 

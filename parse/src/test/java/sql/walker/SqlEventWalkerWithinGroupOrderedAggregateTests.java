@@ -3,6 +3,8 @@ package sql.walker;
 import org.junit.Assert;
 import org.junit.Test;
 
+import access.Snippet;
+import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 /**
@@ -11,10 +13,28 @@ import sql.SQLSelectParserParser;
 public class SqlEventWalkerWithinGroupOrderedAggregateTests extends AbstractSqlParseEventWalkerTest {
 
 	private static final String PRIOR_ALIAS = "prior_alias";
+	private static final String[] ORDERED_PERCENTILE_FUNCTIONS = { "PERCENTILE_CONT", "PERCENTILE_DISC" };
 
 	private static String listaggWithinGroupOver(String tableAlias) {
 		return "LISTAGG(" + tableAlias + ".program, '||')"
 				+ " WITHIN GROUP (ORDER BY " + tableAlias + ".funnel_priority, " + tableAlias + ".sort_order ASC)"
+				+ " OVER (PARTITION BY " + tableAlias + ".contact_key)";
+	}
+
+	private static String percentileWithinGroupOver(
+			String functionName,
+			String percentileLiteral,
+			String tableAlias) {
+		return functionName + "(" + percentileLiteral + ")"
+				+ " WITHIN GROUP (ORDER BY " + tableAlias + ".funnel_priority DESC NULLS LAST, "
+				+ tableAlias + ".sort_order ASC NULLS FIRST)"
+				+ " OVER (PARTITION BY " + tableAlias + ".contact_key)";
+	}
+
+	private static String arrayAggWithinGroupOver(String tableAlias, String valueExpression) {
+		return "ARRAY_AGG(" + valueExpression + ")"
+				+ " WITHIN GROUP (ORDER BY " + tableAlias + ".funnel_priority DESC NULLS LAST, "
+				+ tableAlias + ".sort_order ASC NULLS FIRST)"
 				+ " OVER (PARTITION BY " + tableAlias + ".contact_key)";
 	}
 
@@ -34,6 +54,68 @@ public class SqlEventWalkerWithinGroupOrderedAggregateTests extends AbstractSqlP
 				symbolTable.contains("window_partition_by=[")
 						&& symbolTable.matches("(?s).*window_partition_by=\\[.*\\{name="
 								+ PRIOR_ALIAS + ", table_ref=query\\d+\\}.*"));
+	}
+
+	private void assertPercentileWithinGroupArtifacts(
+			String functionName,
+			SqlParseEventWalker extractor,
+			String expectedSourceAlias) {
+		String ast = extractor.getAsTree().toString();
+		String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("AST should include function " + functionName + ": " + ast,
+				ast.contains("function_name=" + functionName));
+		Assert.assertTrue("AST should include explicit null ordering: " + ast,
+				ast.contains("null_order=LAST") && ast.contains("null_order=FIRST"));
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+
+		Assert.assertTrue("Table dictionary should include funnel_priority: " + tableDictionary,
+				tableDictionary.contains("funnel_priority=["));
+		Assert.assertTrue("Table dictionary should include sort_order: " + tableDictionary,
+				tableDictionary.contains("sort_order=["));
+		Assert.assertTrue("Table dictionary should include contact_key: " + tableDictionary,
+				tableDictionary.contains("contact_key=["));
+
+		Assert.assertTrue("Symbol table should include within_group_ordered_by: " + symbolTable,
+				symbolTable.contains("within_group_ordered_by=["));
+		Assert.assertTrue("Symbol table should include funnel_priority lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=funnel_priority, table_ref=" + expectedSourceAlias + "}"));
+		Assert.assertTrue("Symbol table should include sort_order lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=sort_order, table_ref=" + expectedSourceAlias + "}"));
+		Assert.assertTrue("Symbol table should include window_partition_by: " + symbolTable,
+				symbolTable.contains("window_partition_by=["));
+		Assert.assertTrue("Symbol table should include contact_key lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=contact_key, table_ref=" + expectedSourceAlias + "}"));
+	}
+
+	private void assertArrayAggWithinGroupArtifacts(SqlParseEventWalker extractor, String expectedSourceAlias) {
+		String ast = extractor.getAsTree().toString();
+		String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("AST should include ARRAY_AGG: " + ast, ast.contains("function_name=ARRAY_AGG"));
+		Assert.assertTrue("AST should include explicit null ordering: " + ast,
+				ast.contains("null_order=LAST") && ast.contains("null_order=FIRST"));
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+
+		Assert.assertTrue("Table dictionary should include funnel_priority: " + tableDictionary,
+				tableDictionary.contains("funnel_priority=["));
+		Assert.assertTrue("Table dictionary should include sort_order: " + tableDictionary,
+				tableDictionary.contains("sort_order=["));
+		Assert.assertTrue("Table dictionary should include contact_key: " + tableDictionary,
+				tableDictionary.contains("contact_key=["));
+
+		Assert.assertTrue("Symbol table should include within_group_ordered_by: " + symbolTable,
+				symbolTable.contains("within_group_ordered_by=["));
+		Assert.assertTrue("Symbol table should include funnel_priority lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=funnel_priority, table_ref=" + expectedSourceAlias + "}"));
+		Assert.assertTrue("Symbol table should include sort_order lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=sort_order, table_ref=" + expectedSourceAlias + "}"));
+		Assert.assertTrue("Symbol table should include window_partition_by: " + symbolTable,
+				symbolTable.contains("window_partition_by=["));
+		Assert.assertTrue("Symbol table should include contact_key lineage for alias " + expectedSourceAlias + ": " + symbolTable,
+				symbolTable.contains("{name=contact_key, table_ref=" + expectedSourceAlias + "}"));
 	}
 
 	@Test
@@ -226,6 +308,325 @@ public class SqlEventWalkerWithinGroupOrderedAggregateTests extends AbstractSqlP
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={within_group_ordered_by=[{name=prior_alias, table_ref=query0}, {name=sort_order, table_ref=t}], query_dictionary={prior_alias=[[@5,28:38='prior_alias',<419>,1:28], [@20,89:99='prior_alias',<419>,1:89], [@31,139:149='prior_alias',<419>,1:139]], fun_agg=[[@34,155:161='fun_agg',<419>,1:155]]}, table_dictionary={all_funnel_status_sort={funnel_priority=[[@1,7:7='t',<419>,1:7]], program=[[@9,49:49='t',<419>,1:49]], sort_order=[[@22,102:102='t',<419>,1:102]]}}, window_partition_by=[{name=prior_alias, table_ref=query0}], interface={prior_alias=[{name=funnel_priority, table_ref=t}], fun_agg=[{name=prior_alias, table_ref=query0}, {name=sort_order, table_ref=t}, {name=program, table_ref=t}]}, table_alias={t=all_funnel_status_sort}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void percentileWithinGroupAllSelectClausesSymbolTableV7Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String agg = percentileWithinGroupOver(functionName, "0.5", "t");
+			final String query =
+					"SELECT t.program,"
+					+ " " + agg + " AS pct_agg"
+					+ " FROM all_funnel_status_sort t"
+					+ " WHERE t.program = 'a' AND " + agg + " > 0.1"
+					+ " GROUP BY t.program, t.funnel_priority, t.sort_order"
+					+ " HAVING " + agg + " IS NOT NULL"
+					+ " QUALIFY " + agg + " > 0.2"
+					+ " ORDER BY t.sort_order";
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			String interfaceColumns = extractor.getInterface().toString();
+			String symbolTable = extractor.getSymbolTable().toString();
+
+			Assert.assertTrue(functionName + " interface should include both columns: " + interfaceColumns,
+					interfaceColumns.contains("program") && interfaceColumns.contains("pct_agg"));
+			assertPercentileWithinGroupArtifacts(functionName, extractor, "t");
+			Assert.assertTrue(functionName + " should retain grouped_by lineage: " + symbolTable,
+					symbolTable.contains("grouped_by=["));
+			Assert.assertTrue(functionName + " should retain filters lineage: " + symbolTable,
+					symbolTable.contains("filters=["));
+			Assert.assertTrue(functionName + " should retain ordered_by lineage: " + symbolTable,
+					symbolTable.contains("ordered_by=["));
+		}
+	}
+
+	@Test
+	public void percentileWithinGroupJoinOnClauseSymbolTableV8Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String aggT = percentileWithinGroupOver(functionName, "0.5", "t");
+			final String aggU = percentileWithinGroupOver(functionName, "0.5", "u");
+			final String query =
+					"SELECT t.program"
+					+ " FROM all_funnel_status_sort t"
+					+ " JOIN all_funnel_status_sort u ON " + aggT + " > " + aggU;
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			String symbolTable = extractor.getSymbolTable().toString();
+
+			Assert.assertEquals(functionName + " interface is wrong", "[program]",
+					extractor.getInterface().toString());
+			assertPercentileWithinGroupArtifacts(functionName, extractor, "t");
+			Assert.assertTrue(functionName + " should include right-side within-group lineage: " + symbolTable,
+					symbolTable.contains("{name=funnel_priority, table_ref=u}")
+							&& symbolTable.contains("{name=sort_order, table_ref=u}")
+							&& symbolTable.contains("{name=contact_key, table_ref=u}"));
+		}
+	}
+
+	@Test
+	public void percentileWithinGroupUpdateSetSymbolTableV9Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String agg = percentileWithinGroupOver(functionName, "0.5", "src");
+			final String query =
+					"UPDATE employees e SET agg_col = " + agg + " FROM all_funnel_status_sort src"
+					+ " WHERE e.emp_id = src.contact_key AND " + agg + " > 0.1";
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			String symbolTable = extractor.getSymbolTable().toString();
+
+			Assert.assertEquals(functionName + " interface is wrong", "[agg_col]",
+					extractor.getInterface().toString());
+			assertPercentileWithinGroupArtifacts(functionName, extractor, "src");
+			Assert.assertTrue(functionName + " should include assignment lineage: " + symbolTable,
+					symbolTable.contains("assignments={agg_col=["));
+			Assert.assertTrue(functionName + " should include employee key filter lineage: " + symbolTable,
+					symbolTable.contains("{name=emp_id, table_ref=e}"));
+		}
+	}
+
+	@Test
+	public void percentileWithinGroupInsertSelectSymbolTableV10Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String agg = percentileWithinGroupOver(functionName, "0.5", "src");
+			final String query =
+					"INSERT INTO employees (col1, agg_col) SELECT src.program, " + agg
+					+ " FROM all_funnel_status_sort src WHERE " + agg + " IS NOT NULL";
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			String symbolTable = extractor.getSymbolTable().toString();
+
+			Assert.assertEquals(functionName + " interface is wrong", "[agg_col, col1]",
+					extractor.getInterface().toString());
+			assertPercentileWithinGroupArtifacts(functionName, extractor, "src");
+			Assert.assertTrue(functionName + " should include INSERT interface lineage: " + symbolTable,
+					symbolTable.contains("interface={col1=[{name=program, table_ref=query0}]"));
+		}
+	}
+
+	@Test
+	public void percentileWithinGroupDeleteWhereSymbolTableV11Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String agg = percentileWithinGroupOver(functionName, "0.5", "e");
+			final String query =
+					"DELETE FROM employees e WHERE " + agg + " > 0.1 AND e.emp_id = 1";
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			String symbolTable = extractor.getSymbolTable().toString();
+
+			Assert.assertEquals(functionName + " interface is wrong", "[]",
+					extractor.getInterface().toString());
+			assertPercentileWithinGroupArtifacts(functionName, extractor, "e");
+			Assert.assertTrue(functionName + " should include filters lineage: " + symbolTable,
+					symbolTable.contains("filters=["));
+			Assert.assertTrue(functionName + " should include delete-table key lineage: " + symbolTable,
+					symbolTable.contains("{name=emp_id, table_ref=e}"));
+		}
+	}
+
+	@Test
+	public void percentileWithinGroupPriorSelectListAliasSymbolTableV12Test() {
+		for (String functionName : ORDERED_PERCENTILE_FUNCTIONS) {
+			final String query =
+					"SELECT t.funnel_priority AS " + PRIOR_ALIAS + ","
+					+ " " + functionName + "(0.5)"
+					+ " WITHIN GROUP (ORDER BY " + PRIOR_ALIAS + " DESC NULLS LAST, t.sort_order ASC NULLS FIRST)"
+					+ " OVER (PARTITION BY " + PRIOR_ALIAS + ") AS pct_agg"
+					+ " FROM all_funnel_status_sort t";
+
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+
+			Assert.assertEquals(functionName + " interface is wrong", "[" + PRIOR_ALIAS + ", pct_agg]",
+					extractor.getInterface().toString());
+			Assert.assertTrue(functionName + " should include function in AST: " + extractor.getAsTree(),
+					extractor.getAsTree().toString().contains("function_name=" + functionName));
+			assertWithinGroupOrderedByPriorAlias(extractor);
+			assertWindowPartitionByPriorAlias(extractor);
+		}
+	}
+
+	@Test
+	public void arrayAggWithinGroupAllSelectClausesSymbolTableV13Test() {
+		final String agg = arrayAggWithinGroupOver("t", "t.program");
+		final String query =
+				"SELECT t.program,"
+				+ " " + agg + " AS arr_agg"
+				+ " FROM all_funnel_status_sort t"
+				+ " WHERE t.program = 'a' AND " + agg + " IS NOT NULL"
+				+ " GROUP BY t.program, t.funnel_priority, t.sort_order"
+				+ " HAVING " + agg + " IS NOT NULL"
+				+ " QUALIFY " + agg + " IS NOT NULL"
+				+ " ORDER BY t.sort_order";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		String interfaceColumns = extractor.getInterface().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("ARRAY_AGG interface should include both columns: " + interfaceColumns,
+				interfaceColumns.contains("program") && interfaceColumns.contains("arr_agg"));
+		assertArrayAggWithinGroupArtifacts(extractor, "t");
+		Assert.assertTrue("ARRAY_AGG should retain grouped_by lineage: " + symbolTable,
+				symbolTable.contains("grouped_by=["));
+		Assert.assertTrue("ARRAY_AGG should retain filters lineage: " + symbolTable,
+				symbolTable.contains("filters=["));
+		Assert.assertTrue("ARRAY_AGG should retain ordered_by lineage: " + symbolTable,
+				symbolTable.contains("ordered_by=["));
+	}
+
+	@Test
+	public void arrayAggWithinGroupJoinOnClauseSymbolTableV14Test() {
+		final String aggT = arrayAggWithinGroupOver("t", "t.program");
+		final String aggU = arrayAggWithinGroupOver("u", "u.program");
+		final String query =
+				"SELECT t.program"
+				+ " FROM all_funnel_status_sort t"
+				+ " JOIN all_funnel_status_sort u ON " + aggT + " IS NOT NULL AND " + aggU + " IS NOT NULL";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertEquals("ARRAY_AGG interface is wrong", "[program]",
+				extractor.getInterface().toString());
+		assertArrayAggWithinGroupArtifacts(extractor, "t");
+		Assert.assertTrue("ARRAY_AGG should include right-side within-group lineage: " + symbolTable,
+				symbolTable.contains("{name=funnel_priority, table_ref=u}")
+						&& symbolTable.contains("{name=sort_order, table_ref=u}")
+						&& symbolTable.contains("{name=contact_key, table_ref=u}")
+						&& symbolTable.contains("{name=program, table_ref=u}"));
+	}
+
+	@Test
+	public void arrayAggWithinGroupUpdateSetSymbolTableV15Test() {
+		final String agg = arrayAggWithinGroupOver("src", "src.program");
+		final String query =
+				"UPDATE employees e SET agg_col = " + agg + " FROM all_funnel_status_sort src"
+				+ " WHERE e.emp_id = src.contact_key AND " + agg + " IS NOT NULL";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertEquals("ARRAY_AGG interface is wrong", "[agg_col]",
+				extractor.getInterface().toString());
+		assertArrayAggWithinGroupArtifacts(extractor, "src");
+		Assert.assertTrue("ARRAY_AGG should include assignment lineage: " + symbolTable,
+				symbolTable.contains("assignments={agg_col=["));
+		Assert.assertTrue("ARRAY_AGG should include employee key filter lineage: " + symbolTable,
+				symbolTable.contains("{name=emp_id, table_ref=e}"));
+	}
+
+	@Test
+	public void arrayAggWithinGroupInsertSelectSymbolTableV16Test() {
+		final String agg = arrayAggWithinGroupOver("src", "src.program");
+		final String query =
+				"INSERT INTO employees (col1, agg_col) SELECT src.program, " + agg
+				+ " FROM all_funnel_status_sort src WHERE " + agg + " IS NOT NULL";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertEquals("ARRAY_AGG interface is wrong", "[agg_col, col1]",
+				extractor.getInterface().toString());
+		assertArrayAggWithinGroupArtifacts(extractor, "src");
+		Assert.assertTrue("ARRAY_AGG should include INSERT interface lineage: " + symbolTable,
+				symbolTable.contains("interface={col1=[{name=program, table_ref=query0}]"));
+	}
+
+	@Test
+	public void arrayAggWithinGroupDeleteWhereSymbolTableV17Test() {
+		final String agg = arrayAggWithinGroupOver("e", "e.program");
+		final String query =
+				"DELETE FROM employees e WHERE " + agg + " IS NOT NULL AND e.emp_id = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertEquals("ARRAY_AGG interface is wrong", "[]",
+				extractor.getInterface().toString());
+		assertArrayAggWithinGroupArtifacts(extractor, "e");
+		Assert.assertTrue("ARRAY_AGG should include filters lineage: " + symbolTable,
+				symbolTable.contains("filters=["));
+		Assert.assertTrue("ARRAY_AGG should include delete-table key lineage: " + symbolTable,
+				symbolTable.contains("{name=emp_id, table_ref=e}"));
+	}
+
+	@Test
+	public void arrayAggWithinGroupPriorSelectListAliasSymbolTableV18Test() {
+		final String query =
+				"SELECT t.funnel_priority AS " + PRIOR_ALIAS + ","
+				+ " ARRAY_AGG(t.program)"
+				+ " WITHIN GROUP (ORDER BY " + PRIOR_ALIAS + " DESC NULLS LAST, t.sort_order ASC NULLS FIRST)"
+				+ " OVER (PARTITION BY " + PRIOR_ALIAS + ") AS arr_agg"
+				+ " FROM all_funnel_status_sort t";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("ARRAY_AGG interface is wrong", "[" + PRIOR_ALIAS + ", arr_agg]",
+				extractor.getInterface().toString());
+		Assert.assertTrue("ARRAY_AGG should include function in AST: " + extractor.getAsTree(),
+				extractor.getAsTree().toString().contains("function_name=ARRAY_AGG"));
+		assertWithinGroupOrderedByPriorAlias(extractor);
+		assertWindowPartitionByPriorAlias(extractor);
+	}
+
+	@Test
+	public void arrayAggWithinGroupColumnResolutionDiagnosticsV19Test() {
+		final String unresolvedQuery =
+				"SELECT ARRAY_AGG(unknown_col) WITHIN GROUP (ORDER BY unknown_col) OVER (PARTITION BY unknown_col)";
+		SqlParseEventWalker unresolved = runParsertest(unresolvedQuery, parse(unresolvedQuery));
+		Snippet unresolvedSnippet = unresolved.getSnippet();
+		Assert.assertNotNull("Expected unresolved diagnostic for ARRAY_AGG argument",
+				findDiagnosticByCodeAndFragmentAndSeverity(unresolvedSnippet, "UNRESOLVED_UNQUALIFIED_COLUMNS",
+						ParseDiagnostic.Severity.ERROR, "unknown_col"));
+
+		final String ambiguousQuery =
+				"SELECT ARRAY_AGG(id) WITHIN GROUP (ORDER BY id) OVER (PARTITION BY id)"
+				+ " FROM left_tab l JOIN right_tab r ON l.id = r.id";
+		SqlParseEventWalker ambiguous = runParsertest(ambiguousQuery, parse(ambiguousQuery));
+		Snippet ambiguousSnippet = ambiguous.getSnippet();
+		Assert.assertNotNull("Expected ambiguous column diagnostic for ARRAY_AGG argument",
+				findDiagnosticByCodeAndFragmentAndSeverity(ambiguousSnippet, "AMBIGUOUS_COLUMN_REFERENCE",
+						ParseDiagnostic.Severity.SEVERE_WARNING, "id"));
+	}
+
+	@Test
+	public void arrayAggWithinGroupSetOpAndCompoundIntegrationV20Test() {
+		final String setOpQuery =
+				"SELECT agg.arr_agg FROM ("
+				+ " SELECT ARRAY_AGG(t.program) WITHIN GROUP (ORDER BY t.funnel_priority DESC NULLS LAST, t.sort_order ASC NULLS FIRST)"
+				+ " OVER (PARTITION BY t.contact_key) AS arr_agg FROM all_funnel_status_sort t"
+				+ " UNION ALL"
+				+ " SELECT ARRAY_AGG(u.program) WITHIN GROUP (ORDER BY u.funnel_priority DESC NULLS LAST, u.sort_order ASC NULLS FIRST)"
+				+ " OVER (PARTITION BY u.contact_key) AS arr_agg FROM all_funnel_status_sort u"
+				+ " ) agg";
+		SqlParseEventWalker setOp = runParsertest(setOpQuery, parse(setOpQuery));
+		assertNoFatalErrors(setOp);
+		assertNoWalkerDiagnostics(setOp);
+		Assert.assertEquals("Set-op ARRAY_AGG interface is wrong", "[arr_agg]", setOp.getInterface().toString());
+		Assert.assertTrue("Set-op symbol table should include published union scope: " + setOp.getSymbolTable(),
+				setOp.getSymbolTable().toString().contains("def_union"));
+
+		final String compoundArrayQuery =
+				"SELECT ARRAY_AGG(ARRAY_CONSTRUCT(t.program, t.sort_order))"
+				+ " WITHIN GROUP (ORDER BY t.funnel_priority DESC NULLS LAST, t.sort_order ASC NULLS FIRST)"
+				+ " OVER (PARTITION BY t.contact_key) AS arr_agg"
+				+ " FROM all_funnel_status_sort t";
+		SqlParseEventWalker compound = runParsertest(compoundArrayQuery, parse(compoundArrayQuery));
+		assertNoFatalErrors(compound);
+		Assert.assertTrue("Compound ARRAY_AGG should include ARRAY_CONSTRUCT argument in AST: " + compound.getAsTree(),
+				compound.getAsTree().toString().contains("function_name=ARRAY_CONSTRUCT"));
+		Assert.assertTrue("Compound ARRAY_AGG should retain sort_order lineage: " + compound.getSymbolTable(),
+				compound.getSymbolTable().toString().contains("{name=sort_order, table_ref=t}"));
 	}
 
 }
