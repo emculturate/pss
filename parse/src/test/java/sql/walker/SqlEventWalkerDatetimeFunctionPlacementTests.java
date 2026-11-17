@@ -513,6 +513,705 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 	}
 
 
+
+	@Test
+	public void diffFamilySetCUnknownAliasLeftV0Test() {
+		String query = "select datediff(day, z.created_at, a.resolved_at) as delta_days from events a";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		assertFatalDiagnosticCount(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				"No alias or table called 'z'", null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=z}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{name=created_at, table_ref=z}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetCUnknownAliasRightV0Test() {
+		String query = "select datediff(day, a.created_at, z.resolved_at) as delta_days from events a";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		assertFatalDiagnosticCount(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				"No alias or table called 'z'", null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=z}}}}}, from={table={alias=a, table=events}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@5,21:21='a',<419>,1:21]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=z}]}, table_alias={a=events}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetCMissingDerivedExportInRightOperandV0Test() {
+		String query = "select datediff(day, d.created_out, d.missing_ts) as delta_days, d.id from (select e.id, e.created_at as created_out, e.resolved_at as resolved_out from events e) d";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'missing_ts' at (l:1 c:36) was not found in output interface of query alias 'd'.",
+				"d.missing_ts", 1, 36);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_out, table_ref=d}}, right={column={name=missing_ts, table_ref=d}}}}, 2={column={name=id, table_ref=d}}}, from={table={alias=d, query={select={1={column={name=id, table_ref=e}}, 2={column={name=created_at, table_ref=e}, alias=created_out}, 3={column={name=resolved_at, table_ref=e}, alias=resolved_out}}, from={table={alias=e, table=events}}}}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@32,118:118='e',<419>,1:118]], created_at=[[@26,89:89='e',<419>,1:89]], id=[[@22,83:83='e',<419>,1:83]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={resolved_out=[[@36,135:146='resolved_out',<419>,1:135]], created_out=[[@30,105:115='created_out',<419>,1:105], [@5,21:21='d',<419>,1:21]], id=[[@24,85:86='id',<419>,1:85], [@16,65:65='d',<419>,1:65]]}, query1={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, def_query0={query_dictionary={resolved_out=[[@36,135:146='resolved_out',<419>,1:135]], created_out=[[@30,105:115='created_out',<419>,1:105], [@5,21:21='d',<419>,1:21]], id=[[@24,85:86='id',<419>,1:85], [@16,65:65='d',<419>,1:65]]}, table_dictionary={events={resolved_at=[[@32,118:118='e',<419>,1:118]], created_at=[[@26,89:89='e',<419>,1:89]], id=[[@22,83:83='e',<419>,1:83]]}}, interface={resolved_out=[{name=resolved_at, table_ref=e}], created_out=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, interface={id=[{name=id, table_ref=d}], delta_days=[{name=created_out, table_ref=d}, {name=missing_ts, table_ref=d}]}, table_alias={d=query0}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetCOverlappingCteExportsTriggerAmbiguityV0Test() {
+		String query = "with b1 as (select e.id, e.created_at, e.resolved_at from events e), b2 as (select a.id, a.created_at, a.resolved_at from accounts a) select datediff(day, created_at, b1.resolved_at) as delta_days, b1.id from b1 join b2 on b1.id = b2.id";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		assertDiagnosticAtPosition(parser.getSnippet(), "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'created_at'", "created_at", 1, 155);
+		assertDiagnosticAtPosition(parser.getSnippet(), "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [created_at [(l:1 c:155)]]", "created_at", 1, 155);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=id, table_ref=e}}, 2={column={name=created_at, table_ref=e}}, 3={column={name=resolved_at, table_ref=e}}}, from={table={alias=e, table=events}}}, alias=b1}, 2={cte={select={1={column={name=id, table_ref=a}}, 2={column={name=created_at, table_ref=a}}, 3={column={name=resolved_at, table_ref=a}}}, from={table={alias=a, table=accounts}}}, alias=b2}}, query={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=null}}, right={column={name=resolved_at, table_ref=b1}}}}, 2={column={name=id, table_ref=b1}}}, from={join={1={table={alias=null, table=b1}}, 2={join=join, on={condition={left={column={name=id, table_ref=b1}}, right={column={name=id, table_ref=b2}}, operator==}}}, 3={table={alias=null, table=b2}}}}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={resolved_at=[[@33,103:103='a',<419>,1:103]], created_at=[[@29,89:89='a',<419>,1:89]], id=[[@25,83:83='a',<419>,1:83]]}, events={resolved_at=[[@13,39:39='e',<419>,1:39]], created_at=[[@9,25:25='e',<419>,1:25]], id=[[@5,19:19='e',<419>,1:19]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={created_at=[[@11,27:36='created_at',<419>,1:27]], resolved_at=[[@15,41:51='resolved_at',<419>,1:41], [@47,167:168='b1',<419>,1:167]], id=[[@7,21:22='id',<419>,1:21], [@54,198:199='b1',<419>,1:198], [@62,223:224='b1',<419>,1:223]]}, query1={created_at=[[@31,91:100='created_at',<419>,1:91]], resolved_at=[[@35,105:115='resolved_at',<419>,1:105]], id=[[@27,85:86='id',<419>,1:85], [@66,231:232='b2',<419>,1:231]]}, query2={id=[[@56,201:202='id',<419>,1:201]], delta_days=[[@52,186:195='delta_days',<419>,1:186]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={context_list={b1=query0, b2=query1}, query_dictionary={id=[[@56,201:202='id',<419>,1:201]], delta_days=[[@52,186:195='delta_days',<419>,1:186]]}, def_query1={context_list={b1=query0}, query_dictionary={resolved_at=[[@35,105:115='resolved_at',<419>,1:105]], created_at=[[@31,91:100='created_at',<419>,1:91]], id=[[@27,85:86='id',<419>,1:85], [@66,231:232='b2',<419>,1:231]]}, table_dictionary={accounts={resolved_at=[[@33,103:103='a',<419>,1:103]], created_at=[[@29,89:89='a',<419>,1:89]], id=[[@25,83:83='a',<419>,1:83]]}}, interface={resolved_at=[{name=resolved_at, table_ref=a}], created_at=[{name=created_at, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=accounts, b1=query0}}, def_query0={query_dictionary={resolved_at=[[@15,41:51='resolved_at',<419>,1:41], [@47,167:168='b1',<419>,1:167]], created_at=[[@11,27:36='created_at',<419>,1:27]], id=[[@7,21:22='id',<419>,1:21], [@54,198:199='b1',<419>,1:198], [@62,223:224='b1',<419>,1:223]]}, table_dictionary={events={resolved_at=[[@13,39:39='e',<419>,1:39]], created_at=[[@9,25:25='e',<419>,1:25]], id=[[@5,19:19='e',<419>,1:19]]}}, interface={resolved_at=[{name=resolved_at, table_ref=e}], created_at=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, filters=[{name=id, table_ref=b1}, {name=id, table_ref=b2}], interface={id=[{name=id, table_ref=b1}], delta_days=[{name=created_at, table_ref=null}, {name=resolved_at, table_ref=b1}]}, table_alias={b2=query1, b1=query0}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDPredicandSubstitutionLeftOnlyV0Test() {
+		final String query = "select datediff(day, <left value>, a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={substitution={name=<left value>, type=predicand}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left value>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@7,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={resolved_at=[[@7,35:35='a',<419>,1:35]]}}, interface={delta_days=[{name=<left value>, type=predicand}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDPredicandSubstitutionRightOnlyV0Test() {
+		final String query = "select datediff(day, a.created_at, <right value>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={substitution={name=<right value>, type=predicand}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right value>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=<right value>, type=predicand}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDPredicandSubstitutionsBothOperandsV0Test() {
+		final String query = "select datediff(day, <left value>, <right value>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={substitution={name=<left value>, type=predicand}}, right={substitution={name=<right value>, type=predicand}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right value>=predicand, <left value>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@10,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@10,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={}}, interface={delta_days=[{name=<left value>, type=predicand}, {name=<right value>, type=predicand}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDColumnSubstitutionLeftOnlyV0Test() {
+		final String query = "select datediff(day, a.<left col>, a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={substitution={name=<left col>, type=column}, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={<left col>=[[@5,21:21='a',<419>,1:21]], resolved_at=[[@9,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={<left col>=[[@5,21:21='a',<419>,1:21]], resolved_at=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{substitution={name=<left col>, type=column}, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDColumnSubstitutionRightOnlyV0Test() {
+		final String query = "select datediff(day, a.created_at, a.<right col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={substitution={name=<right col>, type=column}, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@5,21:21='a',<419>,1:21]], <right col>=[[@9,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21]], <right col>=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {substitution={name=<right col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDColumnSubstitutionsBothOperandsV0Test() {
+		final String query = "select datediff(day, a.<left col>, a.<right col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={substitution={name=<left col>, type=column}, table_ref=a}}, right={column={substitution={name=<right col>, type=column}, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left col>=column, <right col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={<left col>=[[@5,21:21='a',<419>,1:21]], <right col>=[[@9,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={<left col>=[[@5,21:21='a',<419>,1:21]], <right col>=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{substitution={name=<left col>, type=column}, table_ref=a}, {substitution={name=<right col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDMixedPredicandLeftColumnRightV0Test() {
+		final String query = "select datediff(day, <left value>, a.<right col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={substitution={name=<left value>, type=predicand}}, right={column={substitution={name=<right col>, type=column}, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right col>=column, <left value>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={<right col>=[[@7,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={<right col>=[[@7,35:35='a',<419>,1:35]]}}, interface={delta_days=[{name=<left value>, type=predicand}, {substitution={name=<right col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDMixedColumnLeftPredicandRightV0Test() {
+		final String query = "select datediff(day, a.<left col>, <right value>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={substitution={name=<left col>, type=column}, table_ref=a}}, right={substitution={name=<right value>, type=predicand}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left col>=column, <right value>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={<left col>=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@12,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={<left col>=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{substitution={name=<left col>, type=column}, table_ref=a}, {name=<right value>, type=predicand}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDPredicandInsideLeftFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at + <left delta>, a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={calc={left={column={name=created_at, table_ref=a}}, right={substitution={name=<left delta>, type=predicand}}, operator=+}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left delta>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@11,50:50='a',<419>,1:50]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@16,68:77='delta_days',<419>,1:68]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@16,68:77='delta_days',<419>,1:68]]}, table_dictionary={events={resolved_at=[[@11,50:50='a',<419>,1:50]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=<left delta>, type=predicand}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDPredicandInsideRightFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at + <right delta>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={calc={left={column={name=resolved_at, table_ref=a}}, right={substitution={name=<right delta>, type=predicand}}, operator=+}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right delta>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@16,69:78='delta_days',<419>,1:69]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@16,69:78='delta_days',<419>,1:69]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}, {name=<right delta>, type=predicand}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDColumnSubstitutionInsideLeftFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at + a.<left delta col>, a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={calc={left={column={name=created_at, table_ref=a}}, right={column={substitution={name=<left delta col>, type=column}, table_ref=a}}, operator=+}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@13,56:56='a',<419>,1:56]], <left delta col>=[[@9,36:36='a',<419>,1:36]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@18,74:83='delta_days',<419>,1:74]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@18,74:83='delta_days',<419>,1:74]]}, table_dictionary={events={resolved_at=[[@13,56:56='a',<419>,1:56]], <left delta col>=[[@9,36:36='a',<419>,1:36]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {substitution={name=<left delta col>, type=column}, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDColumnSubstitutionInsideRightFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at + a.<right delta col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={calc={left={column={name=resolved_at, table_ref=a}}, right={column={substitution={name=<right delta col>, type=column}, table_ref=a}}, operator=+}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@13,51:51='a',<419>,1:51]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@18,75:84='delta_days',<419>,1:75]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@18,75:84='delta_days',<419>,1:75]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@13,51:51='a',<419>,1:51]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}, {substitution={name=<right delta col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDMixedSubstitutionsAndColumnsInsideLeftFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at + <left delta> + a.<left delta col>, a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={calc={left={calc={left={column={name=created_at, table_ref=a}}, right={substitution={name=<left delta>, type=predicand}}, operator=+}}, right={column={substitution={name=<left delta col>, type=column}, table_ref=a}}, operator=+}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left delta>=predicand, <left delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@15,71:71='a',<419>,1:71]], <left delta col>=[[@11,51:51='a',<419>,1:51]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@20,89:98='delta_days',<419>,1:89]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@20,89:98='delta_days',<419>,1:89]]}, table_dictionary={events={resolved_at=[[@15,71:71='a',<419>,1:71]], <left delta col>=[[@11,51:51='a',<419>,1:51]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=<left delta>, type=predicand}, {substitution={name=<left delta col>, type=column}, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDMixedSubstitutionsAndColumnsInsideRightFormulaV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at + <right delta> + a.<right delta col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={calc={left={calc={left={column={name=resolved_at, table_ref=a}}, right={substitution={name=<right delta>, type=predicand}}, operator=+}}, right={column={substitution={name=<right delta col>, type=column}, table_ref=a}}, operator=+}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<right delta>=predicand, <right delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@15,67:67='a',<419>,1:67]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@20,91:100='delta_days',<419>,1:91]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@20,91:100='delta_days',<419>,1:91]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@15,67:67='a',<419>,1:67]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}, {name=<right delta>, type=predicand}, {substitution={name=<right delta col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDMixedSubstitutionsInBothFormulasV0Test() {
+		final String query = "select datediff(day, a.created_at + <left delta> + a.<left delta col>, a.resolved_at + <right delta> + a.<right delta col>) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={calc={left={calc={left={column={name=created_at, table_ref=a}}, right={substitution={name=<left delta>, type=predicand}}, operator=+}}, right={column={substitution={name=<left delta col>, type=column}, table_ref=a}}, operator=+}}, right={calc={left={calc={left={column={name=resolved_at, table_ref=a}}, right={substitution={name=<right delta>, type=predicand}}, operator=+}}, right={column={substitution={name=<right delta col>, type=column}, table_ref=a}}, operator=+}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left delta>=predicand, <left delta col>=column, <right delta>=predicand, <right delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@15,71:71='a',<419>,1:71]], <left delta col>=[[@11,51:51='a',<419>,1:51]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@21,103:103='a',<419>,1:103]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@26,127:136='delta_days',<419>,1:127]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@26,127:136='delta_days',<419>,1:127]]}, table_dictionary={events={resolved_at=[[@15,71:71='a',<419>,1:71]], <left delta col>=[[@11,51:51='a',<419>,1:51]], created_at=[[@5,21:21='a',<419>,1:21]], <right delta col>=[[@21,103:103='a',<419>,1:103]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=<left delta>, type=predicand}, {substitution={name=<left delta col>, type=column}, table_ref=a}, {name=resolved_at, table_ref=a}, {name=<right delta>, type=predicand}, {substitution={name=<right delta col>, type=column}, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDJoinedSourceSubstitutionTypingIsolatedV0Test() {
+		final String query = "select datediff(day, a.created_at + a.<left delta col>, b.resolved_at + b.<right delta col>) as delta_days from events a join accounts b on a.id = b.event_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={calc={left={column={name=created_at, table_ref=a}}, right={column={substitution={name=<left delta col>, type=column}, table_ref=a}}, operator=+}}, right={calc={left={column={name=resolved_at, table_ref=b}}, right={column={substitution={name=<right delta col>, type=column}, table_ref=b}}, operator=+}}}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left delta col>=column, <right delta col>=column}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={event_id=[[@34,147:147='b',<419>,1:147]], resolved_at=[[@13,56:56='b',<419>,1:56]], <right delta col>=[[@17,72:72='b',<419>,1:72]]}, events={<left delta col>=[[@9,36:36='a',<419>,1:36]], created_at=[[@5,21:21='a',<419>,1:21]], id=[[@30,140:140='a',<419>,1:140]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@22,96:105='delta_days',<419>,1:96]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@22,96:105='delta_days',<419>,1:96]]}, table_dictionary={accounts={event_id=[[@34,147:147='b',<419>,1:147]], resolved_at=[[@13,56:56='b',<419>,1:56]], <right delta col>=[[@17,72:72='b',<419>,1:72]]}, events={<left delta col>=[[@9,36:36='a',<419>,1:36]], created_at=[[@5,21:21='a',<419>,1:21]], id=[[@30,140:140='a',<419>,1:140]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}], interface={delta_days=[{name=created_at, table_ref=a}, {substitution={name=<left delta col>, type=column}, table_ref=a}, {name=resolved_at, table_ref=b}, {substitution={name=<right delta col>, type=column}, table_ref=b}]}, table_alias={a=events, b=accounts}}}", extractor.getSymbolTable().toString());
+	}
+
+
+
+	@Test
+	public void diffFamilySetDMissingQualifiedColumnSubstitutionFatalWithoutJoinExtensionV0Test() {
+		String query = "select datediff(day, x.<left col>, a.created_at) as delta_days from events a";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				"Source Table not found for Column '<left col>' at (l:1 c:21). No alias or table called 'x'.",
+				"<left col>", 1, 21);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={substitution={name=<left col>, type=column}, table_ref=x}}, right={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left col>=column}", parser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@9,35:35='a',<419>,1:35]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,52:61='delta_days',<419>,1:52]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,52:61='delta_days',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{substitution={name=<left col>, type=column}, table_ref=x}, {name=created_at, table_ref=a}]}, table_alias={a=events}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetDSameReferenceDeferredWithJoinExtensionV0Test() {
+		String query = "select datediff(day, x.<left col>, a.created_at) as delta_days from events a <extension>";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		assertSnowflakeGrammarWarningAt(parser, "snowflake_datetime_diff_expression", invocationOffset(query, "datediff"));
+		Assert.assertEquals(0, parser.getSnippet().getFatalErrorCount());
+		Assert.assertEquals(1,
+				parser.getSnippet().getDiagnosticCountByCodeAndSeverity("QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.SEVERE_WARNING));
+		Assert.assertEquals(1,
+				parser.getSnippet().getDiagnosticCountByCodeAndSeverity("JOIN_EXTENSION_REQUIRED", ParseDiagnostic.Severity.SEVERE_WARNING));
+		String missingMessage = "Source Table not found for Column '<left col>' at (l:1 c:21). No alias or table called 'x'.";
+		String extensionMessage = "Join extension variable '<extension>' at (l:1 c:77) is not optional: 1 table/column reference(s)"
+				+ " not defined in the query (x.<left col>) must be satisfied by the substituted join extension snippet.";
+		assertDiagnosticAtPosition(parser.getSnippet(), "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.SEVERE_WARNING,
+				missingMessage, "<left col>", 1, 21);
+		assertDiagnosticAtPosition(parser.getSnippet(), "JOIN_EXTENSION_REQUIRED", ParseDiagnostic.Severity.SEVERE_WARNING,
+				extensionMessage, "<extension>", 1, 77);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={substitution={name=<left col>, type=column}, table_ref=x}}, right={column={name=created_at, table_ref=a}}}}}, from={extension={substitution={name=<extension>, type=join_extension}}, table={alias=a, table=events}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<left col>=column, <extension>=join_extension}", parser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@9,35:35='a',<419>,1:35]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@14,52:61='delta_days',<419>,1:52]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@14,52:61='delta_days',<419>,1:52]]}, table_dictionary={events={created_at=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{substitution={name=<left col>, type=column}, table_ref=x}, {name=created_at, table_ref=a}]}, table_alias={a=events}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetENestedDiffAsArg1InOrdinaryFunctionV0Test() {
+		final String query = "select coalesce(datediff(day, a.created_at, a.resolved_at), 0) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={literal=0}}, function_name=coalesce}, alias=delta_days}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@11,44:44='a',<419>,1:44]], created_at=[[@7,30:30='a',<419>,1:30]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@19,66:75='delta_days',<419>,1:66]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@19,66:75='delta_days',<419>,1:66]]}, table_dictionary={events={resolved_at=[[@11,44:44='a',<419>,1:44]], created_at=[[@7,30:30='a',<419>,1:30]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetENestedDiffAsArg2InOrdinaryFunctionV0Test() {
+		final String query = "select greatest(0, datediff(day, a.created_at, a.resolved_at)) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={literal=0}, 2={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}}, function_name=greatest}, alias=delta_days}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@13,47:47='a',<419>,1:47]], created_at=[[@9,33:33='a',<419>,1:33]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@19,66:75='delta_days',<419>,1:66]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@19,66:75='delta_days',<419>,1:66]]}, table_dictionary={events={resolved_at=[[@13,47:47='a',<419>,1:47]], created_at=[[@9,33:33='a',<419>,1:33]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetEOrdinaryFunctionNestedInLeftOperandV0Test() {
+		final String query = "select datediff(day, coalesce(a.created_at, a.fallback_created_at), a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={function={parameters={1={column={name=created_at, table_ref=a}}, 2={column={name=fallback_created_at, table_ref=a}}}, function_name=coalesce}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={fallback_created_at=[[@11,44:44='a',<419>,1:44]], resolved_at=[[@16,68:68='a',<419>,1:68]], created_at=[[@7,30:30='a',<419>,1:30]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@21,86:95='delta_days',<419>,1:86]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@21,86:95='delta_days',<419>,1:86]]}, table_dictionary={events={fallback_created_at=[[@11,44:44='a',<419>,1:44]], resolved_at=[[@16,68:68='a',<419>,1:68]], created_at=[[@7,30:30='a',<419>,1:30]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=fallback_created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetEOrdinaryFunctionNestedInRightOperandV0Test() {
+		final String query = "select datediff(day, a.created_at, coalesce(a.resolved_at, a.fallback_resolved_at)) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={function={parameters={1={column={name=resolved_at, table_ref=a}}, 2={column={name=fallback_resolved_at, table_ref=a}}}, function_name=coalesce}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@11,44:44='a',<419>,1:44]], fallback_resolved_at=[[@15,59:59='a',<419>,1:59]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@21,87:96='delta_days',<419>,1:87]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@21,87:96='delta_days',<419>,1:87]]}, table_dictionary={events={resolved_at=[[@11,44:44='a',<419>,1:44]], fallback_resolved_at=[[@15,59:59='a',<419>,1:59]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}, {name=fallback_resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetENestedDiffInLeftOperandWithValidOuterDiffV0Test() {
+		final String query = "select datediff(day, datediff(day, a.created_at, a.midpoint_at), a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=midpoint_at, table_ref=a}}}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@18,65:65='a',<419>,1:65]], midpoint_at=[[@13,49:49='a',<419>,1:49]], created_at=[[@9,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@23,83:92='delta_days',<419>,1:83]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@23,83:92='delta_days',<419>,1:83]]}, table_dictionary={events={resolved_at=[[@18,65:65='a',<419>,1:65]], midpoint_at=[[@13,49:49='a',<419>,1:49]], created_at=[[@9,35:35='a',<419>,1:35]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=midpoint_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetENestedDiffInRightOperandWithValidOuterDiffV0Test() {
+		final String query = "select datediff(day, a.created_at, datediff(day, a.midpoint_at, a.resolved_at)) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=midpoint_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@17,64:64='a',<419>,1:64]], midpoint_at=[[@13,49:49='a',<419>,1:49]], created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@23,83:92='delta_days',<419>,1:83]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_days=[[@23,83:92='delta_days',<419>,1:83]]}, table_dictionary={events={resolved_at=[[@17,64:64='a',<419>,1:64]], midpoint_at=[[@13,49:49='a',<419>,1:49]], created_at=[[@5,21:21='a',<419>,1:21]]}}, interface={delta_days=[{name=created_at, table_ref=a}, {name=midpoint_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetEInvalidInnerLevelDoesNotContaminateSiblingDiffV0Test() {
+		String query = "select datediff(day, datediff(badpart, a.created_at, a.midpoint_at), a.resolved_at) as invalid_delta, datediff(day, a.created_at, a.resolved_at) as valid_delta from events a";
+		SqlParserAccess parser = new SqlParserAccess(false, false, false);
+		parser.executeTheParse(query, "SQL");
+		Assert.assertEquals(0, parser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals(1,
+				parser.getSnippet().getDiagnosticCountByCodeAndSeverity("INVALID_DATETIME_PART", ParseDiagnostic.Severity.FATAL));
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(), "INVALID_DATETIME_PART",
+				"Invalid date/time part badpart for DATEDIFF at (l:1 c:30).",
+				"badpart", 1, 30);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=invalid_delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={datetime_function={function_name=datediff, level={canonical=BADPART, text=badpart, form=IDENTIFIER}, left={column={name=created_at, table_ref=a}}, right={column={name=midpoint_at, table_ref=a}}}}, right={column={name=resolved_at, table_ref=a}}}}, 2={alias=valid_delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", parser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[valid_delta, invalid_delta]", parser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", parser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@18,69:69='a',<419>,1:69], [@33,130:130='a',<419>,1:130]], midpoint_at=[[@13,53:53='a',<419>,1:53]], created_at=[[@9,39:39='a',<419>,1:39], [@29,116:116='a',<419>,1:116]]}}", parser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={valid_delta=[[@38,148:158='valid_delta',<419>,1:148]], invalid_delta=[[@23,87:99='invalid_delta',<419>,1:87]]}}", parser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={valid_delta=[[@38,148:158='valid_delta',<419>,1:148]], invalid_delta=[[@23,87:99='invalid_delta',<419>,1:87]]}, table_dictionary={events={resolved_at=[[@18,69:69='a',<419>,1:69], [@33,130:130='a',<419>,1:130]], midpoint_at=[[@13,53:53='a',<419>,1:53]], created_at=[[@9,39:39='a',<419>,1:39], [@29,116:116='a',<419>,1:116]]}}, interface={valid_delta=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], invalid_delta=[{name=created_at, table_ref=a}, {name=midpoint_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", parser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetERepeatedReferencesPreserveOccurrenceSemanticsV0Test() {
+		final String query = "select datediff(day, a.created_at, a.created_at) as zero_delta from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=zero_delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[zero_delta]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@5,21:21='a',<419>,1:21], [@9,35:35='a',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={zero_delta=[[@14,52:61='zero_delta',<419>,1:52]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={zero_delta=[[@14,52:61='zero_delta',<419>,1:52]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21], [@9,35:35='a',<419>,1:35]]}}, interface={zero_delta=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetEDistinctSiblingDiffOutputsRetainIndependentLineageV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at) as delta_one, datediff(day, a.started_at, a.ended_at) as delta_two from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_one, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={alias=delta_two, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=started_at, table_ref=a}}, right={column={name=ended_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_one, delta_two]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], started_at=[[@20,78:78='a',<419>,1:78]], ended_at=[[@24,92:92='a',<419>,1:92]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_two=[[@29,107:115='delta_two',<419>,1:107]], delta_one=[[@14,53:61='delta_one',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={delta_one=[[@14,53:61='delta_one',<419>,1:53]], delta_two=[[@29,107:115='delta_two',<419>,1:107]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], started_at=[[@20,78:78='a',<419>,1:78]], ended_at=[[@24,92:92='a',<419>,1:92]]}}, interface={delta_one=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], delta_two=[{name=started_at, table_ref=a}, {name=ended_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void diffFamilySetFDerivedProducerExportsDiffResultLineageV0Test() {
+		final String query = "select d.delta_days from (select datediff(day, e.created_at, e.resolved_at) as delta_days from events e) d";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=delta_days, table_ref=d}}}, from={table={alias=d, query={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=e}}, right={column={name=resolved_at, table_ref=e}}}}}, from={table={alias=e, table=events}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@15,61:61='e',<419>,1:61]], created_at=[[@11,47:47='e',<419>,1:47]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@20,79:88='delta_days',<419>,1:79], [@1,7:7='d',<419>,1:7]]}, query1={delta_days=[[@3,9:18='delta_days',<419>,1:9]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={delta_days=[[@3,9:18='delta_days',<419>,1:9]]}, def_query0={query_dictionary={delta_days=[[@20,79:88='delta_days',<419>,1:79], [@1,7:7='d',<419>,1:7]]}, table_dictionary={events={resolved_at=[[@15,61:61='e',<419>,1:61]], created_at=[[@11,47:47='e',<419>,1:47]]}}, interface={delta_days=[{name=created_at, table_ref=e}, {name=resolved_at, table_ref=e}]}, table_alias={e=events}}, interface={delta_days=[{name=delta_days, table_ref=d}]}, table_alias={d=query0}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFDerivedConsumerComputesDiffFromExportsV0Test() {
+		final String query = "select datediff(day, d.created_at, d.resolved_at) as delta_days from (select e.created_at, e.resolved_at from events e) d";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=d}}, right={column={name=resolved_at, table_ref=d}}}}}, from={table={alias=d, query={select={1={column={name=created_at, table_ref=e}}, 2={column={name=resolved_at, table_ref=e}}}, from={table={alias=e, table=events}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@22,91:91='e',<419>,1:91]], created_at=[[@18,77:77='e',<419>,1:77]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={created_at=[[@20,79:88='created_at',<419>,1:79], [@5,21:21='d',<419>,1:21]], resolved_at=[[@24,93:103='resolved_at',<419>,1:93], [@9,35:35='d',<419>,1:35]]}, query1={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, def_query0={query_dictionary={resolved_at=[[@24,93:103='resolved_at',<419>,1:93], [@9,35:35='d',<419>,1:35]], created_at=[[@20,79:88='created_at',<419>,1:79], [@5,21:21='d',<419>,1:21]]}, table_dictionary={events={resolved_at=[[@22,91:91='e',<419>,1:91]], created_at=[[@18,77:77='e',<419>,1:77]]}}, interface={resolved_at=[{name=resolved_at, table_ref=e}], created_at=[{name=created_at, table_ref=e}]}, table_alias={e=events}}, interface={delta_days=[{name=created_at, table_ref=d}, {name=resolved_at, table_ref=d}]}, table_alias={d=query0}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFTwoLayerDerivedRenameChainV0Test() {
+		final String query = "select datediff(day, x.created_at, x.resolved_at) as delta_days from (select m.c_out as created_at, m.r_out as resolved_at from (select e.created_at as c_out, e.resolved_at as r_out from events e) m) x";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=x}}, right={column={name=resolved_at, table_ref=x}}}}}, from={table={alias=x, query={select={1={column={name=c_out, table_ref=m}, alias=created_at}, 2={column={name=r_out, table_ref=m}, alias=resolved_at}}, from={table={alias=m, query={select={1={column={name=created_at, table_ref=e}, alias=c_out}, 2={column={name=resolved_at, table_ref=e}, alias=r_out}}, from={table={alias=e, table=events}}}}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@38,159:159='e',<419>,1:159]], created_at=[[@32,136:136='e',<419>,1:136]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={c_out=[[@36,152:156='c_out',<419>,1:152], [@18,77:77='m',<419>,1:77]], r_out=[[@42,176:180='r_out',<419>,1:176], [@24,100:100='m',<419>,1:100]]}, query1={created_at=[[@22,88:97='created_at',<419>,1:88], [@5,21:21='x',<419>,1:21]], resolved_at=[[@28,111:121='resolved_at',<419>,1:111], [@9,35:35='x',<419>,1:35]]}, query2={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, def_query1={query_dictionary={resolved_at=[[@28,111:121='resolved_at',<419>,1:111], [@9,35:35='x',<419>,1:35]], created_at=[[@22,88:97='created_at',<419>,1:88], [@5,21:21='x',<419>,1:21]]}, def_query0={query_dictionary={r_out=[[@42,176:180='r_out',<419>,1:176], [@24,100:100='m',<419>,1:100]], c_out=[[@36,152:156='c_out',<419>,1:152], [@18,77:77='m',<419>,1:77]]}, table_dictionary={events={resolved_at=[[@38,159:159='e',<419>,1:159]], created_at=[[@32,136:136='e',<419>,1:136]]}}, interface={r_out=[{name=resolved_at, table_ref=e}], c_out=[{name=created_at, table_ref=e}]}, table_alias={e=events}}, interface={resolved_at=[{name=r_out, table_ref=m}], created_at=[{name=c_out, table_ref=m}]}, table_alias={m=query0}}, interface={delta_days=[{name=created_at, table_ref=x}, {name=resolved_at, table_ref=x}]}, table_alias={x=query1}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFCteProducerLineageV0Test() {
+		final String query = "with base as (select datediff(day, e.created_at, e.resolved_at) as delta_days from events e) select b.delta_days from base b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=e}}, right={column={name=resolved_at, table_ref=e}}}}}, from={table={alias=e, table=events}}}, alias=base}}, query={select={1={column={name=delta_days, table_ref=b}}}, from={table={alias=b, table=base}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@13,49:49='e',<419>,1:49]], created_at=[[@9,35:35='e',<419>,1:35]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={delta_days=[[@18,67:76='delta_days',<419>,1:67], [@24,100:100='b',<419>,1:100]]}, query1={delta_days=[[@26,102:111='delta_days',<419>,1:102]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={context_list={base=query0, b=query0}, query_dictionary={delta_days=[[@26,102:111='delta_days',<419>,1:102]]}, def_query0={query_dictionary={delta_days=[[@18,67:76='delta_days',<419>,1:67], [@24,100:100='b',<419>,1:100]]}, table_dictionary={events={resolved_at=[[@13,49:49='e',<419>,1:49]], created_at=[[@9,35:35='e',<419>,1:35]]}}, interface={delta_days=[{name=created_at, table_ref=e}, {name=resolved_at, table_ref=e}]}, table_alias={e=events}}, interface={delta_days=[{name=delta_days, table_ref=b}]}, table_alias={b=query0, base=query0}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFCteConsumerLineageV0Test() {
+		final String query = "with base as (select e.created_at, e.resolved_at from events e) select datediff(day, b.created_at, b.resolved_at) as delta_days from base b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=created_at, table_ref=e}}, 2={column={name=resolved_at, table_ref=e}}}, from={table={alias=e, table=events}}}, alias=base}}, query={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=b}}, right={column={name=resolved_at, table_ref=b}}}}}, from={table={alias=b, table=base}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='e',<419>,1:35]], created_at=[[@5,21:21='e',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={created_at=[[@7,23:32='created_at',<419>,1:23], [@21,85:85='b',<419>,1:85]], resolved_at=[[@11,37:47='resolved_at',<419>,1:37], [@25,99:99='b',<419>,1:99]]}, query1={delta_days=[[@30,117:126='delta_days',<419>,1:117]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={context_list={base=query0, b=query0}, query_dictionary={delta_days=[[@30,117:126='delta_days',<419>,1:117]]}, def_query0={query_dictionary={resolved_at=[[@11,37:47='resolved_at',<419>,1:37], [@25,99:99='b',<419>,1:99]], created_at=[[@7,23:32='created_at',<419>,1:23], [@21,85:85='b',<419>,1:85]]}, table_dictionary={events={resolved_at=[[@9,35:35='e',<419>,1:35]], created_at=[[@5,21:21='e',<419>,1:21]]}}, interface={resolved_at=[{name=resolved_at, table_ref=e}], created_at=[{name=created_at, table_ref=e}]}, table_alias={e=events}}, interface={delta_days=[{name=created_at, table_ref=b}, {name=resolved_at, table_ref=b}]}, table_alias={b=query0, base=query0}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFChainedCteRenamePathV0Test() {
+		final String query = "with base as (select e.created_at as c1, e.resolved_at as r1 from events e), mid as (select b.c1 as created_at, b.r1 as resolved_at from base b) select datediff(day, m.created_at, m.resolved_at) as delta_days from mid m";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=created_at, table_ref=e}, alias=c1}, 2={column={name=resolved_at, table_ref=e}, alias=r1}}, from={table={alias=e, table=events}}}, alias=base}, 2={cte={select={1={column={name=c1, table_ref=b}, alias=created_at}, 2={column={name=r1, table_ref=b}, alias=resolved_at}}, from={table={alias=b, table=base}}}, alias=mid}}, query={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=m}}, right={column={name=resolved_at, table_ref=m}}}}}, from={table={alias=m, table=mid}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@11,41:41='e',<419>,1:41]], created_at=[[@5,21:21='e',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={c1=[[@9,37:38='c1',<419>,1:37], [@25,92:92='b',<419>,1:92]], r1=[[@15,58:59='r1',<419>,1:58], [@31,112:112='b',<419>,1:112]]}, query1={created_at=[[@29,100:109='created_at',<419>,1:100], [@45,166:166='m',<419>,1:166]], resolved_at=[[@35,120:130='resolved_at',<419>,1:120], [@49,180:180='m',<419>,1:180]]}, query2={delta_days=[[@54,198:207='delta_days',<419>,1:198]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={context_list={base=query0, mid=query1, m=query1}, query_dictionary={delta_days=[[@54,198:207='delta_days',<419>,1:198]]}, def_query1={context_list={base=query0, b=query0}, query_dictionary={resolved_at=[[@35,120:130='resolved_at',<419>,1:120], [@49,180:180='m',<419>,1:180]], created_at=[[@29,100:109='created_at',<419>,1:100], [@45,166:166='m',<419>,1:166]]}, interface={resolved_at=[{name=r1, table_ref=b}], created_at=[{name=c1, table_ref=b}]}, table_alias={b=query0, base=query0}}, def_query0={query_dictionary={c1=[[@9,37:38='c1',<419>,1:37], [@25,92:92='b',<419>,1:92]], r1=[[@15,58:59='r1',<419>,1:58], [@31,112:112='b',<419>,1:112]]}, table_dictionary={events={resolved_at=[[@11,41:41='e',<419>,1:41]], created_at=[[@5,21:21='e',<419>,1:21]]}}, interface={c1=[{name=created_at, table_ref=e}], r1=[{name=resolved_at, table_ref=e}]}, table_alias={e=events}}, interface={delta_days=[{name=created_at, table_ref=m}, {name=resolved_at, table_ref=m}]}, table_alias={mid=query1, m=query1, base=query0}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFScalarSubquerySuppliesLeftV0Test() {
+		final String query = "select datediff(day, (select max(i.created_at) from history i), a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={lookup={from={table={alias=i, table=history}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=created_at, table_ref=i}}}}}}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{history={created_at=[[@9,33:33='i',<419>,1:33]]}, events={resolved_at=[[@18,64:64='a',<419>,1:64]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@12,45:45=')',<288>,1:45]]}, query2={delta_days=[[@23,82:91='delta_days',<419>,1:82]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={delta_days=[[@23,82:91='delta_days',<419>,1:82]]}, table_dictionary={events={resolved_at=[[@18,64:64='a',<419>,1:64]]}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@12,45:45=')',<288>,1:45]]}, table_dictionary={history={created_at=[[@9,33:33='i',<419>,1:33]]}}, interface={unnamed_0=[{name=created_at, table_ref=i}]}, table_alias={i=history}}, interface={delta_days=[{name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFScalarSubquerySuppliesRightV0Test() {
+		final String query = "select datediff(day, a.created_at, (select max(i.resolved_at) from history i)) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={lookup={from={table={alias=i, table=history}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=resolved_at, table_ref=i}}}}}}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{history={resolved_at=[[@13,47:47='i',<419>,1:47]]}, events={created_at=[[@5,21:21='a',<419>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@16,60:60=')',<288>,1:60]]}, query2={delta_days=[[@23,82:91='delta_days',<419>,1:82]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={delta_days=[[@23,82:91='delta_days',<419>,1:82]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21]]}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@16,60:60=')',<288>,1:60]]}, table_dictionary={history={resolved_at=[[@13,47:47='i',<419>,1:47]]}}, interface={unnamed_0=[{name=resolved_at, table_ref=i}]}, table_alias={i=history}}, interface={delta_days=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFCorrelatedScalarInLeftV0Test() {
+		final String query = "select datediff(day, (select max(i.created_at) from history i where i.event_id = a.id), a.resolved_at) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={lookup={from={table={alias=i, table=history}}, where={condition={left={column={name=event_id, table_ref=i}}, right={column={name=id, table_ref=a}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=created_at, table_ref=i}}}}}}}, right={column={name=resolved_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{history={event_id=[[@17,68:68='i',<419>,1:68]], created_at=[[@9,33:33='i',<419>,1:33]]}, events={resolved_at=[[@26,88:88='a',<419>,1:88]], id=[[@21,81:81='a',<419>,1:81]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@12,45:45=')',<288>,1:45]]}, query2={delta_days=[[@31,106:115='delta_days',<419>,1:106]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={delta_days=[[@31,106:115='delta_days',<419>,1:106]]}, table_dictionary={events={resolved_at=[[@26,88:88='a',<419>,1:88]], id=[[@21,81:81='a',<419>,1:81]]}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@12,45:45=')',<288>,1:45]]}, table_dictionary={history={event_id=[[@17,68:68='i',<419>,1:68]], created_at=[[@9,33:33='i',<419>,1:33]]}}, filters=[{name=event_id, table_ref=i}, {name=id, table_ref=a}], interface={unnamed_0=[{name=created_at, table_ref=i}]}, table_alias={i=history}}, interface={delta_days=[{name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetFCorrelatedScalarInRightV0Test() {
+		final String query = "select datediff(day, a.created_at, (select max(i.resolved_at) from history i where i.event_id = a.id)) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={lookup={from={table={alias=i, table=history}}, where={condition={left={column={name=event_id, table_ref=i}}, right={column={name=id, table_ref=a}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=resolved_at, table_ref=i}}}}}}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{history={event_id=[[@21,83:83='i',<419>,1:83]], resolved_at=[[@13,47:47='i',<419>,1:47]]}, events={created_at=[[@5,21:21='a',<419>,1:21]], id=[[@25,96:96='a',<419>,1:96]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@16,60:60=')',<288>,1:60]]}, query2={delta_days=[[@31,106:115='delta_days',<419>,1:106]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={delta_days=[[@31,106:115='delta_days',<419>,1:106]]}, table_dictionary={events={created_at=[[@5,21:21='a',<419>,1:21]], id=[[@25,96:96='a',<419>,1:96]]}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@16,60:60=')',<288>,1:60]]}, table_dictionary={history={event_id=[[@21,83:83='i',<419>,1:83]], resolved_at=[[@13,47:47='i',<419>,1:47]]}}, filters=[{name=event_id, table_ref=i}, {name=id, table_ref=a}], interface={unnamed_0=[{name=resolved_at, table_ref=i}]}, table_alias={i=history}}, interface={delta_days=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void dateaddUsesEarlierSelectAliasForIncrementOperandV0Test() {
+		final String query = "select a.offset_days as inc_days, dateadd(day, inc_days, a.created_at) as shifted from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=offset_days, table_ref=a}, alias=inc_days}, 2={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=inc_days, table_ref=null}}, value={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[inc_days, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@13,57:57='a',<419>,1:57]], offset_days=[[@1,7:7='a',<419>,1:7]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@18,74:80='shifted',<419>,1:74]], inc_days=[[@5,24:31='inc_days',<419>,1:24], [@11,47:54='inc_days',<419>,1:47]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={inc_days=[[@5,24:31='inc_days',<419>,1:24], [@11,47:54='inc_days',<419>,1:47]], shifted=[[@18,74:80='shifted',<419>,1:74]]}, table_dictionary={events={created_at=[[@13,57:57='a',<419>,1:57]], offset_days=[[@1,7:7='a',<419>,1:7]]}}, interface={inc_days=[{name=offset_days, table_ref=a}], shifted=[{name=inc_days, table_ref=query0}, {name=created_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void dateaddUsesEarlierSelectAliasesForBothOperandsV0Test() {
+		final String query = "select a.offset_days as inc_days, a.created_at as base_ts, dateadd(day, inc_days, base_ts) as shifted from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=offset_days, table_ref=a}, alias=inc_days}, 2={column={name=created_at, table_ref=a}, alias=base_ts}, 3={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={column={name=inc_days, table_ref=null}}, value={column={name=base_ts, table_ref=null}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[base_ts, inc_days, shifted]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@7,34:34='a',<419>,1:34]], offset_days=[[@1,7:7='a',<419>,1:7]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={base_ts=[[@11,50:56='base_ts',<419>,1:50], [@19,82:88='base_ts',<419>,1:82]], shifted=[[@22,94:100='shifted',<419>,1:94]], inc_days=[[@5,24:31='inc_days',<419>,1:24], [@17,72:79='inc_days',<419>,1:72]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={base_ts=[[@11,50:56='base_ts',<419>,1:50], [@19,82:88='base_ts',<419>,1:82]], inc_days=[[@5,24:31='inc_days',<419>,1:24], [@17,72:79='inc_days',<419>,1:72]], shifted=[[@22,94:100='shifted',<419>,1:94]]}, table_dictionary={events={created_at=[[@7,34:34='a',<419>,1:34]], offset_days=[[@1,7:7='a',<419>,1:7]]}}, interface={base_ts=[{name=created_at, table_ref=a}], inc_days=[{name=offset_days, table_ref=a}], shifted=[{name=inc_days, table_ref=query0}, {name=base_ts, table_ref=query0}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffUsesEarlierSelectAliasesForBothOperandsV0Test() {
+		final String query = "select a.created_at as start_ts, a.resolved_at as end_ts, datediff(day, start_ts, end_ts) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=created_at, table_ref=a}, alias=start_ts}, 2={column={name=resolved_at, table_ref=a}, alias=end_ts}, 3={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=null}}, right={column={name=end_ts, table_ref=null}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[start_ts, end_ts, delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@7,33:33='a',<419>,1:33]], created_at=[[@1,7:7='a',<419>,1:7]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={start_ts=[[@5,23:30='start_ts',<419>,1:23], [@17,72:79='start_ts',<419>,1:72]], end_ts=[[@11,50:55='end_ts',<419>,1:50], [@19,82:87='end_ts',<419>,1:82]], delta_days=[[@22,93:102='delta_days',<419>,1:93]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={start_ts=[[@5,23:30='start_ts',<419>,1:23], [@17,72:79='start_ts',<419>,1:72]], end_ts=[[@11,50:55='end_ts',<419>,1:50], [@19,82:87='end_ts',<419>,1:82]], delta_days=[[@22,93:102='delta_days',<419>,1:93]]}, table_dictionary={events={resolved_at=[[@7,33:33='a',<419>,1:33]], created_at=[[@1,7:7='a',<419>,1:7]]}}, interface={start_ts=[{name=created_at, table_ref=a}], end_ts=[{name=resolved_at, table_ref=a}], delta_days=[{name=start_ts, table_ref=query0}, {name=end_ts, table_ref=query0}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void datediffUsesEarlierDatetimeAliasAsOperandV0Test() {
+		final String query = "select dateadd(day, 1, a.created_at) as shifted1, datediff(day, a.created_at, shifted1) as delta_days from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=shifted1, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=created_at, table_ref=a}}}}, 2={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=shifted1, table_ref=null}}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[shifted1, delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={created_at=[[@7,23:23='a',<419>,1:23], [@18,64:64='a',<419>,1:64]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted1=[[@12,40:47='shifted1',<419>,1:40], [@22,78:85='shifted1',<419>,1:78]], delta_days=[[@25,91:100='delta_days',<419>,1:91]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={shifted1=[[@12,40:47='shifted1',<419>,1:40], [@22,78:85='shifted1',<419>,1:78]], delta_days=[[@25,91:100='delta_days',<419>,1:91]]}, table_dictionary={events={created_at=[[@7,23:23='a',<419>,1:23], [@18,64:64='a',<419>,1:64]]}}, interface={shifted1=[{name=created_at, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=shifted1, table_ref=query0}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
 	@Test
 	public void diffFamilySetAQuotedLevelPreservedAcrossTimediffAndTimestampdiffV0Test() {
 		final String query = "select timediff('day', u.started_at, u.ended_at) as td, timestampdiff('day', u.started_at, u.ended_at) as tsd from usage_events u";
@@ -3484,5 +4183,151 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 		Assert.assertEquals("Table Dictionary is wrong", "{events={part=[[@5,22:22='a',<419>,1:22]], ts=[[@11,33:33='a',<419>,1:33]]}}", extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={shifted=[[@16,42:48='shifted',<419>,1:42]]}}", extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={shifted=[[@16,42:48='shifted',<419>,1:42]]}, table_dictionary={events={part=[[@5,22:22='a',<419>,1:22]], ts=[[@11,33:33='a',<419>,1:33]]}}, interface={shifted=[{name=part, table_ref=a}, {name=ts, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGWherePlacementV0Test() {
+		final String query = "select a.id from events a where datediff(day, a.created_at, a.resolved_at) > 0";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, right={literal=0}, operator=>}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@16,60:60='a',<419>,1:60]], created_at=[[@12,46:46='a',<419>,1:46]], id=[[@1,7:7='a',<419>,1:7]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@3,9:10='id',<419>,1:9]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={events={resolved_at=[[@16,60:60='a',<419>,1:60]], created_at=[[@12,46:46='a',<419>,1:46]], id=[[@1,7:7='a',<419>,1:7]]}}, filters=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGHavingPlacementV0Test() {
+		final String query = "select a.account_id, count(*) as cnt from events a group by a.account_id having datediff(day, min(a.created_at), max(a.resolved_at)) > 0";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=account_id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=cnt}}, having={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={function={function_name=min, qualifier=null, parameters={column={name=created_at, table_ref=a}}}}, right={function={function_name=max, qualifier=null, parameters={column={name=resolved_at, table_ref=a}}}}}}, right={literal=0}, operator=>}}, from={table={alias=a, table=events}}, groupby={1={column={name=account_id, table_ref=a}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[account_id, cnt]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={account_id=[[@1,7:7='a',<419>,1:7], [@16,60:60='a',<419>,1:60]], resolved_at=[[@33,117:117='a',<419>,1:117]], created_at=[[@26,98:98='a',<419>,1:98]], *=[[@7,27:27='*',<291>,1:27]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={cnt=[[@10,33:35='cnt',<419>,1:33]], account_id=[[@3,9:18='account_id',<419>,1:9]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={account_id=[[@3,9:18='account_id',<419>,1:9]], cnt=[[@10,33:35='cnt',<419>,1:33]]}, table_dictionary={events={account_id=[[@1,7:7='a',<419>,1:7], [@16,60:60='a',<419>,1:60]], resolved_at=[[@33,117:117='a',<419>,1:117]], created_at=[[@26,98:98='a',<419>,1:98]], *=[[@7,27:27='*',<291>,1:27]]}}, grouped_by=[{name=account_id, table_ref=a}], filters=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], interface={account_id=[{name=account_id, table_ref=a}], cnt=[]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGOrderByExpressionAndAliasPlacementV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at) as delta_days, a.id from events a order by datediff(day, a.started_at, a.ended_at) desc, delta_days asc";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=started_at, table_ref=a}}, right={column={name=ended_at, table_ref=a}}}}, sort_order=desc}, 2={null_order=null, predicand={column={name=delta_days, table_ref=null}}, sort_order=asc}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], started_at=[[@28,107:107='a',<419>,1:107]], id=[[@16,65:65='a',<419>,1:65]], ended_at=[[@32,121:121='a',<419>,1:121]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53], [@38,139:148='delta_days',<419>,1:139]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53], [@38,139:148='delta_days',<419>,1:139]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], started_at=[[@28,107:107='a',<419>,1:107]], id=[[@16,65:65='a',<419>,1:65]], ended_at=[[@32,121:121='a',<419>,1:121]]}}, ordered_by=[{name=started_at, table_ref=a}, {name=ended_at, table_ref=a}, {name=delta_days, table_ref=query0}], interface={id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGWindowPartitionOrderPlacementV0Test() {
+		final String query = "select row_number() over (partition by datediff(day, a.created_at, a.resolved_at) order by datediff(hour, a.started_at, a.ended_at)) as rn from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rn, window_function={over={partition_by={1={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}}, orderby={1={null_order=null, predicand={datetime_function={function_name=datediff, level={canonical=HOUR, text=hour, form=KEYWORD}, left={column={name=started_at, table_ref=a}}, right={column={name=ended_at, table_ref=a}}}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rn]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@16,67:67='a',<419>,1:67]], created_at=[[@12,53:53='a',<419>,1:53]], started_at=[[@26,106:106='a',<419>,1:106]], ended_at=[[@30,120:120='a',<419>,1:120]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={rn=[[@36,136:137='rn',<419>,1:136]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={window_ordered_by=[{name=started_at, table_ref=a}, {name=ended_at, table_ref=a}], query_dictionary={rn=[[@36,136:137='rn',<419>,1:136]]}, table_dictionary={events={resolved_at=[[@16,67:67='a',<419>,1:67]], created_at=[[@12,53:53='a',<419>,1:53]], started_at=[[@26,106:106='a',<419>,1:106]], ended_at=[[@30,120:120='a',<419>,1:120]]}}, window_partition_by=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], interface={rn=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}, {name=started_at, table_ref=a}, {name=ended_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGInsertSelectPlacementV0Test() {
+		final String query = "insert into archive_events (delta_days, event_id) select datediff(day, a.created_at, a.resolved_at) as delta_days, a.id as event_id from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}, alias=event_id}}}, target_table={table={alias=null, table=archive_events}}, columns={1={column={name=delta_days, table_ref=null}}, 2={column={name=event_id, table_ref=null}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[event_id, delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{archive_events={event_id=[[@6,40:47='event_id',<419>,1:40]], delta_days=[[@4,28:37='delta_days',<419>,1:28]]}, events={resolved_at=[[@17,85:85='a',<419>,1:85]], created_at=[[@13,71:71='a',<419>,1:71]], id=[[@24,115:115='a',<419>,1:115]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={event_id=[[@28,123:130='event_id',<419>,1:123]], delta_days=[[@22,103:112='delta_days',<419>,1:103]]}, insert1={event_id=[[@6,40:47='event_id',<419>,1:40]], delta_days=[[@4,28:37='delta_days',<419>,1:28]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert1={query_dictionary={event_id=[[@6,40:47='event_id',<419>,1:40]], delta_days=[[@4,28:37='delta_days',<419>,1:28]]}, table_dictionary={archive_events={event_id=[[@6,40:47='event_id',<419>,1:40]], delta_days=[[@4,28:37='delta_days',<419>,1:28]]}}, def_query0={query_dictionary={event_id=[[@28,123:130='event_id',<419>,1:123]], delta_days=[[@22,103:112='delta_days',<419>,1:103]]}, table_dictionary={events={resolved_at=[[@17,85:85='a',<419>,1:85]], created_at=[[@13,71:71='a',<419>,1:71]], id=[[@24,115:115='a',<419>,1:115]]}}, interface={event_id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}, interface={delta_days=[{name=delta_days, table_ref=query0}], event_id=[{name=event_id, table_ref=query0}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGUpdateSetAndWherePlacementV0Test() {
+		final String query = "update events e set offset_days = datediff(day, e.created_at, e.resolved_at) where datediff(day, e.started_at, e.ended_at) > 0";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={table={alias=e, table=events}, where={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=started_at, table_ref=e}}, right={column={name=ended_at, table_ref=e}}}}, right={literal=0}, operator=>}}, assignments={1={set={column={name=offset_days, table_ref=null}}, to={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=e}}, right={column={name=resolved_at, table_ref=e}}}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[offset_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={started_at=[[@23,97:97='e',<419>,1:97]], ended_at=[[@27,111:111='e',<419>,1:111]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={offset_days=[[@4,20:30='offset_days',<419>,1:20]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_update0={assignments={offset_days=[{name=created_at, table_ref=e}, {name=resolved_at, table_ref=e}]}, table_dictionary={events={started_at=[[@23,97:97='e',<419>,1:97]], ended_at=[[@27,111:111='e',<419>,1:111]]}}, update_dictionary={offset_days=[[@4,20:30='offset_days',<419>,1:20]]}, target_table={events={resolved_at=[[@14,62:62='e',<419>,1:62]], created_at=[[@10,48:48='e',<419>,1:48]], offset_days=[[@4,20:30='offset_days',<419>,1:20]]}}, filters=[{name=started_at, table_ref=e}, {name=ended_at, table_ref=e}], table_alias={e=events}, lhs_unresolved_columns={offset_days={column={name=offset_days, table_ref=null}, locations=[[@4,20:30='offset_days',<419>,1:20]]}}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGDeleteWhereAndExistsPlacementV0Test() {
+		final String query = "delete from events e where datediff(day, e.created_at, e.resolved_at) > 0 and exists (select 1 from adjustments a where datediff(day, a.created_at, a.updated_at) > 0)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={delete={table={alias=e, table=events}, where={and={1={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=e}}, right={column={name=resolved_at, table_ref=e}}}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=a, table=adjustments}}, where={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=updated_at, table_ref=a}}}}, right={literal=0}, operator=>}}, operator=exists}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{adjustments={updated_at=[[@36,148:148='a',<419>,1:148]], created_at=[[@32,134:134='a',<419>,1:134]]}, events={resolved_at=[[@13,55:55='e',<419>,1:55]], created_at=[[@9,41:41='e',<419>,1:41]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@23,93:93='1',<300>,1:93]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_delete2={query_dictionary={}, table_dictionary={events={resolved_at=[[@13,55:55='e',<419>,1:55]], created_at=[[@9,41:41='e',<419>,1:41]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@23,93:93='1',<300>,1:93]]}, table_dictionary={adjustments={updated_at=[[@36,148:148='a',<419>,1:148]], created_at=[[@32,134:134='a',<419>,1:134]]}}, filters=[{name=created_at, table_ref=a}, {name=updated_at, table_ref=a}], interface={unnamed_0=[]}, table_alias={a=adjustments}}, filters=[{name=created_at, table_ref=e}, {name=resolved_at, table_ref=e}], interface=null, table_alias={e=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetGSetOpBranchIsolationV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at) as delta_days, a.id from events a union all select datediff(day, b.created_at, b.resolved_at) as delta_days, b.id from events_archive b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={alias=delta_days, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=b}}, right={column={name=resolved_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}}}, from={table={alias=b, table=events_archive}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, delta_days]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events_archive={resolved_at=[[@33,129:129='b',<419>,1:129]], created_at=[[@29,115:115='b',<419>,1:115]], id=[[@40,159:159='b',<419>,1:159]]}, events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], id=[[@16,65:65='a',<419>,1:65]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, query1={id=[[@42,161:162='id',<419>,1:161]], delta_days=[[@38,147:156='delta_days',<419>,1:147]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union2={def_query1={query_dictionary={id=[[@42,161:162='id',<419>,1:161]], delta_days=[[@38,147:156='delta_days',<419>,1:147]]}, table_dictionary={events_archive={resolved_at=[[@33,129:129='b',<419>,1:129]], created_at=[[@29,115:115='b',<419>,1:115]], id=[[@40,159:159='b',<419>,1:159]]}}, setop=UNION, interface={id=[{name=id, table_ref=b}], delta_days=[{name=created_at, table_ref=b}, {name=resolved_at, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={id=[[@18,67:68='id',<419>,1:67]], delta_days=[[@14,53:62='delta_days',<419>,1:53]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35]], created_at=[[@5,21:21='a',<419>,1:21]], id=[[@16,65:65='a',<419>,1:65]]}}, interface={id=[{name=id, table_ref=a}], delta_days=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}, interface={id=query_column, delta_days=query_column}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetHQualifiedSameNameUdfRemainsGenericV0Test() {
+		final String query = "select datediff(day, a.created_at, a.resolved_at) as built_in_delta, custom.datediff(a.part, a.created_at, a.resolved_at) as udf_delta from events a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=built_in_delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=created_at, table_ref=a}}, right={column={name=resolved_at, table_ref=a}}}}, 2={function={schema=custom, parameters={1={column={name=part, table_ref=a}}, 2={column={name=created_at, table_ref=a}}, 3={column={name=resolved_at, table_ref=a}}}, function_name=datediff}, alias=udf_delta}}, from={table={alias=a, table=events}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[udf_delta, built_in_delta]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{events={resolved_at=[[@9,35:35='a',<419>,1:35], [@28,107:107='a',<419>,1:107]], part=[[@20,85:85='a',<419>,1:85]], created_at=[[@5,21:21='a',<419>,1:21], [@24,93:93='a',<419>,1:93]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={udf_delta=[[@33,125:133='udf_delta',<419>,1:125]], built_in_delta=[[@14,53:66='built_in_delta',<419>,1:53]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={udf_delta=[[@33,125:133='udf_delta',<419>,1:125]], built_in_delta=[[@14,53:66='built_in_delta',<419>,1:53]]}, table_dictionary={events={resolved_at=[[@9,35:35='a',<419>,1:35], [@28,107:107='a',<419>,1:107]], part=[[@20,85:85='a',<419>,1:85]], created_at=[[@5,21:21='a',<419>,1:21], [@24,93:93='a',<419>,1:93]]}}, interface={udf_delta=[{name=part, table_ref=a}, {name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}], built_in_delta=[{name=created_at, table_ref=a}, {name=resolved_at, table_ref=a}]}, table_alias={a=events}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void diffFamilySetHScriptResetsDialectAffinityPerStatementV0Test() {
+		final String script = "select datediff(day, a.created_at, a.resolved_at) as delta_days from events a; select extract(dow from b.created_at) as dow_part from events b";
+		final SQLSelectParserParser parser = parse(script);
+		SqlParseEventWalker extractor = runScriptParsertest(script, parser);
+		Assert.assertEquals(script, 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals(0, extractor.getSnippet().getFatalErrorCount());
+		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());
+		Assert.assertEquals(1, extractor.getPostgresDialectGrammarCount());
 	}
 }

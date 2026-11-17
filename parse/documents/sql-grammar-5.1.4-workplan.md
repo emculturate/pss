@@ -1435,10 +1435,19 @@ Added focused verification coverage for the remaining highest-risk diff behavior
 - [x] TIMESTAMPDIFF invalid part fatal with exact token/position/message assertions.
 - [x] Completed Section A closure for diff family: quoted-level metadata and mixed-case invocation preservation for TIMEDIFF/TIMESTAMPDIFF, plus quoted invalid-part fatal coverage per invocation.
 - [x] Completed Section B (`DF-13..DF-37`) 25-case left/right shape matrix with strict goldens (`L/CQ/CU/FQ/FU` × `L/CQ/CU/FQ/FU`).
+- [x] Completed Section C (`DF-38..DF-49`) ambiguity/visibility failures, including unknown-alias operand failures, missing derived export handling, and overlapping CTE export ambiguity.
+- [x] Completed Section D (`DF-50..DF-67`) substitution matrix for `left`/`right` trees (predicand/column/mixed/formula/joined-source) including join-extension fatal vs deferred behavior.
+- [x] Completed Section E (`DF-68..DF-76`) nested/sibling isolation, including nested-diff-in-wrapper positions, wrapper-in-operand shapes, inner-invalid-part isolation against sibling diffs, repeated-reference occurrence semantics, and independent sibling output lineage.
+- [x] Completed Section F (`DF-77..DF-86`) producer/consumer and scope propagation through derived producers/consumers, two-layer rename chains, CTE producer/consumer chains, and scalar/correlated scalar subqueries in both `left` and `right` operands.
+- [x] Completed Section G (`DF-87..DF-94`) clause/DML/set-op placement for WHERE, HAVING, ORDER BY expression+alias, window PARTITION/ORDER, INSERT…SELECT, UPDATE SET+WHERE, DELETE WHERE+EXISTS, and set-op branch isolation.
+- [x] Completed Section H (`DF-95..DF-96`) schema-qualified same-name UDF generic control for DATEDIFF and SCRIPT statement-level dialect-affinity reset/isolation verification.
+- [x] Added DIFF-family snippet production: full DATEDIFF endpoint matrix (`PREDICAND`, `CONDITION`, `QUERY`, `TUPLE`, `IN_LIST`, `JOIN_EXTENSION`, `VALUES`, `INSERT`, `UPDATE`, `DELETE`, `DDL`, `SCRIPT`) plus TIMEDIFF/TIMESTAMPDIFF predicand substitution controls with strict AccessObject goldens.
+- [x] Added missing prior-family snippet coverage with substitution-slot assertions for EXTRACT, DATE_PART, DATE_TRUNC, TIME_SLICE, LAST_DAY, NEXT_DAY, and PREVIOUS_DAY.
+- [x] Added Postgres-family snippet endpoint matrices at the same depth for DATE_BIN, AGE, MAKE_TIMESTAMP, JUSTIFY_INTERVAL, and CLOCK_TIMESTAMP (`PREDICAND`, `CONDITION`, `QUERY`, `TUPLE`, `IN_LIST`, `JOIN_EXTENSION`, `VALUES`, `INSERT`, `UPDATE`, `DELETE`, `DDL`, `SCRIPT`) plus sibling predicand controls for MAKE_DATE/MAKE_TIME/MAKE_TIMESTAMPTZ/MAKE_INTERVAL, JUSTIFY_DAYS/JUSTIFY_HOURS, and STATEMENT_TIMESTAMP/TRANSACTION_TIMESTAMP/TIMEOFDAY.
 
 These close the representative Entry 1 item-52 gaps for alias+substitution and
-per-invocation invalid-part verification, and close Sections A+B of the
-DF-01..DF-96 catalog. Remaining closure scope is Sections C-H as listed above.
+per-invocation invalid-part verification, and close Sections A-H of the
+DF-01..DF-96 catalog.
 
 **Remaining datetime-family scenario catalogs (planning checkpoint, 2026-11-14)**
 
@@ -1465,6 +1474,10 @@ DF-01..DF-96 catalog. Remaining closure scope is Sections C-H as listed above.
   - Ambiguous/unqualified value diagnostics and unresolved behavior checks
   - Hidden/missing export failures through derived/CTE boundaries
   - TRUNC one-arg/numeric controls (must remain generic or numeric path as applicable)
+- **Section D — mandatory snippet substitution coverage (fold into TE-M/TE-R execution)**
+  - Add explicit snippet-endpoint tests for this family in `SqlEventWalkerDatetimeFunctionSnippetTests` (or family-specific snippet class if split) using endpoint forms where datetime functions are valid (`PREDICAND`, `CONDITION`, `QUERY`, `TUPLE`, `JOIN_EXTENSION`, `IN_LIST`, `VALUES`, `INSERT`, `UPDATE`, `DELETE`, `DDL`, `SCRIPT`).
+  - Exercise substitution variables in every argument slot that accepts predicand/column trees (`value` and family-specific expression slots); verify substitution typing, table/query dictionary collection, and symbol-table payloads with full literal goldens.
+  - Keep DATEADD-only snippet presence checks as insufficient for closure; each family must prove its own snippet-path behavior.
 - **Complete regression scenarios (TE-R01..TE-R44)**
   - Nested/sibling isolation, substitution typing, set-op branch isolation
   - DML placements (INSERT/UPDATE/DELETE), window wrappers where legal
@@ -1487,7 +1500,7 @@ Covered now (**mark complete**):
 - [x] **TE-C04** EXTRACT/DATE_PART source-shape coverage (column, qualified column, typed literal, parentheses, arithmetic, CAST, nested extract).
 - [x] **TE-C05** Predicand substitution coverage for EXTRACT/DATE_PART source trees.
 - [x] **TE-C06** Dialect-affinity warning coverage for EXTRACT/DATE_PART (including comma-form and nested combinations).
-- [x] **TE-C07** Snippet endpoint presence for datetime-function family behavior (via datetime snippet suite; mostly DATEADD, but confirms endpoint compatibility with datetime_function nodes).
+- [x] **TE-C07** Snippet endpoint presence for datetime-function family behavior (datetime snippet suite now includes DATEADD + DIFF family endpoint matrix and substitution-focused coverage for EXTRACT/DATE_PART/DATE_TRUNC and boundary/slice functions).
 
 Still to add for this family (**not covered yet**):
 - [ ] **TE-C08..TE-C12 (core placement expansion):** explicit WHERE/HAVING/ORDER BY/window/derived+CTE producer-consumer coverage for DATE_TRUNC and datetime TRUNC (not just EXTRACT/DATE_PART).
@@ -1525,6 +1538,10 @@ Current effective status after the minimum-parity batch:
   - Invalid boundary diagnostics for TIME_SLICE
   - Invalid weekday diagnostics for NEXT_DAY/PREVIOUS_DAY
   - Ambiguous/unqualified value and export-visibility failures
+- **Section D — mandatory snippet substitution coverage (fold into BS-M/BS-R execution)**
+  - Add snippet-endpoint tests for this family across the supported snippet endpoints, including `SCRIPT` multi-statement reset behavior.
+  - Validate substitutions in all predicand-capable slots (`value`, `slice_length`, and optional boundary/weekday positions where grammar permits expression/substitution forms) with exact golden assertions for AST/interface/dictionaries/symbol tables.
+  - Include negative snippet cases for invalid level/boundary/weekday diagnostics with exact position/message assertions.
 - **Complete regression scenarios (BS-R01..BS-R36)**
   - Substitutions in value/length/weekday slots, nested function wrappers
   - Clause/DML/set-op placement and sibling isolation
@@ -1571,6 +1588,10 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
   - Ambiguous source/origin for DATE_BIN
   - AGE left/right ambiguity and hidden-export failures
   - Invalid-shape controls (arity/signature mismatch paths)
+- **Section D — mandatory snippet substitution coverage (fold into PG-M/PG-R execution)**
+  - Add snippet-endpoint tests for DATE_BIN and AGE with substitutions in each expression slot (`stride/source/origin` and AGE one/two-argument forms as applicable).
+  - Verify substitution typing and normal column resolution/collection through snippet parsing with strict golden outputs.
+  - Add snippet negative controls for signature misuse and ambiguity/visibility failures.
 - **Complete regression scenarios (PG-R01..PG-R24)**
   - Substitution typing per slot, nested/sibling isolation
   - DML/set-op placement and mixed-source visibility proofs
@@ -1589,6 +1610,10 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
   - Field-local ambiguity/unqualified failures for each constructor shape
   - MAKE_INTERVAL component misuse/missing-field shape controls
   - Hidden-export visibility failures through derived/CTE chains
+- **Section D — mandatory snippet substitution coverage (fold into MK-M/MK-R execution)**
+  - Add snippet-endpoint tests for all MAKE* constructors, including named/positional MAKE_INTERVAL forms.
+  - Require substitution-variable coverage for every field position that accepts predicand expressions; assert per-field typing and dictionary/symbol-table placement with exact goldens.
+  - Include malformed snippet controls for component misuse and missing/invalid field shapes.
 - **Complete regression scenarios (MK-R01..MK-R42)**
   - Full field matrix permutations, nested wrappers, set-op isolation
   - Multi-layer rename chains and substitution typing in each field family
@@ -1606,6 +1631,10 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
   - Ambiguous/unqualified value failures
   - Hidden-export and missing-output visibility failures
   - Invocation routing controls (no part-diagnostic mislabeling)
+- **Section D — mandatory snippet substitution coverage (fold into JY-M/JY-R execution)**
+  - Add snippet-endpoint tests for JUSTIFY* invocations with substitutions in the interval-expression input.
+  - Verify substitution typing and ordinary column resolution/collection behaviors in snippet contexts with strict goldens.
+  - Include snippet negatives for ambiguity/visibility and routing-control diagnostics.
 - **Complete regression scenarios (JY-R01..JY-R20)**
   - Nested/sibling isolation, DML/set-op placement, statement reset
   - UDF same-name controls and dialect-affinity checks
@@ -1622,6 +1651,10 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
   - Signature misuse / argument-introduction rejection paths
   - UDF same-name controls and function-routing protections
   - Mixed-affinity fatal checks where statement rules require
+- **Section D — mandatory snippet substitution coverage (fold into CK-M/CK-R execution)**
+  - Add snippet-endpoint tests proving zero-argument family behavior across snippet endpoints where invocation is legal, including SCRIPT reset behavior.
+  - Assert that no argument-level substitution/column collection is introduced for these zero-arg functions, while surrounding query substitutions still type and resolve normally.
+  - Include snippet negatives for illegal argument introduction and same-name UDF routing controls.
 - **Complete regression scenarios (CK-R01..CK-R20)**
   - Derived/CTE propagation, DML/set-op placement where valid
   - Multi-statement reset and sibling isolation
