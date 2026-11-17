@@ -38,6 +38,26 @@ upgrade blocker.
 | 7 | Typos (stray characters) | 2 | 2 |
 
 Many rows share a template name. The extract has no version or tenant column, so these are presumably per-tenant or per-version copies; fixing the source template should clear several rows at once. The index at the end lists every case.
+
+## Author handoff checklist (rollout rules + affected rows)
+
+Use this as the short author-facing handoff list when migrating to 5.1.4. For each rule, the "Affected rows" column lists the record IDs (`qN`/`sN`) and the best available name field already captured in this document.
+
+| # | Author rule | Affected rows (record IDs) | Name field(s) to use in handoff |
+|---|---|---|---|
+| 1 | Fix duplicate output names inside UNION branches by aliasing branch outputs to the first-branch interface. | **Pattern 1 (111 cases):** `q860..q889`, `q891..q895`, `q900..q902`, `q2154`, `q2155`, `q2964..q2991`, `q2996..q3050`, `q3059`, `q3060`, `q3062`, `q3106`, `s36703`. | Domain/entity/query name and bundle names listed under **Pattern 1** distinct templates/bundles. |
+| 2 | Make every SELECT-list output name unique (rename or remove duplicates). | **Pattern 2 (17 cases):** `q2168`, `q5217`, `s77918`, `s78210`, `s78379`, `s78385`, `s79125`, `s80357`, `s80358`, `s80359`, `s80360`, `s80361`, `s81144`, `s81145`, `s81146`, `s81147`, `s81148`. | Domain/entity/query name and Foundation bundle rows under **Pattern 2**. |
+| 3 | Match set-operation branch column counts and positions exactly. | **Pattern 3 (1 case):** `q1703`. | `AMS / gifts_funds` (see **Pattern 3**). |
+| 4 | Resolve undeclared/out-of-scope aliases (add missing joins, fix typo aliases, or expose columns from inner scope). | **Pattern 4 (16 cases):** `q33`, `q508`, `q746`, `q1280`, `q1323`, `q1324`, `q1476`, `q1669`, `q2910`, `q3676`, `q3870`, `q4154`, `q5112`, `q5137`, `q6290`, `q6304`. | Domain/entity/query names in **Pattern 4** index table. |
+| 5 | Export required columns from derived tables/CTEs before outer references; fix alias typos in exported names. | **Pattern 5 (14 cases):** `q2969`, `q3700`, `q3731`, `q5124`, `q6293`, `s78384`, `s78400`, `s78415`, `s78701`, `s78754`, `s78755`, `s78756`, `s78982`, `s78983`. | Domain/entity/query names and bundle names in **Pattern 5** index table. |
+| 6 | For variable-across-boundary SQL, provide stable exported aliases (or use concrete exported names where binding is fixed). | **Pattern 6 (11 cases):** `q5201`, `q5286`, `q5287`, `q5288`, `q5289`, `q5290`, `q5291`, `q5314`, `q5335`, `s8491`, `s8492`. | PDP/ALR query names and Foundation bundles in **Pattern 6** section and index. |
+| 7 | Remove typos/stray characters (`]`, trailing `\\`, etc.). | **Pattern 7 (2 cases):** `q5128`, `s6989`. | `Pagoda / TRANSFER_COURSEWORK` and `ALR Partner Code Mapping` rows under **Pattern 7**. |
+| 8 | If alias supply depends on join extension, include the `<join_extension...>` variable and bind to a snippet declaring required aliases. | Not part of the 172-case remediation index; identify by diagnostics: `JOIN_EXTENSION_REQUIRED` (and downgraded qualified-source severe warning). | Template/bundle identity from current run outputs; see join-extension notes in this document. |
+| 9 | IN_LIST snippets must be wrapped in parentheses when parsed at `IN_LIST` endpoint. | No fixed static row subset in this file; apply to snippet records routed through `IN_LIST` endpoint. | Snippet endpoint field + snippet record ID (`sN`) in run outputs. |
+| 10 | Verification gate: parse corrected SQL/snippets on 5.1.4 and require `getFatalErrorCount()==0` (allow expected `JOIN_EXTENSION_REQUIRED` severe warnings only where applicable). | Applies to all corrected rows above (`q*`/`s*`). | Use row IDs plus domain/entity/query or bundle names from pattern tables for sign-off tracking. |
+
+For full row-by-row detail (record ID, domain/entity/query or bundle, first error location, and first fatal message), use the index tables under **Pattern 1..7** later in this document.
+
 ### Not your problem (excluded from this document)
 
 These are not author errors and are **not** listed in the index. Current

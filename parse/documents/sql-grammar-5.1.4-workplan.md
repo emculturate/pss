@@ -44,14 +44,12 @@
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
-| **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Not started** — s85047 and reduced reproductions confirmed; related historical cases require reclassification |
+| **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Complete** (closed 2026-11-13) — targeted fix + warning policy + parity re-evaluation delivered; see Entry 20 section |
 
-**5.0.0 → 5.1.4 parity gate:** Entry **20** must be fixed and verified before
-declaring parity for the bound-query and snippet extracts. The previously
-reported closure of the named bound-query parser defects did not account for
-Pattern 6's seven bound queries, which were classified as author remediation
-and now require re-evaluation under Entry 20. This gate is in addition to the
-remaining corpus, consumer, generator, and release checks.
+**5.0.0 → 5.1.4 parity gate update:** Entry **20** is closed (2026-11-13) and
+no longer blocks parity. Remaining parity/release checks continue to be the
+corpus, consumer, generator, and release verification gates documented in this
+workplan.
 
 ---
 
