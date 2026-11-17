@@ -6802,4 +6802,148 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	/**
+	 * Entry 2 Stage B guard: legacy Snowflake quoted PIVOT output selectors remain resolvable even
+	 * when projected through outer aliases.
+	 */
+	@Test
+	public void pivotQuotedLegacyIdentifierWithOuterAliasResolvedStageBTest() {
+		final String query =
+				"SELECT contact_initiated_activity_key,\n"
+						+ "       \"'diq_entry_year'\" AS entry_year,\n"
+						+ "       \"'diq_entry_term'\" AS entry_term,\n"
+						+ "       \"'Survey Question'\" AS form_response,\n"
+						+ "       survey_question_year_term_rank\n"
+						+ "FROM src\n"
+						+ "PIVOT(MAX(form_response) FOR question_category IN ('diq_entry_year', 'diq_entry_term', 'Survey Question'))\n"
+						+ "WHERE entry_year IS NOT NULL AND entry_term IS NOT NULL AND form_response IS NOT NULL\n"
+						+ "ORDER BY contact_initiated_activity_key";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(
+				"Expected extractor for quoted legacy selector support; failure="
+						+ runResult.getFailure() + ", parserErrors=" + runResult.getParserErrors()
+						+ ", listenerDiagnostics=" + runResult.getListenerDiagnostics(),
+				extractor);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue(
+				"Expected aliased interface columns after quoted selector projection: " + extractor.getInterface(),
+				extractor.getInterface().toString().contains("entry_year")
+						&& extractor.getInterface().toString().contains("entry_term")
+						&& extractor.getInterface().toString().contains("form_response"));
+	}
+
+	/**
+	 * Entry 2 Stage A guard: newer IN-list alias form must remain healthy while fixing legacy quoted
+	 * unaliased selector support.
+	 */
+	@Test
+	public void pivotInListAliasedFormNoRegressionGuardStageATest() {
+		final String query =
+				"SELECT contact_initiated_activity_key,\n"
+						+ "       entry_year,\n"
+						+ "       entry_term,\n"
+						+ "       form_response,\n"
+						+ "       survey_question_year_term_rank\n"
+						+ "FROM src\n"
+						+ "PIVOT(MAX(form_response) FOR question_category IN (\n"
+						+ "  'diq_entry_year' AS entry_year,\n"
+						+ "  'diq_entry_term' AS entry_term,\n"
+						+ "  'Survey Question' AS form_response))\n"
+						+ "WHERE entry_year IS NOT NULL AND entry_term IS NOT NULL AND form_response IS NOT NULL\n"
+						+ "ORDER BY contact_initiated_activity_key";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull("Expected extractor from allow-errors run", extractor);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		String symbolTable = extractor.getSymbolTable().toString();
+		Assert.assertTrue("Expected pivot derivation source_columns in symbol table: " + symbolTable,
+				symbolTable.contains("derivation={source_columns="));
+		Assert.assertTrue("Expected aliased output in interface: " + extractor.getInterface(),
+				extractor.getInterface().toString().contains("entry_year")
+						&& extractor.getInterface().toString().contains("entry_term")
+						&& extractor.getInterface().toString().contains("form_response"));
+	}
+
+	/**
+	 * Entry 2 Stage B target: quoted unaliased pivot outputs (legacy Snowflake style) should resolve
+	 * as regular column references without requiring outer SELECT aliases.
+	 */
+	@Test
+	public void pivotQuotedUnaliasedSelectorWithoutAsResolvedStageBTest() {
+		final String query =
+				"SELECT contact_initiated_activity_key,\n"
+						+ "       \"'diq_entry_year'\",\n"
+						+ "       \"'diq_entry_term'\",\n"
+						+ "       \"'Survey Question'\",\n"
+						+ "       survey_question_year_term_rank\n"
+						+ "FROM src\n"
+						+ "PIVOT(MAX(form_response) FOR question_category IN ('diq_entry_year', 'diq_entry_term', 'Survey Question'))\n"
+						+ "WHERE \"'diq_entry_year'\" IS NOT NULL\n"
+						+ "ORDER BY contact_initiated_activity_key";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(
+				"Expected extractor for legacy quoted unaliased selector support; failure="
+						+ runResult.getFailure() + ", parserErrors=" + runResult.getParserErrors()
+						+ ", listenerDiagnostics=" + runResult.getListenerDiagnostics(),
+				extractor);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected legacy quoted selector in interface: " + extractor.getInterface(),
+				extractor.getInterface().toString().contains("'diq_entry_year'")
+						&& extractor.getInterface().toString().contains("'diq_entry_term'")
+						&& extractor.getInterface().toString().contains("'Survey Question'"));
+	}
+
+	/**
+	 * Entry 2 Stage C acceptance: mixed PIVOT IN alias/unaliased forms must resolve side-by-side
+	 * without changing legacy quoted-selector behavior for the unaliased member.
+	 */
+	@Test
+	public void pivotMixedInAliasAndLegacyQuotedSelectorResolutionStageCTest() {
+		final String query =
+				"SELECT contact_initiated_activity_key,\n"
+						+ "       entry_year,\n"
+						+ "       \"'diq_entry_term'\",\n"
+						+ "       form_response,\n"
+						+ "       survey_question_year_term_rank\n"
+						+ "FROM src\n"
+						+ "PIVOT(MAX(form_response) FOR question_category IN (\n"
+						+ "  'diq_entry_year' AS entry_year,\n"
+						+ "  'diq_entry_term',\n"
+						+ "  'Survey Question' AS form_response))\n"
+						+ "WHERE \"'diq_entry_term'\" IS NOT NULL\n"
+						+ "ORDER BY contact_initiated_activity_key";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(
+				"Expected extractor for mixed alias/legacy quoted-selector support; failure="
+						+ runResult.getFailure() + ", parserErrors=" + runResult.getParserErrors()
+						+ ", listenerDiagnostics=" + runResult.getListenerDiagnostics(),
+				extractor);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		String interfaceText = extractor.getInterface().toString();
+		Assert.assertTrue("Expected entry_year in interface: " + interfaceText, interfaceText.contains("entry_year"));
+		Assert.assertTrue("Expected legacy quoted selector in interface: " + interfaceText,
+				interfaceText.contains("'diq_entry_term'"));
+		Assert.assertTrue("Expected form_response in interface: " + interfaceText,
+				interfaceText.contains("form_response"));
+
+		String symbolTable = extractor.getSymbolTable().toString();
+		Assert.assertTrue("Expected mixed derived output names in symbol table: " + symbolTable,
+				symbolTable.contains("entry_year_MAX")
+						&& symbolTable.contains("diq_entry_term_MAX")
+						&& symbolTable.contains("form_response_MAX"));
+	}
+
 }

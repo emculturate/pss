@@ -3553,7 +3553,7 @@ TIMEOFDAY : T I M E O F D A Y;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
-  | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_'|'-')* DOUBLE_QUOTE
+  | DOUBLE_QUOTE (~('"'|'\r'|'\n'|'0'..'9')) (~('"'|'\r'|'\n'))* DOUBLE_QUOTE
   ;
 
 EXPONEN : E ('+' | '-')?;

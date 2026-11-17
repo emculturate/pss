@@ -26,7 +26,7 @@
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
 | **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slices A-D complete with explicit matrix traceability; Slice E deferred until after 5.1.4 release; Slice F complete except explicitly deferred generator work (Entry 10) |
-| **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
+| **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Complete** (closed 2026-11-17) — Stage A/B/C delivered and live-query fixture closeout re-scan verified |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
 | **5** | Simple Jinja / dbt substitutions (6.1–6.4) | Enhancement | **Not started** |
@@ -2035,12 +2035,35 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 ## Entry 2 — Snowflake PIVOT quoted unaliased identifiers
 
-**Status:** Not started  
+**Status:** Complete (closed 2026-11-17)  
 **Spec (do not duplicate here):** [snowflake-pivot-quoted-identifier-parser-brief.md](./snowflake-pivot-quoted-identifier-parser-brief.md)
 
 **Summary:** Lexer/parser must treat older unaliased PIVOT output names as delimited identifiers (`"'diq_entry_year'"`, numeric `"1"`…). Register IN-list values in `derivation.source_columns`; resolve as column refs. Newer `IN ('x' AS alias)` must keep working.
 
 **Acceptance:** Both fixtures in the brief parse with no FATAL; derivation and location refs correct.
+
+### Stage progress
+
+- **Stage A (complete):** Added targeted capture/guard tests in
+  `SqlEventWalkerPivotUnpivotTests` to pin legacy quoted-selector behavior and
+  protect modern `IN (... AS alias)` form.
+- **Stage B (complete):** Expanded lexer support for double-quoted identifiers
+  so legacy selector spellings such as `"'diq_entry_year'"` parse as normal
+  identifier references in SELECT/WHERE.
+- **Stage C (complete):** Added mixed alias/unaliased PIVOT IN acceptance
+  coverage to confirm side-by-side resolution (`entry_year` + legacy quoted
+  selector) without regressions.
+- **Stage D (complete):** Re-scanned copied live-query fixtures under
+  `parse/testdata/live_queries/` and confirmed the historical quoted-selector
+  parser-recovery fatal pattern is no longer present.
+
+### Validation evidence
+
+- `mvn -pl parse clean -Dtest=sql.walker.SqlEventWalkerPivotUnpivotTests#pivotQuotedUnaliasedSelectorWithoutAsResolvedStageBTest test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerPivotUnpivotTests#pivotQuotedLegacyIdentifierWithOuterAliasResolvedStageBTest,sql.walker.SqlEventWalkerPivotUnpivotTests#pivotInListAliasedFormNoRegressionGuardStageATest,sql.walker.SqlEventWalkerPivotUnpivotTests#pivotQuotedUnaliasedSelectorWithoutAsResolvedStageBTest,sql.walker.SqlEventWalkerPivotUnpivotTests#pivotMixedInAliasAndLegacyQuotedSelectorResolutionStageCTest test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerPivotUnpivotTests test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSetOpScopingGateTests,sql.walker.SqlEventWalkerSetOpQueryVariableTests test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerLiveSampleQueriesTests#liveQueryPotentialStudentByEntryTermSurveyResponseHistoryNoLegacyPivotFatalRecoveryTest,sql.walker.SqlEventWalkerLiveSampleQueriesTests#liveQueryPotentialStudentByEntryTermNoSurveyNoLegacyPivotFatalRecoveryTest test`
 
 ---
 

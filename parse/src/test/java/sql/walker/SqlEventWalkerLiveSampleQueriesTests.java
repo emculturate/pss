@@ -2576,4 +2576,95 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoFatalErrors(extractor);
 	}
+
+	private void assertLiveQueryHasNoLegacyPivotQuotedSelectorParserRecovery(
+			String scenarioName,
+			String query) {
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+
+		Assert.assertNotNull(
+				"Expected extractor for live query scenario " + scenarioName + "; failure="
+						+ runResult.getFailure() + ", parserErrors=" + runResult.getParserErrors()
+						+ ", listenerDiagnostics=" + runResult.getListenerDiagnostics(),
+				extractor);
+		Assert.assertEquals(
+				"Expected zero parser errors for scenario " + scenarioName,
+				0,
+				runResult.getParserErrorCount());
+		assertNoFatalErrors(extractor);
+
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertNotNull("Expected snippet for scenario " + scenarioName, snippet);
+		Assert.assertNull(
+				"Quoted-selector parser recovery fatal persisted for scenario " + scenarioName,
+				findFatalDiagnosticByCodeAndFragment(snippet, "REPORT_ERROR", "\""));
+		Assert.assertNull(
+				"Quoted-selector parser recovery fatal on 'diq_entry_year' persisted for scenario " + scenarioName,
+				findFatalDiagnosticByCodeAndFragment(snippet, "REPORT_ERROR", "'diq_entry_year'"));
+		Assert.assertNull(
+				"Quoted-selector parser recovery fatal on 'diq_entry_term' persisted for scenario " + scenarioName,
+				findFatalDiagnosticByCodeAndFragment(snippet, "REPORT_ERROR", "'diq_entry_term'"));
+	}
+
+	@Test
+	public void liveQueryPotentialStudentByEntryTermSurveyResponseHistoryNoLegacyPivotFatalRecoveryTest() {
+		assertLiveQueryHasNoLegacyPivotQuotedSelectorParserRecovery(
+				"v_alrinsights_potentialstudentbyentrytermsurveyresponsehistory",
+				"""
+				WITH src AS (
+				     SELECT contact_initiated_activity_key
+				          , form_response
+				          , question_category
+				          , FIRST_VALUE(survey_question_year_term_rank) OVER (PARTITION BY contact_initiated_activity_key ORDER BY survey_question_year_term_rank ASC NULLS LAST) AS survey_question_year_term_rank
+				     FROM {{ ref('form_response_details') }}
+				     WHERE question_category IN ('diq_entry_year', 'diq_entry_term', 'Survey Question') and form_response IS NOT NULL )
+				, form_response AS (
+				  SELECT contact_initiated_activity_key
+				       , "'diq_entry_year'" AS entry_year
+				       , "'diq_entry_term'" AS entry_term
+				       , "'Survey Question'" AS form_response
+				       , survey_question_year_term_rank
+				  FROM src
+				  PIVOT(MAX(form_response) FOR question_category IN ('diq_entry_year', 'diq_entry_term', 'Survey Question'))
+				  WHERE entry_year IS NOT NULL AND entry_term IS NOT NULL AND form_response is not null
+				  ORDER BY contact_initiated_activity_key )
+				SELECT * FROM form_response
+				""");
+	}
+
+	@Test
+	public void liveQueryPotentialStudentByEntryTermNoSurveyNoLegacyPivotFatalRecoveryTest() {
+		assertLiveQueryHasNoLegacyPivotQuotedSelectorParserRecovery(
+				"v_alrinsights_potentialstudentbyentrytermnosurvey",
+				"""
+				WITH src AS (
+				     SELECT frd.contact_initiated_activity_key
+				          , frd.form_response
+				          , LOWER(frd.question_category) AS question_category
+				     FROM {{ ref('form_response_details') }} frd
+				     WHERE LOWER(frd.question_category) IN (
+				        'diq_entry_year', 'diq_entry_term', 'nosrvy_enroll_plans', 'nosrvy_ceeb_lookup',
+				        'nosrvy_cert_plans', 'nosrvy_alt_plans', 'nosrvy_top_factors', 'nosrvy_factors_other',
+				        'nosrvy_apply_qty', 'nosrvy_sch_1', 'nosrvy_sch_1_ceeb', 'nosrvy_sch_2', 'nosrvy_sch_2_ceeb',
+				        'nosrvy_sch_3', 'nosrvy_sch_3_ceeb', 'nosrvy_sch_intrst', 'nosrvy_feedback')
+				       and frd.form_response IS NOT NULL)
+				, form_response AS (
+				      SELECT contact_initiated_activity_key
+				           , "'diq_entry_year'" AS entry_year
+				           , "'diq_entry_term'" AS entry_term
+				           , "'nosrvy_enroll_plans'" AS no_survey_enrollment_plans
+				      FROM src
+				      PIVOT(MAX(form_response) FOR question_category IN (
+				        'diq_entry_year', 'diq_entry_term', 'nosrvy_enroll_plans', 'nosrvy_school_search', 'nosrvy_ceeb_lookup',
+				        'nosrvy_cert_plans', 'nosrvy_alt_plans', 'nosrvy_top_factors', 'nosrvy_factors_other',
+				        'nosrvy_apply_qty', 'nosrvy_sch_1', 'nosrvy_sch_1_ceeb', 'nosrvy_sch_2', 'nosrvy_sch_2_ceeb',
+				        'nosrvy_sch_3', 'nosrvy_sch_3_ceeb', 'nosrvy_sch_intrst', 'nosrvy_feedback'))
+				      WHERE entry_year IS NOT NULL
+				      AND entry_term IS NOT NULL
+				      AND no_survey_enrollment_plans IS NOT NULL
+				ORDER BY contact_initiated_activity_key )
+				SELECT * FROM form_response
+				""");
+	}
 }
