@@ -2265,7 +2265,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
-| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Partial | Lexer tokens and aggregate grammar hook are in place; walker now records Snowflake statement-dialect affinity for set-aggregate usage and strict baseline placement/warning tests are added. Dedicated broader semantic parity/diagnostic matrix coverage remains open. |
+| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
 | **4.7** | Binary / set array operations | Not started | Define supported operator/function set and add grammar + walker + diagnostics coverage. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Not started | Function-family parity not yet implemented. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | Not started | Add signature-specific AST/lineage coverage for multi-argument transform family. |
@@ -2379,6 +2379,21 @@ Slice A closure criteria were validated in two gates:
 Additional Slice A completion deltas included:
 - Snowflake statement-dialect warning coverage for set-aggregate array routines (`array_union_agg`, `array_unique_agg`) in walker + strict tests.
 - DDL/SCRIPT statement-scoped warning controls for `array_construct`.
+
+### Entry 4 Slice B closure checkpoint (2026-11-17)
+
+Slice B closure criteria were validated in two gates:
+
+1. **Focused Slice B suites**
+   - `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerWithinGroupOrderedAggregateTests,sql.walker.SqlEventWalkerSnowflakeArraySetAggregateTests,sql.walker.SqlEventWalkerSnowflakeArrayConstructTests test`
+   - Result: **57 run, 0 failures, 0 errors**
+2. **Full parse cohort**
+   - `mvn -pl parse test`
+   - Result: **2717 run, 0 failures, 0 errors** (21 skipped)
+
+Slice B completion deltas:
+- Added strict set-aggregate parity tests in `SqlEventWalkerSnowflakeArraySetAggregateTests` covering `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` placement, Snowflake warning behavior, ambiguous-column diagnostics, set-op interface propagation, and script-scoped warning controls.
+- Confirmed existing `ARRAY_AGG ... WITHIN GROUP ... OVER` lineage matrix remains green.
 
 **Detail:** git — former `parser-defects-enhancements-workplan.md` Phase 5.
 
