@@ -2062,6 +2062,118 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 **Status:** Partial — implement remaining **4.x** independently unless syntax shares one production.
 
+### Entry 4 staged execution slices (A-F)
+
+| Slice | Scope | Target subtasks | Exit gate |
+|------|-------|------------------|-----------|
+| **A — constructors and literal forms** | Close `ARRAY_CONSTRUCT` parity + array literal syntax completion | **4.2**, **4.4** | Placement + endpoint parity matrix passes; malformed/syntax controls green; no regressions in subscript behavior |
+| **B — ordered/union aggregations** | Consolidate aggregate family behavior and lineage | **4.3** (complete), **4.6** | `WITHIN GROUP`/`OVER` lineage matrix complete; aggregate family diagnostics + set-op integration controls pass |
+| **C — mutation/set operations** | Binary/set operators + mutator family | **4.7**, **4.8** | Function/operator signature matrix + column resolution + dialect diagnostics complete |
+| **D — transforms/conversion/predicates** | Multi-arg transforms, unary transforms, conversion/predicate split-to-array | **4.9**, **4.10**, **4.11** | Signature-specific AST + symbol-table lineage + unresolved/ambiguous controls complete |
+| **E — table/higher-order closure** | Advanced `FLATTEN` parity and higher-order array functions | **4.5**, **4.12** | Table-function scope/alias/lineage controls and higher-order argument-shape diagnostics complete |
+| **F — delivery closure** | Corpus + snippet replay, docs, and release-gate verification | Entry 4 closeout + Entry 10/consumer-doc touchpoints where needed | Focused + smoketest/full parser gates pass; workplan matrix accounting complete |
+
+**Story minimum for Entry 4:** Slices **A–C**.  
+**Full Entry 4 closure:** A+B+C+D+E+F.
+
+### Entry 4 test framework (matrix contract)
+
+Use the same strict matrix discipline used in Entry 1 date/time work:
+
+1. **Matrix IDs by concern**
+   - **AR-Cxx**: core happy-path + placement matrix (SQL + DML + required clause sites)
+   - **AR-Mxx**: malformed/syntax/dialect diagnostics (exact code, severity, position)
+   - **AR-Rxx**: deep regressions (nested scopes, alias propagation, set-op branch isolation, multi-statement SCRIPT reset)
+2. **Assertion contract**
+   - Exact extractor goldens: AST, interface, substitutions, table dictionary, query dictionary, symbol table.
+   - For snippet endpoints, keep AccessObject parity checks aligned with extractor outputs (same policy used in datetime suites).
+3. **Column-resolution contract**
+   - Every slice must include qualified, unqualified, unresolved, ambiguous, and hidden-alias controls.
+   - Substitution-variable arguments in ARRAY functions must be typed/recorded like equivalent predicand/column contexts.
+4. **Placement coverage contract**
+   - Minimum sites per function family: SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY, VALUES, INSERT, UPDATE, DELETE, DDL, SCRIPT.
+5. **Validation gates**
+   - Focused class-level runs per slice while implementing.
+   - Slice closeout requires `mvn -Psmoketest-quality-gate test`.
+   - Entry 4 closeout requires focused bundle + parser baseline/full gate per current release protocol.
+
+### Entry 4 first-pass AR ID allocation (implementation starter)
+
+Use these IDs as the execution backbone; keep one-query-per-method and map each
+completed test method back to its AR ID in comments or method names.
+
+#### AR-C (core/placement) — AR-C01..AR-C40
+
+| ID range | Scenario block | Primary host test class |
+|---------|-----------------|--------------------------|
+| **AR-C01..AR-C12** | `ARRAY_CONSTRUCT` full placement matrix (SELECT/WHERE/JOIN/HAVING/QUALIFY/ORDER BY/VALUES/INSERT/UPDATE/DELETE/DDL/SCRIPT) | `SqlEventWalkerSnowflakeArrayConstructTests` |
+| **AR-C13..AR-C18** | `ARRAY_CONSTRUCT` core expression shapes (mixed args, repeated refs, CASE nesting, derived-table consumer, substitution args) | `SqlEventWalkerSnowflakeArrayConstructTests` |
+| **AR-C19..AR-C24** | Array literal value expressions `[expr,...]` across core SQL/DML placements (paired with existing subscript controls) | `SqlEventWalkerArraySubscriptTests` (or dedicated `ArrayLiteral` class if split) |
+| **AR-C25..AR-C29** | `ARRAY_CONTAINS` + VARIANT argument-shape happy paths + placement representatives | `SqlEventWalkerFunctionsAggregatesWindowingTests` (or dedicated array function class) |
+| **AR-C30..AR-C34** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` aggregate placement + lineage paths | `SqlEventWalkerWithinGroupOrderedAggregateTests` / dedicated aggregate array class |
+| **AR-C35..AR-C37** | Mutator family (`APPEND`/`PREPEND`/`INSERT`/`REMOVE`/`REMOVE_AT`) representative placements | dedicated array function class |
+| **AR-C38..AR-C40** | Transform/unary/conversion/predicate representatives (`ARRAY_TO_STRING`, `ARRAY_DISTINCT`, split/convert/predicate) | dedicated array function class |
+
+#### AR-M (malformed/diagnostics) — AR-M01..AR-M24
+
+| ID range | Scenario block | Primary host test class |
+|---------|-----------------|--------------------------|
+| **AR-M01..AR-M08** | Syntax controls for malformed `ARRAY_CONSTRUCT` / array literal forms (missing paren/comma, trailing comma, malformed literal list) with full syntax diagnostics | `SqlEventWalkerSnowflakeArrayConstructTests` + array literal class |
+| **AR-M09..AR-M14** | Column resolution diagnostics (unresolved, ambiguous, hidden alias) for constructor/aggregate/mutator families | family-specific array test classes |
+| **AR-M15..AR-M19** | Dialect diagnostics (Snowflake warnings, mixed-dialect fatal pairings, SCRIPT statement-scoped warning reset) | `SqlEventWalkerSnowflakeArrayConstructTests` + function-family classes |
+| **AR-M20..AR-M24** | Signature/arity/type-shape diagnostics for transform/unary/conversion/predicate families | dedicated array function class |
+
+#### AR-R (regression/deep integration) — AR-R01..AR-R20
+
+| ID range | Scenario block | Primary host test class |
+|---------|-----------------|--------------------------|
+| **AR-R01..AR-R06** | Nested/derived/CTE alias propagation for constructor + aggregate outputs | `SqlEventWalkerSnowflakeArrayConstructTests` / `SqlEventWalkerWithinGroupOrderedAggregateTests` |
+| **AR-R07..AR-R10** | Set-op branch isolation and output-interface propagation for array-family outputs | `SqlEventWalkerSetOpScopingGateTests` + family classes |
+| **AR-R11..AR-R14** | Multi-statement SCRIPT reset semantics for array warnings/diagnostics | family-specific array classes |
+| **AR-R15..AR-R17** | `FLATTEN`/`LATERAL FLATTEN` advanced parity (scope, alias visibility, lineage) | `SqlEventWalkerTableFunctionTests` |
+| **AR-R18..AR-R20** | Compound integration controls (constructor+aggregate+transform compositions) | `SqlEventWalkerWithinGroupOrderedAggregateTests` + dedicated array function class |
+
+#### Slice-to-ID mapping (first pass)
+
+| Slice | ID allocation |
+|------|---------------|
+| **A (4.2 + 4.4)** | AR-C01..AR-C24, AR-M01..AR-M12, AR-R01..AR-R04 |
+| **B (4.3 + 4.6)** | AR-C30..AR-C34 (+ existing 4.3 coverage), AR-M09..AR-M14, AR-R05..AR-R10 |
+| **C (4.7 + 4.8)** | AR-C35..AR-C37, AR-M20..AR-M22, AR-R11..AR-R12 |
+| **D (4.9 + 4.10 + 4.11)** | AR-C38..AR-C40, AR-M20..AR-M24, AR-R18..AR-R20 |
+| **E (4.5 + 4.12)** | AR-R15..AR-R17 (+ additional AR-C/AR-M IDs if higher-order syntax expands) |
+| **F (closeout)** | Full re-run + matrix accounting over all AR-C/AR-M/AR-R IDs |
+
+#### Tentative test method naming prefixes (first PR convention)
+
+Method-name template:
+
+- `arC##_shortScenario_V#Test`
+- `arM##_shortScenario_V#Test`
+- `arR##_shortScenario_V#Test`
+
+Where:
+
+- `##` is zero-padded matrix ID number (e.g., `01`, `07`, `20`)
+- `shortScenario` is stable, human-readable scenario text
+- `V#` is the local variant counter in that class (`V0`, `V1`, ...)
+
+Suggested host/class prefix mapping:
+
+| Host class | Prefix family |
+|-----------|----------------|
+| `SqlEventWalkerSnowflakeArrayConstructTests` | `arC01..arC18`, `arM01..arM08`, `arM15..arM19`, `arR01..arR04` |
+| `SqlEventWalkerArraySubscriptTests` *(or split literal class)* | `arC19..arC24`, `arM01..arM08` (literal-specific rows) |
+| `SqlEventWalkerWithinGroupOrderedAggregateTests` | `arC30..arC34`, `arR05..arR10`, `arR18..arR20` |
+| `SqlEventWalkerTableFunctionTests` | `arR15..arR17` |
+| dedicated array-family classes (4.7–4.11) | `arC35..arC40`, `arM09..arM14`, `arM20..arM24`, `arR11..arR14` |
+
+Examples:
+
+- `arC01_arrayConstructSelectPlacement_V0Test`
+- `arM07_arrayLiteralTrailingCommaSyntax_V0Test`
+- `arR09_arrayAggSetOpBranchIsolation_V0Test`
+
 ### Entry 4 checkpoint (2026-11-15)
 
 The codebase already contains ARRAY-adjacent capabilities that were not reflected
