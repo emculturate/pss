@@ -9086,9 +9086,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() >= 2) {
 			Object currentValue = normalizeCharacterLiteralOperand(subMap.remove("1"));
-			int keyIdx = 2;
-			Object nextSuffix = subMap.remove(String.valueOf(keyIdx));
-			while (nextSuffix != null) {
+			List<Integer> suffixKeyOrder = new ArrayList<Integer>();
+			for (String key : subMap.keySet()) {
+				try {
+					int idx = Integer.parseInt(key);
+					if (idx > 1) {
+						suffixKeyOrder.add(idx);
+					}
+				} catch (NumberFormatException ignored) {
+					// Non-index key; ignore for suffix chaining.
+				}
+			}
+			suffixKeyOrder.sort(Integer::compareTo);
+			for (Integer keyIdx : suffixKeyOrder) {
+				Object nextSuffix = subMap.remove(String.valueOf(keyIdx));
+				if (nextSuffix == null) {
+					continue;
+				}
 				if (nextSuffix instanceof Map<?, ?> suffixMap
 						&& MUMBLE_PRIMARY_SUFFIX_SUBSCRIPT.equals(
 								suffixMap.get(MUMBLE_PRIMARY_SUFFIX_KIND_KEY))) {
@@ -9098,6 +9112,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					Map<String, Object> wrapped = new HashMap<String, Object>();
 					wrapped.put(MUMBLE_SUBSCRIPT_KEY, subscript);
 					currentValue = wrapped;
+				} else if (nextSuffix instanceof Map<?, ?> suffixMap
+						&& MUMBLE_PRIMARY_SUFFIX_JSON_PATH.equals(
+								suffixMap.get(MUMBLE_PRIMARY_SUFFIX_KIND_KEY))) {
+					Object jsonPath = suffixMap.get(MUMBLE_JSON_PATH_KEY);
+					if (jsonPath != null && currentValue instanceof Map<?, ?> currentMapObj) {
+						Map<String, Object> currentMap = (Map<String, Object>) currentMapObj;
+						if (currentMap.containsKey(MUMBLE_COLUMN_KEY)
+								&& currentMap.get(MUMBLE_COLUMN_KEY) instanceof Map<?, ?> columnMapObj) {
+							Map<String, Object> columnMap = (Map<String, Object>) columnMapObj;
+							columnMap.put(MUMBLE_JSON_PATH_KEY, jsonPath);
+						} else if (currentMap.containsKey(MUMBLE_FUNCTION_KEY)
+								&& currentMap.get(MUMBLE_FUNCTION_KEY) instanceof Map<?, ?> functionMapObj) {
+							Map<String, Object> functionMap = (Map<String, Object>) functionMapObj;
+							functionMap.put(MUMBLE_JSON_PATH_KEY, jsonPath);
+						}
+					}
 				} else {
 					Map<String, Object> castItem = new HashMap<String, Object>();
 					castItem.put(MUMBLE_FUNCTION_NAME_KEY, MUMBLE_CAST_FUNCTION_NAME);
@@ -9108,8 +9138,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					wrapped.put(MUMBLE_FUNCTION_KEY, castItem);
 					currentValue = wrapped;
 				}
-				keyIdx++;
-				nextSuffix = subMap.remove(String.valueOf(keyIdx));
 			}
 			subMap.clear();
 			if (currentValue instanceof Map<?, ?> map) {
@@ -9147,6 +9175,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> marker = new HashMap<String, Object>();
 		marker.put(MUMBLE_PRIMARY_SUFFIX_KIND_KEY, MUMBLE_PRIMARY_SUFFIX_SUBSCRIPT);
 		marker.put(MUMBLE_SUBSCRIPT_INDEX_KEY, index);
+
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		Map<String, Object> parentMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
+		parentMap.put(String.valueOf(parentMap.size()), marker);
+	}
+
+	@Override
+	public void exitJsonPathSuffix(SQLSelectParserParser.JsonPathSuffixContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object pathName = subMap.remove("1");
+
+		Map<String, Object> marker = new HashMap<String, Object>();
+		marker.put(MUMBLE_PRIMARY_SUFFIX_KIND_KEY, MUMBLE_PRIMARY_SUFFIX_JSON_PATH);
+		marker.put(MUMBLE_JSON_PATH_KEY, pathName);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);

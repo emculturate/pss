@@ -200,6 +200,7 @@ public final class MumbleConstants {
     /** Internal marker on {@code value_expression_primary} suffix list entries (not emitted in final AST). */
     public static final String MUMBLE_PRIMARY_SUFFIX_KIND_KEY = "primary_suffix_kind";
     public static final String MUMBLE_PRIMARY_SUFFIX_SUBSCRIPT = "subscript";
+    public static final String MUMBLE_PRIMARY_SUFFIX_JSON_PATH = "json_path";
     public static final String MUMBLE_SUBSTITUTION_KEY = "substitution";
     public static final String MUMBLE_SYMMETRY_KEY = "symmetry";
     public static final String MUMBLE_TABLE_ALIAS_KEY = "table_alias";

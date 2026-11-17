@@ -706,6 +706,305 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				extractor.getSymbolTable().toString());
 	}
 
+	/**
+	 * Entry 3 Stage B target: post-call Snowflake field access on PARSE_URL should parse and
+	 * remain compatible with downstream cast syntax.
+	 */
+	@Test
+	public void parseUrlPostCallFieldAccessResolvedStageBTest() {
+		final String query = "SELECT PARSE_URL(t.url, 1):scheme::varchar AS scheme_txt FROM t";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}, alias=scheme_txt}}, from={table={alias=null, table=t}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_txt]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={url=[[@3,17:17='t',<419>,1:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}, table_dictionary={t={url=[[@3,17:17='t',<419>,1:17]]}}, interface={scheme_txt=[{name=url, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * Entry 3 Stage A guard: regular cast syntax on PARSE_URL invocation remains healthy.
+	 */
+	@Test
+	public void parseUrlCastWithoutPostCallFieldAccessGuardStageATest() {
+		final String query = "SELECT PARSE_URL(t.url, 1)::varchar AS parsed_url_txt FROM t";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, function_name=PARSE_URL}}}, alias=parsed_url_txt}}, from={table={alias=null, table=t}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[parsed_url_txt]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={url=[[@3,17:17='t',<419>,1:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={parsed_url_txt=[[@12,39:52='parsed_url_txt',<419>,1:39]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={parsed_url_txt=[[@12,39:52='parsed_url_txt',<419>,1:39]]}, table_dictionary={t={url=[[@3,17:17='t',<419>,1:17]]}}, interface={parsed_url_txt=[{name=url, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseJsonPostCallFieldAccessSelectStageDTest() {
+		final String query = "SELECT PARSE_JSON('{\"a\":1}'):a::integer AS a_num FROM t";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={function={parameters={1={literal='{\"a\":1}'}}, json_path=a, function_name=PARSE_JSON}}}, alias=a_num}}, from={table={alias=null, table=t}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a_num]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a_num=[[@10,43:47='a_num',<419>,1:43]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={a_num=[[@10,43:47='a_num',<419>,1:43]]}, table_dictionary={t={}}, interface={a_num=[]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseXmlPostCallFieldAccessSelectStageDTest() {
+		final String query = "SELECT PARSE_XML('<r><a>1</a></r>'):a::varchar AS a_txt FROM t";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={literal='<r><a>1</a></r>'}}, json_path=a, function_name=PARSE_XML}}}, alias=a_txt}}, from={table={alias=null, table=t}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a_txt]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a_txt=[[@10,50:54='a_txt',<419>,1:50]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={a_txt=[[@10,50:54='a_txt',<419>,1:50]]}, table_dictionary={t={}}, interface={a_txt=[]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseIpPostCallFieldAccessWhereStageDTest() {
+		final String query = "SELECT 1 FROM t WHERE PARSE_IP('10.0.0.1'):host::varchar IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={literal=1}}, from={table={alias=null, table=t}}, where={condition={left={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={literal='10.0.0.1'}}, json_path=host, function_name=PARSE_IP}}}}, operator=IS NOT NULL}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@1,7:7='1',<300>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={unnamed_0=[[@1,7:7='1',<300>,1:7]]}, table_dictionary={t={}}, filters=[], interface={unnamed_0=[]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void tryParseJsonPostCallFieldAccessJoinOnStageDTest() {
+		final String query =
+				"SELECT t.id FROM t JOIN u ON TRY_PARSE_JSON(u.payload):a::integer = t.id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=t}}}, from={join={1={table={alias=null, table=t}}, 2={join=JOIN, on={condition={left={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={function={parameters={1={column={name=payload, table_ref=u}}}, json_path=a, function_name=TRY_PARSE_JSON}}}}, right={column={name=id, table_ref=t}}, operator==}}}, 3={table={alias=null, table=u}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={id=[[@1,7:7='t',<419>,1:7], [@20,68:68='t',<419>,1:68]]}, u={payload=[[@11,44:44='u',<419>,1:44]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={id=[[@3,9:10='id',<419>,1:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<419>,1:7], [@20,68:68='t',<419>,1:68]]}, u={payload=[[@11,44:44='u',<419>,1:44]]}}, filters=[{name=payload, table_ref=u}, {name=id, table_ref=t}], interface={id=[{name=id, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessAmbiguousArgumentColumnDiagnosticByPositionTest() {
+		final String query =
+				"SELECT PARSE_URL(url, 1):scheme::varchar AS scheme_txt FROM t JOIN u ON t.id = u.id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'url'",
+				"url",
+				1,
+				17);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [url [(l:1 c:17)]]",
+				"url",
+				1,
+				17);
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessHasNoSnowflakeDialectGrammarWarningTest() {
+		final String query = "SELECT PARSE_URL(t.url, 1):scheme::varchar AS scheme_txt FROM t";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertDiagnosticCountBySeverity(
+				extractor.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				null,
+				null,
+				0);
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessOrderByPlacementParityExpansionTest() {
+		final String query =
+				"SELECT PARSE_URL(t.url, 1):scheme::varchar AS scheme_txt FROM t ORDER BY PARSE_URL(t.url, 1):scheme::varchar";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}, alias=scheme_txt}}, orderby={1={null_order=null, predicand={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}, sort_order=ASC}}, from={table={alias=null, table=t}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_txt]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={url=[[@3,17:17='t',<419>,1:17], [@21,83:83='t',<419>,1:83]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}, table_dictionary={t={url=[[@3,17:17='t',<419>,1:17], [@21,83:83='t',<419>,1:83]]}}, ordered_by=[{name=url, table_ref=t}], interface={scheme_txt=[{name=url, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessGroupByPlacementParityExpansionTest() {
+		final String query =
+				"SELECT PARSE_URL(t.url, 1):scheme::varchar AS scheme_txt FROM t GROUP BY PARSE_URL(t.url, 1):scheme::varchar";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}, alias=scheme_txt}}, from={table={alias=null, table=t}}, groupby={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_txt]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={url=[[@3,17:17='t',<419>,1:17], [@21,83:83='t',<419>,1:83]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={scheme_txt=[[@14,46:55='scheme_txt',<419>,1:46]]}, table_dictionary={t={url=[[@3,17:17='t',<419>,1:17], [@21,83:83='t',<419>,1:83]]}}, grouped_by=[{name=url, table_ref=t}], interface={scheme_txt=[{name=url, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessHavingPlacementParityExpansionTest() {
+		final String query =
+				"SELECT t.id, MAX(PARSE_URL(t.url, 1):scheme::varchar) AS scheme_txt FROM t GROUP BY t.id HAVING MAX(PARSE_URL(t.url, 1):scheme::varchar) IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=t}}, 2={function={function_name=MAX, qualifier=null, parameters={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}, alias=scheme_txt}}, having={condition={left={function={function_name=MAX, qualifier=null, parameters={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}}, operator=IS NOT NULL}}, from={table={alias=null, table=t}}, groupby={1={column={name=id, table_ref=t}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_txt, id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={id=[[@1,7:7='t',<419>,1:7], [@26,84:84='t',<419>,1:84]], url=[[@9,27:27='t',<419>,1:27], [@34,110:110='t',<419>,1:110]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scheme_txt=[[@21,57:66='scheme_txt',<419>,1:57]], id=[[@3,9:10='id',<419>,1:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={scheme_txt=[[@21,57:66='scheme_txt',<419>,1:57]], id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<419>,1:7], [@26,84:84='t',<419>,1:84]], url=[[@9,27:27='t',<419>,1:27], [@34,110:110='t',<419>,1:110]]}}, grouped_by=[{name=id, table_ref=t}], filters=[{name=url, table_ref=t}], interface={scheme_txt=[{name=url, table_ref=t}], id=[{name=id, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessHavingSubstitutionParityExpansionTest() {
+		final String query =
+				"SELECT t.id, MAX(PARSE_URL(t.url, 1):scheme::varchar) AS scheme_txt FROM t GROUP BY t.id HAVING MAX(PARSE_URL(t.url, 1):scheme::varchar) = <scheme filter>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=t}}, 2={function={function_name=MAX, qualifier=null, parameters={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}, alias=scheme_txt}}, having={condition={left={function={function_name=MAX, qualifier=null, parameters={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}}, right={substitution={name=<scheme filter>, type=predicand}}, operator==}}, from={table={alias=null, table=t}}, groupby={1={column={name=id, table_ref=t}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_txt, id]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<scheme filter>=predicand}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={id=[[@1,7:7='t',<419>,1:7], [@26,84:84='t',<419>,1:84]], url=[[@9,27:27='t',<419>,1:27], [@34,110:110='t',<419>,1:110]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scheme_txt=[[@21,57:66='scheme_txt',<419>,1:57]], id=[[@3,9:10='id',<419>,1:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={scheme_txt=[[@21,57:66='scheme_txt',<419>,1:57]], id=[[@3,9:10='id',<419>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<419>,1:7], [@26,84:84='t',<419>,1:84]], url=[[@9,27:27='t',<419>,1:27], [@34,110:110='t',<419>,1:110]]}}, grouped_by=[{name=id, table_ref=t}], filters=[{name=url, table_ref=t}, {name=<scheme filter>, type=predicand}], interface={scheme_txt=[{name=url, table_ref=t}], id=[{name=id, table_ref=t}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void parseUrlPostCallFieldAccessUpdateSetPlacementParityExpansionTest() {
+		final String query =
+				"UPDATE t SET scheme_col = PARSE_URL(t.url, 1):scheme::varchar WHERE t.id = 1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=t}, where={condition={left={column={name=id, table_ref=t}}, right={literal=1}, operator==}}, assignments={1={set={column={name=scheme_col, table_ref=null}}, to={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={parameters={1={column={name=url, table_ref=t}}, 2={literal=1}}, json_path=scheme, function_name=PARSE_URL}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scheme_col]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={id=[[@18,68:68='t',<419>,1:68]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={scheme_col=[[@3,13:22='scheme_col',<419>,1:13]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update0={assignments={scheme_col=[{name=url, table_ref=t}]}, table_dictionary={t={id=[[@18,68:68='t',<419>,1:68]]}}, update_dictionary={scheme_col=[[@3,13:22='scheme_col',<419>,1:13]]}, target_table={t={scheme_col=[[@3,13:22='scheme_col',<419>,1:13]], url=[[@7,36:36='t',<419>,1:36]]}}, filters=[{name=id, table_ref=t}], lhs_unresolved_columns={scheme_col={column={name=scheme_col, table_ref=null}, locations=[[@3,13:22='scheme_col',<419>,1:13]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 	@Test
 	public void snowflakeColonNotationNestedFlattenInputV2Test() {
 		final String query = "SELECT i.value:sku AS sku FROM t, LATERAL FLATTEN(input => t.orders) o, LATERAL FLATTEN(input => o.value:items) i";

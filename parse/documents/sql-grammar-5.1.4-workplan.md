@@ -27,7 +27,7 @@
 |-------|---------|------|--------|
 | **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slices A-D complete with explicit matrix traceability; Slice E deferred until after 5.1.4 release; Slice F complete except explicitly deferred generator work (Entry 10) |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Complete** (closed 2026-11-17) — Stage A/B/C delivered and live-query fixture closeout re-scan verified |
-| **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
+| **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Complete** (closed 2026-11-17) — Stage A/B/C/D delivered with cohort regression bundle green |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
 | **5** | Simple Jinja / dbt substitutions (6.1–6.4) | Enhancement | **Not started** |
 | **6** | Deep Jinja / SCRIPT prefix *(optional)* (7.x) | Enhancement | **Not started** |
@@ -2069,7 +2069,7 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 ## Entry 3 — Snowflake `PARSE_*` and `:` field access
 
-**Status:** Not started
+**Status:** Complete (closed 2026-11-17)
 
 **Problem:** `PARSE_URL(url, 1):scheme::varchar` — colon path after function call is not accepted (`NoViableAltException` on `:`). Same pattern for other semi-structured PARSE results.
 
@@ -2087,6 +2087,34 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 | **B — grammar acceptance** | Minimal parser production changes to allow post-call `:field` access while preserving `::` cast precedence. Avoid new lexer keywords unless evidence forces it. | Repro parse succeeds with no parser/listener fatal diagnostics; cast controls still pass. |
 | **C — walker/AST + resolution** | Wire AST/walker handling for post-call field access and confirm function-argument column collection/resolution/diagnostics stay on normal paths. | No walker fatal diagnostics; unresolved/ambiguous controls produce expected diagnostics. |
 | **D — family expansion + closeout** | Expand shared coverage across `PARSE_JSON`, `PARSE_XML`, `PARSE_IP`, `TRY_PARSE_JSON` where grammar path is shared; add placement coverage and non-regression bundle. | Focused suite + guard bundle green; Entry 3 acceptance evidence recorded for closure. |
+
+### Stage progress
+
+- **Stage A (complete):** Added a failing repro capture for
+  `PARSE_URL(t.url, 1):scheme::varchar` plus a cast-only control guard
+  (`PARSE_URL(t.url, 1)::varchar`) in `SqlEventWalkerTableFunctionTests`.
+- **Stage B (complete):** Added parser support for post-call `:field` suffixes
+  (`value_expression_primary_suffix`) and promoted the Stage A repro to a
+  passing acceptance case while preserving cast guard behavior.
+- **Stage C (complete):** Added explicit walker handling for post-call JSON-path
+  suffixes so `PARSE_URL(...):scheme::varchar` produces a stable AST shape
+  (`json_path=scheme` on the function output) while preserving downstream cast
+  semantics and existing colon-notation table-function behavior.
+- **Stage D (complete):** Expanded shared `PARSE_*` family coverage for
+  `PARSE_JSON`, `PARSE_XML`, `PARSE_IP`, and `TRY_PARSE_JSON` across
+  representative placements (SELECT, WHERE, JOIN ON), then added placement
+  parity expansion coverage (`GROUP BY`, `HAVING`, `ORDER BY`, `UPDATE SET`)
+  with strict full-golden extractor assertions and positional diagnostics for
+  ambiguous/unresolved argument resolution.
+
+### Stage validation evidence
+
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessResolvedStageBTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlCastWithoutPostCallFieldAccessGuardStageATest test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessResolvedStageBTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlCastWithoutPostCallFieldAccessGuardStageATest test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessResolvedStageBTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlCastWithoutPostCallFieldAccessGuardStageATest,sql.walker.SqlEventWalkerTableFunctionTests#snowflakeColonNotationSelectPathV1Test,sql.walker.SqlEventWalkerTableFunctionTests#snowflakeColonNotationNestedFlattenInputV2Test test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests,sql.walker.SqlEventWalkerCastingAndTypesTests test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests#parseJsonPostCallFieldAccessSelectStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseXmlPostCallFieldAccessSelectStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseIpPostCallFieldAccessWhereStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#tryParseJsonPostCallFieldAccessJoinOnStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessResolvedStageBTest test`
+- `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessResolvedStageBTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlCastWithoutPostCallFieldAccessGuardStageATest,sql.walker.SqlEventWalkerTableFunctionTests#parseJsonPostCallFieldAccessSelectStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseXmlPostCallFieldAccessSelectStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseIpPostCallFieldAccessWhereStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#tryParseJsonPostCallFieldAccessJoinOnStageDTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessAmbiguousArgumentColumnDiagnosticByPositionTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessHasNoSnowflakeDialectGrammarWarningTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessOrderByPlacementParityExpansionTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessGroupByPlacementParityExpansionTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessHavingPlacementParityExpansionTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessHavingSubstitutionParityExpansionTest,sql.walker.SqlEventWalkerTableFunctionTests#parseUrlPostCallFieldAccessUpdateSetPlacementParityExpansionTest test`
 
 ---
 

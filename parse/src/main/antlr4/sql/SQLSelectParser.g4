@@ -1237,6 +1237,7 @@ value_expression_primary_core
 
 value_expression_primary_suffix
   : CAST_OPERATOR data_type                              # castSuffix
+  | COLON path_name=identifier                           # jsonPathSuffix
   | LEFT_BRACKET subscript_index RIGHT_BRACKET            # arraySubscriptSuffix
   ;
 
