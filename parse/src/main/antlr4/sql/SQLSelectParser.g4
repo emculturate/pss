@@ -1340,6 +1340,8 @@ set_function_type
   | BITXOR_AGG
   | HASH_AGG
   | ARRAY_AGG
+  | ARRAY_UNION_AGG
+  | ARRAY_UNIQUE_AGG
   | OBJECT_AGG
   | REGR_AVGX
   | REGR_AVGY

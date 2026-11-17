@@ -83,6 +83,34 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 	}
 
 	@Test
+	public void arrayLiteralWarningEmittedOncePerStatementV0Test() {
+		final String query = "SELECT ['a'] AS a1, ['b'] AS a2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				null,
+				null,
+				1);
+		assertNoFatalErrors(extractor);
+	}
+
+	@Test
+	public void arrayLiteralTrailingCommaSyntaxFatalV0Test() {
+		final String query = "SELECT ['a', ] AS arr";
+
+		final SQLSelectParserParser parser = parse(query);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parser);
+		Assert.assertTrue(
+				"Expected parser error at trailing-comma site",
+				runResult.getParserErrors().toString().contains("Line 1:13 - unexpected input: ']'"));
+	}
+
+	@Test
 	public void splitResultLiteralSubscriptV0Test() {
 		final String query = "SELECT SPLIT('a|b', '|')[0] AS x";
 

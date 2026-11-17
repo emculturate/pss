@@ -9,7 +9,18 @@ import java.util.Set;
 public final class SnowflakeRoutineDialectRegistry {
 
 	private static final Set<String> SNOWFLAKE_DIALECT_ROUTINE_NAMES = Set.of(
-			"array_construct");
+			"array_construct",
+			"array_construct_compact",
+			"array_contains",
+			"array_union_agg",
+			"array_unique_agg",
+			"array_append",
+			"array_prepend",
+			"array_insert",
+			"array_remove",
+			"array_remove_at",
+			"array_to_string",
+			"array_distinct");
 
 	private SnowflakeRoutineDialectRegistry() {
 	}

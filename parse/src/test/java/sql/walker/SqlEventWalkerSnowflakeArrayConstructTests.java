@@ -380,6 +380,61 @@ public class SqlEventWalkerSnowflakeArrayConstructTests extends AbstractSqlParse
 	}
 
 	@Test
+	public void snowflakeArrayConstructDdlPlacementV0Test() {
+		final String query =
+				"CREATE VIEW v_arr AS SELECT array_construct(e.email, e.first_name) AS arr FROM enrollment_services__ccp e";
+		final SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runDdlParsertest(query, parser);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_construct' at (l:1 c:28) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				28);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{DDL={create={type=VIEW, name={table=v_arr}, query={select={1={function={parameters={1={column={name=email, table_ref=e}}, 2={column={name=first_name, table_ref=e}}}, function_name=array_construct}, alias=arr}}, from={table={alias=e, table=enrollment_services__ccp}}}}}}",
+				"[]",
+				"{}",
+				"{enrollment_services__ccp={first_name=[[@11,53:53='e',<433>,1:53]], email=[[@7,44:44='e',<433>,1:44]]}}",
+				"{query0={arr=[[@16,70:72='arr',<433>,1:70]]}}",
+				"{def_create1={def_query0={query_dictionary={arr=[[@16,70:72='arr',<433>,1:70]]}, table_dictionary={enrollment_services__ccp={first_name=[[@11,53:53='e',<433>,1:53]], email=[[@7,44:44='e',<433>,1:44]]}}, interface={arr=[{name=email, table_ref=e}, {name=first_name, table_ref=e}]}, table_alias={e=enrollment_services__ccp}}}}");
+	}
+
+	@Test
+	public void snowflakeArrayConstructScriptStatementScopedWarningV0Test() {
+		final String query =
+				"SELECT array_construct(email) AS arr FROM enrollment_services__ccp; SELECT email FROM enrollment_services__ccp;";
+		final SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runScriptParsertest(query, parser);
+		final Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				null,
+				null,
+				1);
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_construct' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SCRIPT={1={select={1={function={parameters={1={column={name=email, table_ref=null}}}, function_name=array_construct}, alias=arr}}, from={table={alias=null, table=enrollment_services__ccp}}}, 2={select={1={column={name=email, table_ref=null}}}, from={table={alias=null, table=enrollment_services__ccp}}}}}",
+				extractor.getAsTree().toString());
+	}
+
+	@Test
 	public void snowflakeArrayConstructUnresolvedUnqualifiedColumnV0Test() {
 		final String query = "SELECT array_construct(email, missing_col) AS arr FROM enrollment_services__ccp";
 		final SqlParseEventWalker extractor = runQuery(query);
@@ -513,5 +568,125 @@ public class SqlEventWalkerSnowflakeArrayConstructTests extends AbstractSqlParse
 				"{enrollment_services__ccp={email=[[@3,11:15='email',<433>,1:11]]}}",
 				"{query0={unnamed_0=[[@4,16:16=')',<288>,1:16]]}}",
 				"{def_query0={query_dictionary={unnamed_0=[[@4,16:16=')',<288>,1:16]]}, table_dictionary={enrollment_services__ccp={email=[[@3,11:15='email',<433>,1:11]]}}, interface={unnamed_0=[{name=email, table_ref=enrollment_services__ccp}]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayConstructCompactSelectPlacementV0Test() {
+		final String query = "SELECT array_construct_compact(email, first_name) AS arr FROM enrollment_services__ccp";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_construct_compact' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={parameters={1={column={name=email, table_ref=null}}, 2={column={name=first_name, table_ref=null}}}, function_name=array_construct_compact}, alias=arr}}, from={table={alias=null, table=enrollment_services__ccp}}}}",
+				"[arr]",
+				"{}",
+				"{enrollment_services__ccp={first_name=[[@5,38:47='first_name',<433>,1:38]], email=[[@3,31:35='email',<433>,1:31]]}}",
+				"{query0={arr=[[@8,53:55='arr',<433>,1:53]]}}",
+				"{def_query0={query_dictionary={arr=[[@8,53:55='arr',<433>,1:53]]}, table_dictionary={enrollment_services__ccp={first_name=[[@5,38:47='first_name',<433>,1:38]], email=[[@3,31:35='email',<433>,1:31]]}}, interface={arr=[{name=email, table_ref=enrollment_services__ccp}, {name=first_name, table_ref=enrollment_services__ccp}]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayContainsSelectPlacementV0Test() {
+		final String query = "SELECT array_contains('a', tags) AS has_a FROM events e";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_contains' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={parameters={1={literal='a'}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}, alias=has_a}}, from={table={alias=e, table=events}}}}",
+				"[has_a]",
+				"{}",
+				"{events={tags=[[@5,27:30='tags',<433>,1:27]]}}",
+				"{query0={has_a=[[@8,36:40='has_a',<433>,1:36]]}}",
+				"{def_query0={query_dictionary={has_a=[[@8,36:40='has_a',<433>,1:36]]}, table_dictionary={events={tags=[[@5,27:30='tags',<433>,1:27]]}}, interface={has_a=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
+	}
+
+	@Test
+	public void snowflakeArrayUnionAggSelectPlacementV0Test() {
+		final String query = "SELECT array_union_agg(tags) AS merged_tags FROM events e";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_union_agg' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_union_agg, qualifier=null, parameters={column={name=tags, table_ref=null}}}, alias=merged_tags}}, from={table={alias=e, table=events}}}}",
+				"[merged_tags]",
+				"{}",
+				"{events={tags=[[@3,23:26='tags',<433>,1:23]]}}",
+				"{query0={merged_tags=[[@6,32:42='merged_tags',<433>,1:32]]}}",
+				"{def_query0={query_dictionary={merged_tags=[[@6,32:42='merged_tags',<433>,1:32]]}, table_dictionary={events={tags=[[@3,23:26='tags',<433>,1:23]]}}, interface={merged_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
+	}
+
+	@Test
+	public void snowflakeArrayUniqueAggSelectPlacementV0Test() {
+		final String query = "SELECT array_unique_agg(tags) AS unique_tags FROM events e";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_unique_agg' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_unique_agg, qualifier=null, parameters={column={name=tags, table_ref=null}}}, alias=unique_tags}}, from={table={alias=e, table=events}}}}",
+				"[unique_tags]",
+				"{}",
+				"{events={tags=[[@3,24:27='tags',<433>,1:24]]}}",
+				"{query0={unique_tags=[[@6,33:43='unique_tags',<433>,1:33]]}}",
+				"{def_query0={query_dictionary={unique_tags=[[@6,33:43='unique_tags',<433>,1:33]]}, table_dictionary={events={tags=[[@3,24:27='tags',<433>,1:24]]}}, interface={unique_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
+	}
+
+	@Test
+	public void snowflakeArraySetAggregatesWarningEmittedOncePerStatementV0Test() {
+		final String query =
+				"SELECT array_union_agg(tags) AS merged_tags, array_unique_agg(tags) AS unique_tags FROM events e";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertDiagnosticCountBySeverity(
+				extractor.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				null,
+				null,
+				1);
+	}
+
+	@Test
+	public void snowflakeArrayConstructTrailingCommaSyntaxFatalV0Test() {
+		final String query = "SELECT array_construct(email,) AS arr FROM enrollment_services__ccp";
+		final SQLSelectParserParser parser = parse(query);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parser);
+		Assert.assertTrue(
+				"Expected parser error at trailing-comma site",
+				runResult.getParserErrors().toString().contains("Line 1:29 - unexpected input: ')'"));
 	}
 }

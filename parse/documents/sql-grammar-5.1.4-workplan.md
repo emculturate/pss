@@ -2124,8 +2124,9 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 ### Slice A implementation decision (2026-11-17)
 
-- Implement Slice A with **parser/walker-first changes and no new lexer tokens**
-  unless an unavoidable ambiguity is proven.
+- Implement Slice A with **lexer-constrained array-family names** plus parser/walker
+  updates: dedicated ARRAY-family lexer tokens are retained, and grammar paths are
+  wired through those tokens rather than broad identifier-only assumptions.
 - Treat array literal support (`[expr, ...]`) as expression-grammar work with
   strict diagnostic controls and golden extractor assertions, while preserving
   subscript behavior (`expr[index]`) as a non-regression invariant.
@@ -2259,12 +2260,12 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 
 | Sub | Construction | Status (2026-11-16) | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
-| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Not started | Add dedicated grammar/AST tests for VARIANT argument forms and column lineage rules. |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Partial | Added routine-level Snowflake dialect affinity + expanded SQL endpoint parity coverage (core happy paths + placement + column/reference + dialect controls). Remaining closure work is snippet-endpoint parity, SCRIPT/DDL coverage, and malformed-call syntax controls. |
+| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Partial | Lexer token + routine dialect warning path landed; baseline SQL placement/resolution coverage added. Remaining closure: dedicated VARIANT-shape matrix and broader placement/resolution controls. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Complete (Slice A) | Added routine-level Snowflake dialect affinity + expanded SQL endpoint parity coverage (core happy paths + placement + column/reference + dialect controls), plus `ARRAY_CONSTRUCT_COMPACT`, DDL/SCRIPT warning-scoping coverage, and malformed trailing-comma syntax controls. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
-| **4.4** | Array literals and subscripts | Partial | `expr[n]` subscript is delivered; array literal value-expression syntax `[expr, ...]` remains open. |
+| **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
-| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Not started | No dedicated grammar/semantic parity coverage yet. |
+| **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Partial | Lexer tokens and aggregate grammar hook are in place; walker now records Snowflake statement-dialect affinity for set-aggregate usage and strict baseline placement/warning tests are added. Dedicated broader semantic parity/diagnostic matrix coverage remains open. |
 | **4.7** | Binary / set array operations | Not started | Define supported operator/function set and add grammar + walker + diagnostics coverage. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Not started | Function-family parity not yet implemented. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | Not started | Add signature-specific AST/lineage coverage for multi-argument transform family. |
@@ -2363,6 +2364,21 @@ select array_union_agg(e.tags) as merged_tags from events e;
 ```
 
 **Test contract (each subtask):** Happy path without FATAL; six extractor goldens where applicable; column ref matrix (qualified, unqualified, unresolved, ambiguous); required SQL/DML sites per construction; compound nest test once **4.3**, **4.9**, **4.10** exist (see former Phase 5.6 compound SELECT in git history).
+
+### Entry 4 Slice A closure checkpoint (2026-11-17)
+
+Slice A closure criteria were validated in two gates:
+
+1. **Focused array/placement suites**
+   - `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayConstructTests,sql.walker.SqlEventWalkerArraySubscriptTests,sql.walker.SqlEventWalkerWithinGroupOrderedAggregateTests,sql.walker.SqlEventWalkerFunctionsAggregatesWindowingTests test`
+   - Result: **207 run, 0 failures, 0 errors**
+2. **Full parse cohort**
+   - `mvn -pl parse test`
+   - Result: **2710 run, 0 failures, 0 errors** (21 skipped)
+
+Additional Slice A completion deltas included:
+- Snowflake statement-dialect warning coverage for set-aggregate array routines (`array_union_agg`, `array_unique_agg`) in walker + strict tests.
+- DDL/SCRIPT statement-scoped warning controls for `array_construct`.
 
 **Detail:** git — former `parser-defects-enhancements-workplan.md` Phase 5.
 

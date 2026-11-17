@@ -9233,6 +9233,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (value instanceof String stringValue && ",".equals(stringValue)) {
 				continue;
 			}
+			if (!(value instanceof Map<?, ?>)) {
+				continue;
+			}
 			args.put(String.valueOf(argumentIndex++), value);
 		}
 
@@ -9338,6 +9341,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Wrong number of entries
 		}
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	private void maybeRecordSnowflakeSetFunctionAffinity(Token anchor, Object functionNameObj) {
+		if (anchor == null || !(functionNameObj instanceof String functionName)) {
+			return;
+		}
+		if (!SnowflakeRoutineDialectRegistry.isSnowflakeDialectRoutine(functionName)) {
+			return;
+		}
+		recordStatementDialectGrammarHit(
+				SqlGrammarDialect.SNOWFLAKE,
+				anchor.getLine(),
+				anchor.getCharPositionInLine(),
+				"routine '" + functionName.toLowerCase(Locale.ROOT) + "'");
 	}
 
 	// set_function_type does NOT need its own exit method
@@ -11920,8 +11938,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.putAll((Map<? extends String, ? extends Object>) subMap.remove("1"));
-			subMap = (Map<String, Object>) subMap.remove("2");
+			Object functionNameNode = subMap.remove("1");
+			Object argumentNode = subMap.remove("2");
+			if (!(functionNameNode instanceof Map<?, ?> functionNameMap)
+					|| !(argumentNode instanceof Map<?, ?> argumentMap)) {
+				walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+				return;
+			}
+			item.putAll((Map<? extends String, ? extends Object>) functionNameMap);
+			subMap = (Map<String, Object>) argumentMap;
 			type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove(type.toString()));
 			subMap.put(MUMBLE_FUNCTION_KEY, item);
@@ -12034,26 +12059,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Boolean doNotSkip = true;
 
 			if (subMap.size() == 1) {
-				// Get first item, record if it is a Substitution Variable by
-				// adding the Substitution List
-				valueExpression = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("1"), ctx);
+				Object firstValue = subMap.remove("1");
+				if (!(firstValue instanceof Map<?, ?> firstValueMap)) {
+					doNotSkip = false;
+				} else {
+					// Get first item, record if it is a Substitution Variable by
+					// adding the Substitution List
+					valueExpression = walker.stampSubstitutionVariableFromContext((Map<String, Object>) firstValueMap, ctx);
+				}
 
 				// Get Value Expression entry
-				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(MUMBLE_COLUMN_KEY);
-				if (node == null)
-					node = (HashMap<String, Object>) valueExpression.get(MUMBLE_SUBSTITUTION_KEY);
-				if (node != null) {
-					if (node.containsKey(MUMBLE_TABLE_REF_KEY))
-						// Value is associated with a table
-						tableRef = (String) node.get(MUMBLE_TABLE_REF_KEY);
-					if (node.containsKey(MUMBLE_NAME_KEY))
-						// Value Expression is a column or substitution, use its
-						// name
-						name = (String) node.get(MUMBLE_NAME_KEY);
-					else if (node.containsKey(MUMBLE_SUBSTITUTION_KEY))
-						// then Value Expression is a COLUMN Substitution
-						// Variable, get the variable's name
-						name = (String) ((HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY)).get("name");
+				if (valueExpression != null) {
+					HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(MUMBLE_COLUMN_KEY);
+					if (node == null)
+						node = (HashMap<String, Object>) valueExpression.get(MUMBLE_SUBSTITUTION_KEY);
+					if (node != null) {
+						if (node.containsKey(MUMBLE_TABLE_REF_KEY))
+							// Value is associated with a table
+							tableRef = (String) node.get(MUMBLE_TABLE_REF_KEY);
+						if (node.containsKey(MUMBLE_NAME_KEY))
+							// Value Expression is a column or substitution, use its
+							// name
+							name = (String) node.get(MUMBLE_NAME_KEY);
+						else if (node.containsKey(MUMBLE_SUBSTITUTION_KEY))
+							// then Value Expression is a COLUMN Substitution
+							// Variable, get the variable's name
+							name = (String) ((HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY)).get("name");
+					}
 				}
 
 			} else {
@@ -12082,8 +12114,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_trim_operands))) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			subMap = (Map<String, Object>) subMap.get("1");
-			subMap = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap, ctx);
+			Object firstValue = subMap.get("1");
+			if (!(firstValue instanceof Map<?, ?> firstValueMap)) {
+				return;
+			}
+			subMap = walker.stampSubstitutionVariableFromContext((Map<String, Object>) firstValueMap, ctx);
 			walker.handleOneChild(ruleIndex);
 			//
 		} else {
