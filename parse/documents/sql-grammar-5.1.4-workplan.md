@@ -2145,6 +2145,27 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 **Story minimum for Entry 4:** Slices **A–C**.  
 **Full Entry 4 closure:** A+B+C+D+E+F.
 
+### Slice D safe implementation plan (execution order)
+
+Use bounded batches and close each before moving forward:
+
+1. **D1 (4.9 transforms, first):**
+   - Start with `ARRAY_TO_STRING` as the lead multi-arg transform.
+   - Add dedicated grammar + walker routing using existing value-expression argument resolution.
+   - Add strict full-golden tests with positional diagnostics, unresolved/missing-alias by eligible argument position, and substitution-variable typing checks (including qualified column-variable typing).
+2. **D2 (4.10 unary transforms):**
+   - Add unary array transform family routing and full matrix tests.
+   - Include unresolved/ambiguous and substitution typing controls for each eligible argument position.
+3. **D3 (4.11 conversion/predicate/split-to-array):**
+   - Lock the exact target function set first, then implement signature-specific routing and tests.
+   - Enforce full matrix coverage and argument-shape diagnostics.
+
+**Validation ladder per D-batch:**
+- Focused family suites
+- `sql.walker.Phase15DerivedColumnGateTestSuite`
+- `sql.walker.SmoketestQualityGateTestSuite`
+- Parser Java suite (excluding bound-query/snippet assessment classes only when explicitly requested)
+
 ### Entry 4 test framework (matrix contract)
 
 Use the same strict matrix discipline used in Entry 1 date/time work:
@@ -2159,12 +2180,23 @@ Use the same strict matrix discipline used in Entry 1 date/time work:
 3. **Column-resolution contract**
    - Every slice must include qualified, unqualified, unresolved, ambiguous, and hidden-alias controls.
    - Substitution-variable arguments in ARRAY functions must be typed/recorded like equivalent predicand/column contexts.
+   - For mutator families, include unhappy unresolved/missing-alias controls for each eligible argument position that accepts predicand/column expressions.
 4. **Placement coverage contract**
    - Minimum sites per function family: SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY, VALUES, INSERT, UPDATE, DELETE, DDL, SCRIPT.
 5. **Validation gates**
    - Focused class-level runs per slice while implementing.
    - Slice closeout requires `mvn -Psmoketest-quality-gate test`.
    - Entry 4 closeout requires focused bundle + parser baseline/full gate per current release protocol.
+6. **Per-function full matrix mandate (Entry 4 array families)**
+   - Do not accept family-level spot checks as closure evidence.
+   - Each targeted array function in the active slice must independently satisfy the full matrix:
+     clause placement (SELECT/WHERE/JOIN ON/HAVING/QUALIFY/ORDER BY/VALUES/INSERT/UPDATE/DELETE/DDL/SCRIPT),
+     nested placement controls, column-resolution matrix (qualified/unqualified/unresolved/ambiguous/missing-alias),
+     substitution-variable coverage (including qualified column-variable typing checks where table prefixes are present), and positional diagnostics.
+   - For Slice C 4.7 specifically, this mandate applies function-by-function to:
+     `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, and `ARRAYS_OVERLAP`.
+   - For Slice C 4.8 mutators, this mandate applies function-by-function to:
+     `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, and `ARRAY_REMOVE_AT`.
 
 ### Entry 4 first-pass AR ID allocation (implementation starter)
 
@@ -2266,12 +2298,21 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
-| **4.7** | Binary / set array operations | Not started | Define supported operator/function set and add grammar + walker + diagnostics coverage. |
-| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Not started | Function-family parity not yet implemented. |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | Not started | Add signature-specific AST/lineage coverage for multi-argument transform family. |
+| **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
+| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | In progress (Slice D / D1) | Grammar hook + walker route for `ARRAY_TO_STRING` landed; initial D1 focused tests started (`SqlEventWalkerSnowflakeArrayTransformTests`). Remaining closure: strict full-literal golden matrix + expanded unresolved/substitution coverage per Entry 4 contract. |
 | **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, …) | Not started | Add unary family routing and output-shape coverage. |
 | **4.11** | Conversion, predicates, split-to-array | Not started | Identify exact Snowflake target set; add function-shape and diagnostic contracts. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
+
+**Slice C closeout record (2026-11-17):**
+- Focused family suites green: `SqlEventWalkerSnowflakeArraySetBinaryTests`, `SqlEventWalkerSnowflakeArrayMutatorTests`, and `SqlEventWalkerSnowflakeArraySetAggregateTests`.
+- Regression gates green: `sql.walker.Phase15DerivedColumnGateTestSuite` and `sql.walker.SmoketestQualityGateTestSuite`.
+- Parser Java suite rerun (excluding bound-query/snippet assessment classes by operator request) green with zero failures.
+
+**Slice D kickoff record (2026-11-17):**
+- D1 (`4.9`) initiated with dedicated grammar/walker route for `ARRAY_TO_STRING` and new focused suite scaffold: `SqlEventWalkerSnowflakeArrayTransformTests`.
+- Initial focused validation green: `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test` (3/3 passing).
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

@@ -19,6 +19,10 @@ public final class SnowflakeRoutineDialectRegistry {
 			"array_insert",
 			"array_remove",
 			"array_remove_at",
+			"array_cat",
+			"array_except",
+			"array_intersection",
+			"arrays_overlap",
 			"array_to_string",
 			"array_distinct");
 

@@ -1261,6 +1261,9 @@ nonparenthesized_value_expression_primary
   | cast_function_expression
   | position_function
   | datetime_function
+  | array_set_binary_function
+  | array_mutator_function
+  | array_transform_function
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
@@ -1278,6 +1281,46 @@ predicand_subquery
 // scalar subquery used in an anonymous location in a condition or value expression, such as in a comparison predicate 
 //or in a select item expression
   : subquery
+  ;
+
+array_set_binary_function
+  : function=array_set_binary_function_name
+    LEFT_PAREN left_operand=value_expression
+    COMMA right_operand=value_expression RIGHT_PAREN
+  ;
+
+array_set_binary_function_name
+  : ARRAY_CAT
+  | ARRAY_EXCEPT
+  | ARRAY_INTERSECTION
+  | ARRAYS_OVERLAP
+  ;
+
+array_mutator_function
+  : function=array_mutator_function_name
+    LEFT_PAREN first_operand=value_expression
+    COMMA second_operand=value_expression
+    (COMMA third_operand=value_expression)?
+    RIGHT_PAREN
+  ;
+
+array_mutator_function_name
+  : ARRAY_APPEND
+  | ARRAY_PREPEND
+  | ARRAY_INSERT
+  | ARRAY_REMOVE
+  | ARRAY_REMOVE_AT
+  ;
+
+array_transform_function
+  : function=array_transform_function_name
+    LEFT_PAREN first_operand=value_expression
+    COMMA second_operand=value_expression
+    RIGHT_PAREN
+  ;
+
+array_transform_function_name
+  : ARRAY_TO_STRING
   ;
 /*
 ===============================================================================
@@ -2656,7 +2699,6 @@ nonreserved_keywords
   | ARRAY_INSERT
   | ARRAY_REMOVE
   | ARRAY_REMOVE_AT
-  | ARRAY_TO_STRING
   | ARRAY_DISTINCT
   | ARRAY_CAT
   | ARRAY_EXCEPT

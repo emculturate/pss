@@ -11923,6 +11923,120 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
+	@Override
+	public void exitArray_set_binary_function( SQLSelectParserParser.Array_set_binary_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> params = new HashMap<String, Object>();
+
+		if (subMap.size() == 3) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object leftArg = subMap.remove("2");
+			Object rightArg = subMap.remove("3");
+			if (leftArg instanceof Map<?, ?> leftArgMap) {
+				leftArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) leftArgMap,
+						ctx.left_operand);
+			}
+			if (rightArg instanceof Map<?, ?> rightArgMap) {
+				rightArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) rightArgMap,
+						ctx.right_operand);
+			}
+			params.put("1", leftArg);
+			params.put("2", rightArg);
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else {
+			// Wrong number of entries
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitArray_mutator_function( SQLSelectParserParser.Array_mutator_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> params = new HashMap<String, Object>();
+
+		if (subMap.size() == 3 || subMap.size() == 4) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object firstArg = subMap.remove("2");
+			Object secondArg = subMap.remove("3");
+			if (firstArg instanceof Map<?, ?> firstArgMap) {
+				firstArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) firstArgMap,
+						ctx.first_operand);
+			}
+			if (secondArg instanceof Map<?, ?> secondArgMap) {
+				secondArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) secondArgMap,
+						ctx.second_operand);
+			}
+			params.put("1", firstArg);
+			params.put("2", secondArg);
+			if (subMap.size() == 1) {
+				Object thirdArg = subMap.remove("4");
+				if (thirdArg instanceof Map<?, ?> thirdArgMap) {
+					thirdArg = walker.stampSubstitutionVariableFromContext(
+							(Map<String, Object>) thirdArgMap,
+							ctx.third_operand);
+				}
+				params.put("3", thirdArg);
+			}
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else {
+			// Wrong number of entries
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitArray_transform_function( SQLSelectParserParser.Array_transform_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> params = new HashMap<String, Object>();
+
+		if (subMap.size() == 3) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object firstArg = subMap.remove("2");
+			Object secondArg = subMap.remove("3");
+			if (firstArg instanceof Map<?, ?> firstArgMap) {
+				firstArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) firstArgMap,
+						ctx.first_operand);
+			}
+			if (secondArg instanceof Map<?, ?> secondArgMap) {
+				secondArg = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) secondArgMap,
+						ctx.second_operand);
+			}
+			params.put("1", firstArg);
+			params.put("2", secondArg);
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else {
+			// Wrong number of entries
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
 	
 	@Override
 	public void exitRoutine_invocation( SQLSelectParserParser.Routine_invocationContext ctx) {
