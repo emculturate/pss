@@ -51,6 +51,54 @@ no longer blocks parity. Remaining parity/release checks continue to be the
 corpus, consumer, generator, and release verification gates documented in this
 workplan.
 
+### 5.1.4 release completion checklist (scoped subset)
+
+This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
+Items not listed here are out of scope for this release.
+
+- **Entry 4 — required for 5.1.4**
+  - **Slice D:** complete remaining D2.3/D2.4/D2.5 and D3.6/D3.7, then run the Slice D final sign-off checklist.
+  - **Slice E:** complete `4.5` advanced `FLATTEN` parity and `4.12` higher-order (`FILTER`/`TRANSFORM`/`REDUCE`) closure.
+  - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
+    - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
+
+- **Entry 7 — required for 5.1.4**
+  - **Endpoint parity slice**
+    - INSERT endpoint parity vs SQL endpoint
+    - DELETE endpoint parity expansion (beyond smoke)
+    - SCRIPT endpoint angle-bracket substitution coverage
+    - DDL endpoint substitution parity (only when product-required for this release)
+    - VALUES endpoint matrix/cell `<var>` parity
+  - **Type×grammar slice**
+    - `EXISTS <var>` coverage
+    - minimal `INSERT … <queryVar>` coverage
+    - VALUES matrix with `<var>` forms
+    - endpoint/type matrix traceability and closeout accounting
+  - **Explicit exclusion:** Jinja predicand work remains out of 5.1.4 scope (depends on Entry 5.2).
+
+- **Entry 15 — narrow characterization pre-slice only (required for 5.1.4)**
+  - **C1:** same-scope visibility characterization for join-extension deferral contexts.
+  - **C2:** non-visibility characterization for non-lateral derived tables / out-of-scope CTE bodies.
+  - **C3:** sibling set-operation branch isolation characterization.
+  - Remaining Entry 15 implementation scope is out of 5.1.4.
+
+- **Entry 11 — partial coverage scope (required for 5.1.4)**
+  - Complete the remaining **Tier 2** `exit*` coverage set from
+    `documents/coverage/sql_walker_exit_method_gaps.md`:
+    - `exitPredicand_primary`
+    - `exitRelational_modifier_in_item`
+    - `exitValue_expression_primary`
+    - `exitOrdered_aggregate_call`
+    - `exitValue_expression`
+    - `exitSelect_item`
+    - `exitConflict_target`
+    - `exitTable_argument_literal`
+    - `exitSql_statement`
+    - `exitSet_operation_member`
+    - `exitJinja_function_call`
+    - `exitUnpivot_clause`
+  - **Tier 3 is explicitly out of 5.1.4 scope.**
+
 ---
 
 ## Completed baselines (no open entry — do not reopen)

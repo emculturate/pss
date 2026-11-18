@@ -1,91 +1,60 @@
 # SqlParseEventWalker — `exit*` method coverage gaps
 
 **Workplan:** [sql-grammar-5.1.4-workplan.md](../sql-grammar-5.1.4-workplan.md) **Entry 11** (retired checklist: `sql_walker_exit_method_coverage-workplan.md`)  
-**Generated:** Aug 9, 2026 (after `cd parse && mvn verify` + JaCoCo `target/site/jacoco/jacoco.xml`)  
+**Generated:** Nov 18, 2026 (refresh after `cd parse && mvn verify`)  
 **Class:** `sql.walker.SqlParseEventWalker`  
-**Scope:** ANTLR listener **`exit*`** methods only (283 total). Not every lexer token or private helper.
+**Scope:** ANTLR listener **`exit*`** methods only (317 total). Not every lexer token or private helper.
 
 ## Summary
 
 | Metric | Count |
 |--------|------:|
-| `exit*` methods | 283 |
+| `exit*` methods | 317 |
 | **Never executed** (0 lines covered by full test suite) | **0** |
 | Executed with **some** missed lines (partial = Tier 2 + Tier 3) | 72 |
-| Fully line-covered (0 missed lines in JaCoCo) | 211 |
+| Fully line-covered (0 missed lines in JaCoCo) | 245 |
 
 **Interpretation:** A method with **0 covered lines** has no test that walks that grammar alternative end-to-end. **Partial** methods are hit by at least one test but still have branches or error paths uncovered — useful for a second pass, not listed exhaustively below.
 
-## Tier 1 — No test hits these `exit*` methods (priority for new exemplars)
+## Tier 1 — No test hits these `exit*` methods
 
-### Tier 1.1 complete — `exitNamed_columns_join`
+Tier 1 remains closed in this refresh (**no zero-hit `exit*` methods**).
 
-| `exit*` method | Grammar rule / path | Status |
-|----------------|---------------------|--------|
-| `exitNamed_columns_join` | `named_columns_join` | **Covered** — Entry 11 Tier 1; `SqlEventWalkerJoinsAndTableResolutionTests` (JOIN USING section). |
+Historical Tier 1 exemplars (`exitNamed_columns_join`, `exitUnpivot_null_policy`, pivot `IN (ANY)`/`IN (SELECT …)`, and T1.5–T1.11 follow-ups) remain covered and are now maintained as regression baseline rather than open gap targets.
 
-### Tier 1.2 complete — `exitUnpivot_null_policy`
+## Tier 2 — Substantial gaps (JaCoCo Nov 18, 2026)
 
-| `exit*` method | Grammar rule / path | Status |
-|----------------|---------------------|--------|
-| `exitUnpivot_null_policy` | `unpivot_null_policy` | **Covered** — Entry 11 Tier 1; `SqlEventWalkerPivotUnpivotTests` (`unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest`). |
-
-### Tier 1.3–1.4 complete — pivot `IN (ANY)` / `IN (SELECT …)`
-
-| `exit*` method | Grammar rule / path | Status |
-|----------------|---------------------|--------|
-| `exitPivot_in_any` | `pivot_in_any` | **Covered** — `pivotInAnyAstShapeTest`, `pivotInAnyOrderBy*` in `SqlEventWalkerPivotUnpivotTests`. |
-| `exitPivot_in_subquery` | `pivot_in_subquery` | **Covered** — `pivotInSubqueryAstShapeTest`. |
-
-### Tier 1.5–1.10 — exemplar tests (Aug 2026 JaCoCo refresh)
-
-| `exit*` method | Test | Notes |
-|----------------|------|--------|
-| `exitTable_argument_boolean` | `inferSchemaIgnoreCaseFalseTableArgumentBooleanT1_5Test` | **COMPLETE** — `ignore_case=FALSE` scalar |
-| `exitInfer_schema_files_argument` | `inferSchemaFilesArgumentT1_6Test` | AST clean |
-| `exitValidate_table_function` | `validateTableFunctionT1_7Test` | AST clean |
-| `exitRow_value_predicand_list` | `groupByRowValuePredicandListT1_8Test` | **COMPLETE** — Tier 3: 1 missed line |
-| ~~`exitOther_trim_operands`~~ | — | **Removed** — no path from `sql()`; grammar alt deleted |
-| `exitOrdinary_grouping_set_list` | `rollupOrdinaryGroupingSetListT1_10Test` | **COMPLETE** — plus `SqlEventWalkerGroupByGroupingSetsTests` |
-| `exitEmpty_grouping_set` | `emptyGroupingSetT1_11Test` | **COMPLETE** — `GROUP BY ()` → `groupby={set={}}` |
-
-**Tier 1 open:** none.
-
-### Tier 2.8 exemplar — UNPIVOT `relational_modifier_in_item`
-
-| `exit*` method | Grammar rule / path | Status |
-|----------------|---------------------|--------|
-| `exitRelational_modifier_in_item` | UNPIVOT `IN (...)` column items | **Exemplar** — tests in place; JaCoCo **6** missed lines (Aug 2026) |
-| `exitRelational_modifier_alias` | Optional `AS` / label on IN item | **COMPLETE** — 0 missed (T3.24) |
-
-## Tier 2 — Substantial gaps (JaCoCo Aug 2026)
-
-Methods with **≥3 missed lines** or **<85%** line coverage (18 total on checklist below; **18** across all `exit*`).
+Methods with **≥3 missed lines** or **<85%** line coverage (**12 methods**).
 
 
 | ID | `exit*` | Lines (cov/total) | % | Missed |
 |----|---------|-------------------|---|--------|
-| T2.4 | `exitJinja_arg` | 15/24 | 62% | 9 |
-| T2.5 | `exitJinja_function_call` | 25/34 | 74% | 9 |
-| T2.7 | `exitStatic_data_type_name` | 20/27 | 74% | 7 |
-| T2.1 | `exitTable_argument_literal` | 14/20 | 70% | 6 |
-| T2.8 | `exitRelational_modifier_in_item` | 24/30 | 80% | 6 |
-| T2.13 | `exitEveryRule` | 25/31 | 81% | 6 |
-| T2.9 | `exitWith_clause` | 14/19 | 74% | 5 |
-| T2.3 | `exitInfer_schema_argument` | 18/23 | 78% | 5 |
-| T2.11 | `exitFlatten_argument` | 15/19 | 79% | 4 |
-| T2.19 | `exitConflict_target` | 12/15 | 80% | 3 |
-| T2.16 | `exitDrop_options` | 13/16 | 81% | 3 |
-| T2.17 | `exitAlter_options` | 13/16 | 81% | 3 |
-| T2.15 | `exitSql_statement` | 21/24 | 88% | 3 |
-| T2.20 | `exitSet_operation_member` | 22/25 | 88% | 3 |
-| T2.10 | `exitUnpivot_clause` | 36/39 | 92% | 3 |
-| T2.24 | `exitAssignment_expression_list` | 5/7 | 71% | 2 |
-| T2.18 | `exitInsert_preamble` | 10/12 | 83% | 2 |
+| T2-01 | `exitPredicand_primary` | 21/27 | 78% | 6 |
+| T2-02 | `exitRelational_modifier_in_item` | 24/30 | 80% | 6 |
+| T2-03 | `exitValue_expression_primary` | 57/63 | 90% | 6 |
+| T2-04 | `exitOrdered_aggregate_call` | 24/28 | 86% | 4 |
+| T2-05 | `exitValue_expression` | 52/56 | 93% | 4 |
+| T2-06 | `exitSelect_item` | 60/64 | 94% | 4 |
+| T2-07 | `exitConflict_target` | 12/15 | 80% | 3 |
+| T2-08 | `exitTable_argument_literal` | 13/16 | 81% | 3 |
+| T2-09 | `exitSql_statement` | 22/25 | 88% | 3 |
+| T2-10 | `exitSet_operation_member` | 27/30 | 90% | 3 |
+| T2-11 | `exitJinja_function_call` | 31/34 | 91% | 3 |
+| T2-12 | `exitUnpivot_clause` | 36/39 | 92% | 3 |
 
-**Reclassified from Tier 2 checklist to Tier 3** (1–2 missed, ≥85%): T2.2 `exitInsert_target_table_primary`, T2.6 `exitSubquery` (dead branch removed; 2/2 lines), T2.12 `exitQuantified_comparison_predicate`, T2.14 `exitScript`, T2.21 `exitGenerator_argument`, T2.22 `exitJinja_name`, T2.23 `exitOrdinary_grouping_set`, T2.25 `exitRow_value_expression`.
+### Delta vs Aug 2026 list
 
-**Not on numbered checklist (Tier 3):** `exitGroupby_clause`, `exitGroupby_distinct_body` (GROUP BY clause exits; 1 missed line each).
+- **Completed (now full line coverage):**
+  - `exitJinja_arg`, `exitStatic_data_type_name`, `exitWith_clause`, `exitAssignment_expression_list`, `exitInsert_preamble`, `exitSubquery`.
+- **Still partial but no longer Tier 2 (now Tier 3 residual):**
+  - `exitEveryRule`, `exitInfer_schema_argument`, `exitFlatten_argument`, `exitDrop_options`, `exitAlter_options`, `exitInsert_target_table_primary`, `exitQuantified_comparison_predicate`, `exitScript`, `exitGenerator_argument`, `exitJinja_name`, `exitOrdinary_grouping_set`, `exitRow_value_expression`.
+- **New Tier 2 additions in this refresh (data-backed from current parser):**
+  - `exitPredicand_primary`, `exitValue_expression_primary`, `exitOrdered_aggregate_call`, `exitValue_expression`, `exitSelect_item`.
+
+### 5.1.4 feature-area spot check (newly introduced/enhanced paths)
+
+- **Array/date-time feature exits are mostly full coverage** (`exitArray_conversion_seed_function`, `exitArray_range_seed_function`, `exitArray_position_seed_function`, `exitArray_zip_seed_function`, `exitArray_unary_transform_function`, `exitArray_transform_function`, `exitSnowflake_datetime_*` all at 100% line coverage in this refresh).
+- **Residual partials in nearby feature paths are Tier 3**, not Tier 2 (`exitArray_literal_elements` 15/17, `exitArray_literal_expression` 21/22, `exitPivot_in_literal` 18/20, `exitJinja_name` 12/14).
 
 ## How to refresh
 
@@ -94,7 +63,7 @@ cd parse && mvn verify
 # Report: parse/target/site/jacoco/jacoco.xml
 ```
 
-Re-run the exit-method vs JaCoCo comparison (same approach as Aug 2026 gap pass) after adding tests; update this file when Tier 1 list shrinks.
+Re-run the exit-method vs JaCoCo comparison after adding tests; update this file whenever Tier 2/Tier 3 membership changes.
 
 ## Related docs
 
