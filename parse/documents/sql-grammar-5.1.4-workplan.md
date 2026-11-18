@@ -2156,15 +2156,51 @@ Use bounded batches and close each before moving forward:
 2. **D2 (4.10 unary transforms):**
    - Add unary array transform family routing and full matrix tests.
    - Include unresolved/ambiguous and substitution typing controls for each eligible argument position.
+   - Safe bounded sequence (execute in order; run focused validation at each step, defer full ladder to Slice D final sign-off):
+     1. **D2.1 seed route + seed tests (`ARRAY_DISTINCT`)**
+        - Add dedicated unary grammar/walker route for one-arg transform shape.
+        - Add strict seed tests: SELECT happy path + missing-alias fatal + full extractor goldens.
+        - Run focused transform suite and patch exact literal/token-position goldens.
+     2. **D2.2 route expansion (`ARRAY_COMPACT`, `ARRAY_SIZE`)**
+        - Extend unary name set in grammar route.
+        - Add strict per-function core matrix (SELECT/WHERE/ORDER BY/VALUES/INSERT/UPDATE/DELETE as applicable).
+     3. **D2.3 route expansion (`ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`)**
+        - Extend unary name set and complete per-function strict matrix.
+        - Add unresolved/ambiguous/missing-alias controls and substitution typing checks.
+     4. **D2.4 GC2 unary closure (`ARRAY_REVERSE`, `ARRAY_SUM`)**
+        - After lexer/token readiness, extend unary route and complete strict per-function matrix.
+        - Record explicit GC2 completion evidence in Entry 4 accounting.
+     5. **D2.5 D2 focused closeout**
+        - Focused unary transform suite and strict-golden reconciliation only.
+        - Do not run Phase15/Smoketest/full parser ladder here; defer to Slice D final sign-off.
 3. **D3 (4.11 conversion/predicate/split-to-array):**
    - Lock the exact target function set first, then implement signature-specific routing and tests.
    - Enforce full matrix coverage and argument-shape diagnostics.
 
-**Validation ladder per D-batch:**
-- Focused family suites
-- `sql.walker.Phase15DerivedColumnGateTestSuite`
-- `sql.walker.SmoketestQualityGateTestSuite`
-- Parser Java suite (excluding bound-query/snippet assessment classes only when explicitly requested)
+**Validation policy for Stage D (reordered sign-off):**
+- **Per substep/batch (D1, D2.1…D2.5, D3 increments):** run focused family suites only and reconcile strict literal goldens/diagnostics.
+- **Single Slice D final sign-off (once, after Slice D implementation is complete):**
+  - `sql.walker.Phase15DerivedColumnGateTestSuite`
+  - `sql.walker.SmoketestQualityGateTestSuite`
+  - Parser Java suite (excluding bound-query/snippet assessment classes only when explicitly requested)
+
+#### Slice D final sign-off checklist (fill at Slice D closure)
+
+- [ ] **Focused Slice D family suites rerun (all green)**
+  - Command(s): `<fill commands>`
+  - Result summary: `<fill pass/fail + notes>`
+- [ ] **Phase15 derived-column gate**
+  - Command: `mvn -pl parse -Dtest=sql.walker.Phase15DerivedColumnGateTestSuite test`
+  - Result summary: `<fill pass/fail + notes>`
+- [ ] **Smoketest quality gate**
+  - Command: `mvn -pl parse -Dtest=sql.walker.SmoketestQualityGateTestSuite test`
+  - Result summary: `<fill pass/fail + notes>`
+- [ ] **Parser module full suite**
+  - Command: `mvn -pl parse test`
+  - Result summary: `<fill pass/fail + notes>`
+- [ ] **Matrix/accounting closure recorded**
+  - Updated sections: `<fill section names>`
+  - Completed IDs/functions recorded explicitly: `<fill IDs/functions>`
 
 ### Entry 4 canonical Snowflake array-function inventory (no ellipsis)
 
@@ -2200,12 +2236,12 @@ All five gap functions are in-scope for Entry 4 closure. Sequence them in bounde
    - Attach to:
      - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
      - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (unary transforms/scalar)
-   - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused + gate validations.
+   - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
 
 3. **GC3 — Slice D conversion extension**
    - Function: `ARRAYS_TO_OBJECT`
    - Attach to: **4.11**
-   - Deliverables: conversion-family routing, argument-shape diagnostics, strict per-function matrix, focused + gate validations.
+   - Deliverables: conversion-family routing, argument-shape diagnostics, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
 
 4. **GC4 — matrix/accounting closeout**
    - Update Entry 4 matrix/accounting tables to list all five functions as completed.
@@ -2362,7 +2398,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress (Slice D / D1 + GC2) | Grammar/walker routes for `ARRAY_TO_STRING` + `ARRAY_SLICE` are active; `ARRAY_REPEAT` remains explicit GC2 scope and must close with strict per-function matrix. |
-| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | Not started (GC2 planned) | Add unary family routing and output-shape coverage with full per-function matrix, including explicit GC2 closure for `ARRAY_REVERSE` and `ARRAY_SUM`. |
+| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | In progress (Slice D / D2.2 complete; GC2 planned) | Unary route is live for `ARRAY_DISTINCT`/`ARRAY_COMPACT`/`ARRAY_SIZE` with strict per-function placement + resolution matrix closure and green validation ladder; continue D2.3→D2.5 with explicit GC2 closure for `ARRAY_REVERSE` and `ARRAY_SUM`. |
 | **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | Not started (GC3 planned) | Implement explicit target set and add signature-shape + diagnostic contracts per function, including explicit GC3 closure for `ARRAYS_TO_OBJECT`. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
@@ -2374,6 +2410,16 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 **Slice D kickoff record (2026-11-17):**
 - D1 (`4.9`) initiated with dedicated grammar/walker route for `ARRAY_TO_STRING` and new focused suite scaffold: `SqlEventWalkerSnowflakeArrayTransformTests`.
 - Initial focused validation green: `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test` (3/3 passing).
+
+**Slice D D2 sequence opened (2026-11-17):**
+- Added explicit D2.1→D2.5 safe bounded implementation sequence for `4.10` unary transforms in this workplan.
+- D2.1 started: seed unary route and strict `ARRAY_DISTINCT` seed tests in `SqlEventWalkerSnowflakeArrayTransformTests`.
+- D2.2 complete: unary route expanded to `ARRAY_COMPACT` + `ARRAY_SIZE` with strict per-function matrix closure across `SELECT`/`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`, including unresolved/missing-alias controls by eligible argument position.
+- D2.2 validation ladder complete and green:
+  - `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test`
+  - `mvn -pl parse -Dtest=sql.walker.Phase15DerivedColumnGateTestSuite test`
+  - `mvn -pl parse -Dtest=sql.walker.SmoketestQualityGateTestSuite test`
+  - `mvn -pl parse test`
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

@@ -25,7 +25,9 @@ public final class SnowflakeRoutineDialectRegistry {
 			"arrays_overlap",
 			"array_to_string",
 			"array_slice",
-			"array_distinct");
+			"array_distinct",
+			"array_compact",
+			"array_size");
 
 	private SnowflakeRoutineDialectRegistry() {
 	}

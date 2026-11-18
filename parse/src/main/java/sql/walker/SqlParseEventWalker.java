@@ -12046,6 +12046,30 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
 	}
 
+	@Override
+	public void exitArray_unary_transform_function(SQLSelectParserParser.Array_unary_transform_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> params = new HashMap<String, Object>();
+
+		if (subMap.size() == 2) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object arg = subMap.remove("2");
+			if (arg instanceof Map<?, ?> argMap) {
+				arg = walker.stampSubstitutionVariableFromContext((Map<String, Object>) argMap, ctx.operand);
+			}
+			params.put("1", arg);
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
 	
 	@Override
 	public void exitRoutine_invocation( SQLSelectParserParser.Routine_invocationContext ctx) {

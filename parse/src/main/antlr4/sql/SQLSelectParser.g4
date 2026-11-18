@@ -1264,6 +1264,7 @@ nonparenthesized_value_expression_primary
   | array_set_binary_function
   | array_mutator_function
   | array_transform_function
+  | array_unary_transform_function
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
@@ -1323,6 +1324,17 @@ array_transform_function
 array_transform_function_name
   : ARRAY_TO_STRING
   | ARRAY_SLICE
+  ;
+
+array_unary_transform_function
+  : function=array_unary_transform_function_name
+    LEFT_PAREN operand=value_expression RIGHT_PAREN
+  ;
+
+array_unary_transform_function_name
+  : ARRAY_DISTINCT
+  | ARRAY_COMPACT
+  | ARRAY_SIZE
   ;
 /*
 ===============================================================================
