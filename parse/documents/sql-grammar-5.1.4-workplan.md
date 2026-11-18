@@ -1942,7 +1942,7 @@ permission and restored. Subsequent IDE output interference is avoided with the
 opt-in `isolated-build` Maven profile (`target-maven/` output); Java auto-build
 remains enabled. Regeneration, compilation, and the five focused baseline tests
 are verified. The earlier isolated full suite ran 2,199 tests: 1,680 passed, 498
-failed on remaining `<393>` versus `<433>` expectations, 0 errors, 21 skipped.
+failed on remaining `<393>` versus `<452>` expectations, 0 errors, 21 skipped.
 After the user's manual golden edits, the full workspace suite was run through
 the VS Code testing extension using its configured JDK 21 execution settings:
 **2,643 passed, 0 failed**. This satisfies the Phase 1 / Slice A full-suite gate;
