@@ -12012,7 +12012,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 		Map<String, Object> params = new HashMap<String, Object>();
 
-		if (subMap.size() == 3) {
+		if (subMap.size() == 3 || subMap.size() == 4) {
 			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
 			Object firstArg = subMap.remove("2");
 			Object secondArg = subMap.remove("3");
@@ -12028,6 +12028,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			params.put("1", firstArg);
 			params.put("2", secondArg);
+			if (subMap.size() == 1) {
+				Object thirdArg = subMap.remove("4");
+				if (thirdArg instanceof Map<?, ?> thirdArgMap) {
+					thirdArg = walker.stampSubstitutionVariableFromContext(
+							(Map<String, Object>) thirdArgMap,
+							ctx.third_operand);
+				}
+				params.put("3", thirdArg);
+			}
 			item.put(MUMBLE_PARAMETERS_KEY, params);
 			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {

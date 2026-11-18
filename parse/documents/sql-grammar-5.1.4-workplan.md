@@ -2150,7 +2150,7 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 Use bounded batches and close each before moving forward:
 
 1. **D1 (4.9 transforms, first):**
-   - Start with `ARRAY_TO_STRING` as the lead multi-arg transform.
+   - Multi-arg transform set for 4.9 is explicitly: `ARRAY_TO_STRING`, `ARRAY_SLICE`.
    - Add dedicated grammar + walker routing using existing value-expression argument resolution.
    - Add strict full-golden tests with positional diagnostics, unresolved/missing-alias by eligible argument position, and substitution-variable typing checks (including qualified column-variable typing).
 2. **D2 (4.10 unary transforms):**
@@ -2165,6 +2165,67 @@ Use bounded batches and close each before moving forward:
 - `sql.walker.Phase15DerivedColumnGateTestSuite`
 - `sql.walker.SmoketestQualityGateTestSuite`
 - Parser Java suite (excluding bound-query/snippet assessment classes only when explicitly requested)
+
+### Entry 4 canonical Snowflake array-function inventory (no ellipsis)
+
+Source-of-truth inputs used for this inventory:
+- Lexer/grammar tokens in `SQLSelectParser.g4` (`ARRAY_*`, `ARRAYS_*`, `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`)
+- Snowflake documentation list: `functions-semistructured` (retrieved 2026-11-17)
+
+#### A) Implemented/recognized in lexer today (29)
+
+`ARRAY_AGG`, `ARRAY_CONSTRUCT`, `ARRAY_CONSTRUCT_COMPACT`, `ARRAY_CONTAINS`, `ARRAY_UNION_AGG`, `ARRAY_UNIQUE_AGG`, `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT`, `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, `ARRAYS_OVERLAP`, `ARRAY_TO_STRING`, `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_FLATTEN`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAY_SIZE`, `ARRAY_SLICE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAYS_ZIP`, `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`
+
+#### B) Present in Snowflake docs but missing from lexer inventory (explicit gaps)
+
+- `ARRAY_CONSTRUCT_STRUCTURED`
+- `ARRAY_REPEAT`
+- `ARRAY_REVERSE`
+- `ARRAY_SUM`
+- `ARRAYS_TO_OBJECT`
+
+These gaps must be tracked explicitly and resolved intentionally (either add to Entry 4 scope/slices or document as out-of-scope for 5.1.4).
+
+### Entry 4 gap-closure subplan (GC) — explicit sequencing for doc/lexer gaps
+
+All five gap functions are in-scope for Entry 4 closure. Sequence them in bounded GC batches:
+
+1. **GC1 — Slice A extension (constructor parity)**
+   - Function: `ARRAY_CONSTRUCT_STRUCTURED`
+   - Attach to: **4.2**
+   - Deliverables: lexer + grammar route, walker signature handling, strict full-golden matrix (constructor-family placements/diagnostics/resolution/substitution), focused + gate validations.
+
+2. **GC2 — Slice D extensions (transform/unary parity)**
+   - Functions: `ARRAY_REPEAT`, `ARRAY_REVERSE`, `ARRAY_SUM`
+   - Attach to:
+     - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
+     - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (unary transforms/scalar)
+   - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused + gate validations.
+
+3. **GC3 — Slice D conversion extension**
+   - Function: `ARRAYS_TO_OBJECT`
+   - Attach to: **4.11**
+   - Deliverables: conversion-family routing, argument-shape diagnostics, strict per-function matrix, focused + gate validations.
+
+4. **GC4 — matrix/accounting closeout**
+   - Update Entry 4 matrix/accounting tables to list all five functions as completed.
+   - Record exact evidence commands/results for focused suites, gate suites, and parser suite.
+
+**Gate rule for GC batches:** no “etc” placeholders in status rows, plans, or closeout notes; each function must be named explicitly.
+
+#### C) Slice assignment map (explicit)
+
+- **4.1**: `ARRAY_CONTAINS`
+- **4.2**: `ARRAY_CONSTRUCT`, `ARRAY_CONSTRUCT_COMPACT`, `ARRAY_CONSTRUCT_STRUCTURED` (GC1)
+- **4.3**: `ARRAY_AGG`
+- **4.5**: `ARRAY_FLATTEN` / `FLATTEN` / `LATERAL FLATTEN`
+- **4.6**: `ARRAY_UNION_AGG`, `ARRAY_UNIQUE_AGG`
+- **4.7**: `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, `ARRAYS_OVERLAP`
+- **4.8**: `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT`
+- **4.9 (transforms with extra args)**: `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT` (GC2)
+- **4.10 (unary array -> array/scalar)**: `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` (GC2)
+- **4.11 (conversion/predicate/split/range/position/zip)**: `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT` (GC3)
+- **4.12 (higher-order)**: `FILTER`, `TRANSFORM`, `REDUCE`
 
 ### Entry 4 test framework (matrix contract)
 
@@ -2293,16 +2354,16 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | Sub | Construction | Status (2026-11-16) | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
 | **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Partial | Lexer token + routine dialect warning path landed; baseline SQL placement/resolution coverage added. Remaining closure: dedicated VARIANT-shape matrix and broader placement/resolution controls. |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Complete (Slice A) | Added routine-level Snowflake dialect affinity + expanded SQL endpoint parity coverage (core happy paths + placement + column/reference + dialect controls), plus `ARRAY_CONSTRUCT_COMPACT`, DDL/SCRIPT warning-scoping coverage, and malformed trailing-comma syntax controls. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Complete (Slice A) + GC1 pending | `ARRAY_CONSTRUCT` + `ARRAY_CONSTRUCT_COMPACT` are covered; `ARRAY_CONSTRUCT_STRUCTURED` is explicitly tracked in GC1 and must close under full matrix before Entry 4 final closeout. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | `FLATTEN` / `LATERAL FLATTEN` | Partial | Baseline table-function coverage exists; keep advanced parity scenarios in this entry until accepted as complete. |
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, etc.) | In progress (Slice D / D1) | Grammar hook + walker route for `ARRAY_TO_STRING` landed; initial D1 focused tests started (`SqlEventWalkerSnowflakeArrayTransformTests`). Remaining closure: strict full-literal golden matrix + expanded unresolved/substitution coverage per Entry 4 contract. |
-| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, …) | Not started | Add unary family routing and output-shape coverage. |
-| **4.11** | Conversion, predicates, split-to-array | Not started | Identify exact Snowflake target set; add function-shape and diagnostic contracts. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress (Slice D / D1 + GC2) | Grammar/walker routes for `ARRAY_TO_STRING` + `ARRAY_SLICE` are active; `ARRAY_REPEAT` remains explicit GC2 scope and must close with strict per-function matrix. |
+| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | Not started (GC2 planned) | Add unary family routing and output-shape coverage with full per-function matrix, including explicit GC2 closure for `ARRAY_REVERSE` and `ARRAY_SUM`. |
+| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | Not started (GC3 planned) | Implement explicit target set and add signature-shape + diagnostic contracts per function, including explicit GC3 closure for `ARRAYS_TO_OBJECT`. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
 **Slice C closeout record (2026-11-17):**

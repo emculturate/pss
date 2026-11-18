@@ -1316,11 +1316,13 @@ array_transform_function
   : function=array_transform_function_name
     LEFT_PAREN first_operand=value_expression
     COMMA second_operand=value_expression
+    (COMMA third_operand=value_expression)?
     RIGHT_PAREN
   ;
 
 array_transform_function_name
   : ARRAY_TO_STRING
+  | ARRAY_SLICE
   ;
 /*
 ===============================================================================

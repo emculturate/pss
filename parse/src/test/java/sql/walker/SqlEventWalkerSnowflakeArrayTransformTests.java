@@ -266,4 +266,76 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 				"{query0={joined_tags=[[@16,62:72='joined_tags',<452>,1:62]]}}",
 				"{def_create1={def_query0={query_dictionary={joined_tags=[[@16,62:72='joined_tags',<452>,1:62]]}, table_dictionary={tab1={tags=[[@7,44:44='a',<452>,1:44]], sep=[[@11,52:52='a',<452>,1:52]]}}, interface={joined_tags=[{name=tags, table_ref=a}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}}}");
 	}
+
+	@Test
+	public void snowflakeArraySliceSelectPlacementV0Test() {
+		final String query = "SELECT array_slice(a.tags, a.start_idx, a.end_idx) AS sliced_tags FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_slice' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_slice, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=start_idx, table_ref=a}}, 3={column={name=end_idx, table_ref=a}}}}, alias=sliced_tags}}, from={table={alias=a, table=tab1}}}}",
+				"[sliced_tags]",
+				"{}",
+				"{tab1={end_idx=[[@11,40:40='a',<452>,1:40]], start_idx=[[@7,27:27='a',<452>,1:27]], tags=[[@3,19:19='a',<452>,1:19]]}}",
+				"{query0={sliced_tags=[[@16,54:64='sliced_tags',<452>,1:54]]}}",
+				"{def_query0={query_dictionary={sliced_tags=[[@16,54:64='sliced_tags',<452>,1:54]]}, table_dictionary={tab1={end_idx=[[@11,40:40='a',<452>,1:40]], start_idx=[[@7,27:27='a',<452>,1:27]], tags=[[@3,19:19='a',<452>,1:19]]}}, interface={sliced_tags=[{name=tags, table_ref=a}, {name=start_idx, table_ref=a}, {name=end_idx, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArraySliceThirdOperandMissingAliasFatalV0Test() {
+		final String query = "SELECT array_slice(a.tags, a.start_idx, z.end_idx) AS sliced_tags FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_slice' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertSingleMissingAliasFatal(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_slice, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=start_idx, table_ref=a}}, 3={column={name=end_idx, table_ref=z}}}}, alias=sliced_tags}}, from={table={alias=a, table=tab1}}}}",
+				"[sliced_tags]",
+				"{}",
+				"{tab1={start_idx=[[@7,27:27='a',<452>,1:27]], tags=[[@3,19:19='a',<452>,1:19]]}}",
+				"{query0={sliced_tags=[[@16,54:64='sliced_tags',<452>,1:54]]}}",
+				"{def_query0={query_dictionary={sliced_tags=[[@16,54:64='sliced_tags',<452>,1:54]]}, table_dictionary={tab1={start_idx=[[@7,27:27='a',<452>,1:27]], tags=[[@3,19:19='a',<452>,1:19]]}}, interface={sliced_tags=[{name=tags, table_ref=a}, {name=start_idx, table_ref=a}, {name=end_idx, table_ref=z}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArraySliceQualifiedColumnVariablesV0Test() {
+		final String query = "SELECT array_slice(a.<arr_col>, a.<start_col>, a.<end_col>) AS sliced_tags FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_slice' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_slice, parameters={1={column={substitution={name=<arr_col>, type=column}, table_ref=a}}, 2={column={substitution={name=<start_col>, type=column}, table_ref=a}}, 3={column={substitution={name=<end_col>, type=column}, table_ref=a}}}}, alias=sliced_tags}}, from={table={alias=a, table=tab1}}}}",
+				"[sliced_tags]",
+				"{<end_col>=column, <start_col>=column, <arr_col>=column}",
+				"{tab1={<end_col>=[[@11,47:47='a',<452>,1:47]], <start_col>=[[@7,32:32='a',<452>,1:32]], <arr_col>=[[@3,19:19='a',<452>,1:19]]}}",
+				"{query0={sliced_tags=[[@16,63:73='sliced_tags',<452>,1:63]]}}",
+				"{def_query0={query_dictionary={sliced_tags=[[@16,63:73='sliced_tags',<452>,1:63]]}, table_dictionary={tab1={<end_col>=[[@11,47:47='a',<452>,1:47]], <start_col>=[[@7,32:32='a',<452>,1:32]], <arr_col>=[[@3,19:19='a',<452>,1:19]]}}, interface={sliced_tags=[{substitution={name=<arr_col>, type=column}, table_ref=a}, {substitution={name=<start_col>, type=column}, table_ref=a}, {substitution={name=<end_col>, type=column}, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
 }
