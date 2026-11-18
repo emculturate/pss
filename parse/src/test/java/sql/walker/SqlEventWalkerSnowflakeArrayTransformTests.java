@@ -1135,4 +1135,916 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 				"{}",
 				"{def_delete0={query_dictionary={}, table_dictionary={tab1={tags=[[@6,34:37='tags',<452>,1:34]]}}, filters=[{name=tags, table_ref=tab1}], interface=null}}");
 	}
+
+	@Test
+	public void snowflakeSplitToArraySelectSeedV0Test() {
+		final String query = "SELECT split_to_array(a.payload, a.sep) AS split_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}, alias=split_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[split_vals]",
+				"{}",
+				"{tab1={payload=[[@3,22:22='a',<452>,1:22]], sep=[[@7,33:33='a',<452>,1:33]]}}",
+				"{query0={split_vals=[[@12,43:52='split_vals',<452>,1:43]]}}",
+				"{def_query0={query_dictionary={split_vals=[[@12,43:52='split_vals',<452>,1:43]]}, table_dictionary={tab1={payload=[[@3,22:22='a',<452>,1:22]], sep=[[@7,33:33='a',<452>,1:33]]}}, interface={split_vals=[{name=payload, table_ref=a}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayMissingAliasFatalV0Test() {
+		final String query = "SELECT split_to_array(z.payload, a.sep) AS split_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertSingleMissingAliasFatal(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=z}}, 2={column={name=sep, table_ref=a}}}}, alias=split_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[split_vals]",
+				"{}",
+				"{tab1={sep=[[@7,33:33='a',<452>,1:33]]}}",
+				"{query0={split_vals=[[@12,43:52='split_vals',<452>,1:43]]}}",
+				"{def_query0={query_dictionary={split_vals=[[@12,43:52='split_vals',<452>,1:43]]}, table_dictionary={tab1={sep=[[@7,33:33='a',<452>,1:33]]}}, interface={split_vals=[{name=payload, table_ref=z}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeSelectSeedV0Test() {
+		final String query = "SELECT array_generate_range(1, 5) AS gen_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}, alias=gen_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[gen_vals]",
+				"{}",
+				"{tab1={}}",
+				"{query0={gen_vals=[[@8,37:44='gen_vals',<452>,1:37]]}}",
+				"{def_query0={query_dictionary={gen_vals=[[@8,37:44='gen_vals',<452>,1:37]]}, table_dictionary={tab1={}}, interface={gen_vals=[]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionSelectSeedV0Test() {
+		final String query = "SELECT array_position(a.needle, a.tags) AS pos_idx FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}, alias=pos_idx}}, from={table={alias=a, table=tab1}}}}",
+				"[pos_idx]",
+				"{}",
+				"{tab1={needle=[[@3,22:22='a',<452>,1:22]], tags=[[@7,32:32='a',<452>,1:32]]}}",
+				"{query0={pos_idx=[[@12,43:49='pos_idx',<452>,1:43]]}}",
+				"{def_query0={query_dictionary={pos_idx=[[@12,43:49='pos_idx',<452>,1:43]]}, table_dictionary={tab1={needle=[[@3,22:22='a',<452>,1:22]], tags=[[@7,32:32='a',<452>,1:32]]}}, interface={pos_idx=[{name=needle, table_ref=a}, {name=tags, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionMissingAliasFatalV0Test() {
+		final String query = "SELECT array_position(z.needle, a.tags) AS pos_idx FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertSingleMissingAliasFatal(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=array_position, parameters={1={column={name=needle, table_ref=z}}, 2={column={name=tags, table_ref=a}}}}, alias=pos_idx}}, from={table={alias=a, table=tab1}}}}",
+				"[pos_idx]",
+				"{}",
+				"{tab1={tags=[[@7,32:32='a',<452>,1:32]]}}",
+				"{query0={pos_idx=[[@12,43:49='pos_idx',<452>,1:43]]}}",
+				"{def_query0={query_dictionary={pos_idx=[[@12,43:49='pos_idx',<452>,1:43]]}, table_dictionary={tab1={tags=[[@7,32:32='a',<452>,1:32]]}}, interface={pos_idx=[{name=needle, table_ref=z}, {name=tags, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionWherePlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a WHERE array_position(a.needle, a.tags) > 0";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				30);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}}, right={literal=0}, operator=>}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], needle=[[@10,45:45='a',<452>,1:45]], tags=[[@14,55:55='a',<452>,1:55]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], needle=[[@10,45:45='a',<452>,1:45]], tags=[[@14,55:55='a',<452>,1:55]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a ORDER BY array_position(a.needle, a.tags)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				33);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], needle=[[@11,48:48='a',<452>,1:48]], tags=[[@15,58:58='a',<452>,1:58]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], needle=[[@11,48:48='a',<452>,1:48]], tags=[[@15,58:58='a',<452>,1:58]]}}, ordered_by=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionValuesPlacementV0Test() {
+		final String query = "VALUES (array_position(a.needle, a.tags))";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				8);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={values={matrix={1={row={1={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}}}}}}}}",
+				"[$1]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionInsertPlacementV0Test() {
+		final String query = "INSERT INTO tab_out(pos_idx) SELECT array_position(a.needle, a.tags) FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:36) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				36);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=pos_idx, table_ref=null}}}}}}",
+				"[pos_idx]",
+				"{}",
+				"{tab1={needle=[[@9,51:51='a',<452>,1:51]], tags=[[@13,61:61='a',<452>,1:61]]}, tab_out={pos_idx=[[@4,20:26='pos_idx',<452>,1:20]]}}",
+				"{query0={unnamed_0=[[@16,67:67=')',<288>,1:67]]}, insert1={pos_idx=[[@4,20:26='pos_idx',<452>,1:20]]}}",
+				"{def_insert1={query_dictionary={pos_idx=[[@4,20:26='pos_idx',<452>,1:20]]}, table_dictionary={tab_out={pos_idx=[[@4,20:26='pos_idx',<452>,1:20]]}}, def_query0={query_dictionary={unnamed_0=[[@16,67:67=')',<288>,1:67]]}, table_dictionary={tab1={needle=[[@9,51:51='a',<452>,1:51]], tags=[[@13,61:61='a',<452>,1:61]]}}, interface={unnamed_0=[{name=needle, table_ref=a}, {name=tags, table_ref=a}]}, table_alias={a=tab1}}, interface={pos_idx=[{name=unnamed_0, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionUpdatePlacementV0Test() {
+		final String query = "UPDATE tab1 SET pos_idx = array_position(needle, tags)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:26) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				26);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=pos_idx, table_ref=null}}, to={function={function_name=array_position, parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}}}}}}}}",
+				"[pos_idx]",
+				"{}",
+				"{tab1={needle=[[@7,41:46='needle',<452>,1:41], [@10,53:53=')',<288>,1:53]], tags=[[@9,49:52='tags',<452>,1:49], [@10,53:53=')',<288>,1:53]]}}",
+				"{update0={pos_idx=[[@3,16:22='pos_idx',<452>,1:16]]}}",
+				"{def_update0={assignments={pos_idx=[{name=needle, table_ref=tab1}, {name=tags, table_ref=tab1}]}, table_dictionary={tab1={needle=[[@7,41:46='needle',<452>,1:41], [@10,53:53=')',<288>,1:53]], tags=[[@9,49:52='tags',<452>,1:49], [@10,53:53=')',<288>,1:53]]}}, update_dictionary={pos_idx=[[@3,16:22='pos_idx',<452>,1:16]]}, target_table={tab1={pos_idx=[[@3,16:22='pos_idx',<452>,1:16]]}}, lhs_unresolved_columns={pos_idx={column={name=pos_idx, table_ref=null}, locations=[[@3,16:22='pos_idx',<452>,1:16]]}}}}");
+	}
+
+	@Test
+	public void snowflakeArrayPositionDeletePlacementV0Test() {
+		final String query = "DELETE FROM tab1 WHERE array_position(needle, tags) > 0";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_position' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				23);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=array_position, parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}}}, right={literal=0}, operator=>}}}}}",
+				"[]",
+				"{}",
+				"{tab1={needle=[[@6,38:43='needle',<452>,1:38]], tags=[[@8,46:49='tags',<452>,1:46]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={tab1={needle=[[@6,38:43='needle',<452>,1:38]], tags=[[@8,46:49='tags',<452>,1:46]]}}, filters=[{name=needle, table_ref=tab1}, {name=tags, table_ref=tab1}], interface=null}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipSelectSeedV0Test() {
+		final String query = "SELECT arrays_zip(a.tags, a.vals) AS zipped_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}, alias=zipped_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[zipped_vals]",
+				"{}",
+				"{tab1={vals=[[@7,26:26='a',<452>,1:26]], tags=[[@3,18:18='a',<452>,1:18]]}}",
+				"{query0={zipped_vals=[[@12,37:47='zipped_vals',<452>,1:37]]}}",
+				"{def_query0={query_dictionary={zipped_vals=[[@12,37:47='zipped_vals',<452>,1:37]]}, table_dictionary={tab1={vals=[[@7,26:26='a',<452>,1:26]], tags=[[@3,18:18='a',<452>,1:18]]}}, interface={zipped_vals=[{name=tags, table_ref=a}, {name=vals, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipMissingAliasFatalV0Test() {
+		final String query = "SELECT arrays_zip(z.tags, a.vals) AS zipped_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertSingleMissingAliasFatal(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=z}}, 2={column={name=vals, table_ref=a}}}}, alias=zipped_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[zipped_vals]",
+				"{}",
+				"{tab1={vals=[[@7,26:26='a',<452>,1:26]]}}",
+				"{query0={zipped_vals=[[@12,37:47='zipped_vals',<452>,1:37]]}}",
+				"{def_query0={query_dictionary={zipped_vals=[[@12,37:47='zipped_vals',<452>,1:37]]}, table_dictionary={tab1={vals=[[@7,26:26='a',<452>,1:26]]}}, interface={zipped_vals=[{name=tags, table_ref=z}, {name=vals, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayWherePlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a WHERE split_to_array(a.tags, a.sep) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				30);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, operator=IS NOT NULL}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,45:45='a',<452>,1:45]], sep=[[@14,53:53='a',<452>,1:53]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,45:45='a',<452>,1:45]], sep=[[@14,53:53='a',<452>,1:53]]}}, filters=[{name=tags, table_ref=a}, {name=sep, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a ORDER BY split_to_array(a.tags, a.sep)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				33);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,48:48='a',<452>,1:48]], sep=[[@15,56:56='a',<452>,1:56]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,48:48='a',<452>,1:48]], sep=[[@15,56:56='a',<452>,1:56]]}}, ordered_by=[{name=tags, table_ref=a}, {name=sep, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayValuesPlacementV0Test() {
+		final String query = "VALUES (split_to_array(a.tags, a.sep))";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				8);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={values={matrix={1={row={1={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}}}}}",
+				"[$1]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[]}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayInsertPlacementV0Test() {
+		final String query = "INSERT INTO tab_out(split_vals) SELECT split_to_array(a.tags, a.sep) FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				39);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=split_vals, table_ref=null}}}}}}",
+				"[split_vals]",
+				"{}",
+				"{tab1={tags=[[@9,54:54='a',<452>,1:54]], sep=[[@13,62:62='a',<452>,1:62]]}, tab_out={split_vals=[[@4,20:29='split_vals',<452>,1:20]]}}",
+				"{query0={unnamed_0=[[@16,67:67=')',<288>,1:67]]}, insert1={split_vals=[[@4,20:29='split_vals',<452>,1:20]]}}",
+				"{def_insert1={query_dictionary={split_vals=[[@4,20:29='split_vals',<452>,1:20]]}, table_dictionary={tab_out={split_vals=[[@4,20:29='split_vals',<452>,1:20]]}}, def_query0={query_dictionary={unnamed_0=[[@16,67:67=')',<288>,1:67]]}, table_dictionary={tab1={tags=[[@9,54:54='a',<452>,1:54]], sep=[[@13,62:62='a',<452>,1:62]]}}, interface={unnamed_0=[{name=tags, table_ref=a}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}, interface={split_vals=[{name=unnamed_0, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayUpdatePlacementV0Test() {
+		final String query = "UPDATE tab1 SET split_vals = split_to_array(tags, sep)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:29) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				29);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=split_vals, table_ref=null}}, to={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}}}}}}",
+				"[split_vals]",
+				"{}",
+				"{tab1={tags=[[@7,44:47='tags',<452>,1:44], [@10,53:53=')',<288>,1:53]], sep=[[@9,50:52='sep',<452>,1:50], [@10,53:53=')',<288>,1:53]]}}",
+				"{update0={split_vals=[[@3,16:25='split_vals',<452>,1:16]]}}",
+				"{def_update0={assignments={split_vals=[{name=tags, table_ref=tab1}, {name=sep, table_ref=tab1}]}, table_dictionary={tab1={tags=[[@7,44:47='tags',<452>,1:44], [@10,53:53=')',<288>,1:53]], sep=[[@9,50:52='sep',<452>,1:50], [@10,53:53=')',<288>,1:53]]}}, update_dictionary={split_vals=[[@3,16:25='split_vals',<452>,1:16]]}, target_table={tab1={split_vals=[[@3,16:25='split_vals',<452>,1:16]]}}, lhs_unresolved_columns={split_vals={column={name=split_vals, table_ref=null}, locations=[[@3,16:25='split_vals',<452>,1:16]]}}}}");
+	}
+
+	@Test
+	public void snowflakeSplitToArrayDeletePlacementV0Test() {
+		final String query = "DELETE FROM tab1 WHERE split_to_array(tags, sep) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'split_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				23);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}, operator=IS NOT NULL}}}}}",
+				"[]",
+				"{}",
+				"{tab1={tags=[[@6,38:41='tags',<452>,1:38]], sep=[[@8,44:46='sep',<452>,1:44]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={tab1={tags=[[@6,38:41='tags',<452>,1:38]], sep=[[@8,44:46='sep',<452>,1:44]]}}, filters=[{name=tags, table_ref=tab1}, {name=sep, table_ref=tab1}], interface=null}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeWherePlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a WHERE array_generate_range(1, 5) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				30);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}, operator=IS NOT NULL}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]]}}, filters=[], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a ORDER BY array_generate_range(1, 5)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				33);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]]}}, ordered_by=[], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeValuesPlacementV0Test() {
+		final String query = "VALUES (array_generate_range(1, 5))";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				8);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={values={matrix={1={row={1={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}}}}}}}",
+				"[$1]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeInsertPlacementV0Test() {
+		final String query = "INSERT INTO tab_out(gen_vals) SELECT array_generate_range(1, 5) FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:37) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				37);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=gen_vals, table_ref=null}}}}}}",
+				"[gen_vals]",
+				"{}",
+				"{tab1={}, tab_out={gen_vals=[[@4,20:27='gen_vals',<452>,1:20]]}}",
+				"{query0={unnamed_0=[[@12,62:62=')',<288>,1:62]]}, insert1={gen_vals=[[@4,20:27='gen_vals',<452>,1:20]]}}",
+				"{def_insert1={query_dictionary={gen_vals=[[@4,20:27='gen_vals',<452>,1:20]]}, table_dictionary={tab_out={gen_vals=[[@4,20:27='gen_vals',<452>,1:20]]}}, def_query0={query_dictionary={unnamed_0=[[@12,62:62=')',<288>,1:62]]}, table_dictionary={tab1={}}, interface={unnamed_0=[]}, table_alias={a=tab1}}, interface={gen_vals=[{name=unnamed_0, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeUpdatePlacementV0Test() {
+		final String query = "UPDATE tab1 SET gen_vals = array_generate_range(1, 5)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=gen_vals, table_ref=null}}, to={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}}}}}}",
+				"[gen_vals]",
+				"{}",
+				"{tab1={}}",
+				"{update0={gen_vals=[[@3,16:23='gen_vals',<452>,1:16]]}}",
+				"{def_update0={assignments={gen_vals=[]}, table_dictionary={tab1={}}, update_dictionary={gen_vals=[[@3,16:23='gen_vals',<452>,1:16]]}, target_table={tab1={gen_vals=[[@3,16:23='gen_vals',<452>,1:16]]}}, lhs_unresolved_columns={gen_vals={column={name=gen_vals, table_ref=null}, locations=[[@3,16:23='gen_vals',<452>,1:16]]}}}}");
+	}
+
+	@Test
+	public void snowflakeArrayGenerateRangeDeletePlacementV0Test() {
+		final String query = "DELETE FROM tab1 WHERE array_generate_range(1, 5) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'array_generate_range' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				23);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=array_generate_range, parameters={1={literal=1}, 2={literal=5}}}}, operator=IS NOT NULL}}}}}",
+				"[]",
+				"{}",
+				"{tab1={}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={tab1={}}, filters=[], interface=null}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipWherePlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a WHERE arrays_zip(a.tags, a.vals) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				30);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}}, operator=IS NOT NULL}}}}",
+				"[id]",
+				"{}",
+				"{tab1={vals=[[@14,49:49='a',<452>,1:49]], id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,41:41='a',<452>,1:41]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={vals=[[@14,49:49='a',<452>,1:49]], id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,41:41='a',<452>,1:41]]}}, filters=[{name=tags, table_ref=a}, {name=vals, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a ORDER BY arrays_zip(a.tags, a.vals)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				33);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
+				"[id]",
+				"{}",
+				"{tab1={vals=[[@15,52:52='a',<452>,1:52]], id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,44:44='a',<452>,1:44]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={vals=[[@15,52:52='a',<452>,1:52]], id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,44:44='a',<452>,1:44]]}}, ordered_by=[{name=tags, table_ref=a}, {name=vals, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipValuesPlacementV0Test() {
+		final String query = "VALUES (arrays_zip(a.tags, a.vals))";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				8);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={values={matrix={1={row={1={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}}}}}}}}",
+				"[$1]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[]}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipInsertPlacementV0Test() {
+		final String query = "INSERT INTO tab_out(zipped_vals) SELECT arrays_zip(a.tags, a.vals) FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:40) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				40);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=zipped_vals, table_ref=null}}}}}}",
+				"[zipped_vals]",
+				"{}",
+				"{tab1={vals=[[@13,59:59='a',<452>,1:59]], tags=[[@9,51:51='a',<452>,1:51]]}, tab_out={zipped_vals=[[@4,20:30='zipped_vals',<452>,1:20]]}}",
+				"{query0={unnamed_0=[[@16,65:65=')',<288>,1:65]]}, insert1={zipped_vals=[[@4,20:30='zipped_vals',<452>,1:20]]}}",
+				"{def_insert1={query_dictionary={zipped_vals=[[@4,20:30='zipped_vals',<452>,1:20]]}, table_dictionary={tab_out={zipped_vals=[[@4,20:30='zipped_vals',<452>,1:20]]}}, def_query0={query_dictionary={unnamed_0=[[@16,65:65=')',<288>,1:65]]}, table_dictionary={tab1={vals=[[@13,59:59='a',<452>,1:59]], tags=[[@9,51:51='a',<452>,1:51]]}}, interface={unnamed_0=[{name=tags, table_ref=a}, {name=vals, table_ref=a}]}, table_alias={a=tab1}}, interface={zipped_vals=[{name=unnamed_0, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipUpdatePlacementV0Test() {
+		final String query = "UPDATE tab1 SET zipped_vals = arrays_zip(tags, vals)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=zipped_vals, table_ref=null}}, to={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=vals, table_ref=null}}}}}}}}}}",
+				"[zipped_vals]",
+				"{}",
+				"{tab1={vals=[[@9,47:50='vals',<452>,1:47], [@10,51:51=')',<288>,1:51]], tags=[[@7,41:44='tags',<452>,1:41], [@10,51:51=')',<288>,1:51]]}}",
+				"{update0={zipped_vals=[[@3,16:26='zipped_vals',<452>,1:16]]}}",
+				"{def_update0={assignments={zipped_vals=[{name=tags, table_ref=tab1}, {name=vals, table_ref=tab1}]}, table_dictionary={tab1={vals=[[@9,47:50='vals',<452>,1:47], [@10,51:51=')',<288>,1:51]], tags=[[@7,41:44='tags',<452>,1:41], [@10,51:51=')',<288>,1:51]]}}, update_dictionary={zipped_vals=[[@3,16:26='zipped_vals',<452>,1:16]]}, target_table={tab1={zipped_vals=[[@3,16:26='zipped_vals',<452>,1:16]]}}, lhs_unresolved_columns={zipped_vals={column={name=zipped_vals, table_ref=null}, locations=[[@3,16:26='zipped_vals',<452>,1:16]]}}}}");
+	}
+
+	@Test
+	public void snowflakeArraysZipDeletePlacementV0Test() {
+		final String query = "DELETE FROM tab1 WHERE arrays_zip(tags, vals) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'arrays_zip' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				23);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=vals, table_ref=null}}}}}, operator=IS NOT NULL}}}}}",
+				"[]",
+				"{}",
+				"{tab1={vals=[[@8,40:43='vals',<452>,1:40]], tags=[[@6,34:37='tags',<452>,1:34]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={tab1={vals=[[@8,40:43='vals',<452>,1:40]], tags=[[@6,34:37='tags',<452>,1:34]]}}, filters=[{name=tags, table_ref=tab1}, {name=vals, table_ref=tab1}], interface=null}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArraySelectSeedV0Test() {
+		final String query = "SELECT strtok_to_array(a.payload, a.sep) AS strtok_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}, alias=strtok_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[strtok_vals]",
+				"{}",
+				"{tab1={payload=[[@3,23:23='a',<452>,1:23]], sep=[[@7,34:34='a',<452>,1:34]]}}",
+				"{query0={strtok_vals=[[@12,44:54='strtok_vals',<452>,1:44]]}}",
+				"{def_query0={query_dictionary={strtok_vals=[[@12,44:54='strtok_vals',<452>,1:44]]}, table_dictionary={tab1={payload=[[@3,23:23='a',<452>,1:23]], sep=[[@7,34:34='a',<452>,1:34]]}}, interface={strtok_vals=[{name=payload, table_ref=a}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayMissingAliasFatalV0Test() {
+		final String query = "SELECT strtok_to_array(z.payload, a.sep) AS strtok_vals FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				7);
+		assertSingleMissingAliasFatal(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=z}}, 2={column={name=sep, table_ref=a}}}}, alias=strtok_vals}}, from={table={alias=a, table=tab1}}}}",
+				"[strtok_vals]",
+				"{}",
+				"{tab1={sep=[[@7,34:34='a',<452>,1:34]]}}",
+				"{query0={strtok_vals=[[@12,44:54='strtok_vals',<452>,1:44]]}}",
+				"{def_query0={query_dictionary={strtok_vals=[[@12,44:54='strtok_vals',<452>,1:44]]}, table_dictionary={tab1={sep=[[@7,34:34='a',<452>,1:34]]}}, interface={strtok_vals=[{name=payload, table_ref=z}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayWherePlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a WHERE strtok_to_array(a.tags, a.sep) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				30);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, operator=IS NOT NULL}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,46:46='a',<452>,1:46]], sep=[[@14,54:54='a',<452>,1:54]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@10,46:46='a',<452>,1:46]], sep=[[@14,54:54='a',<452>,1:54]]}}, filters=[{name=tags, table_ref=a}, {name=sep, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM tab1 a ORDER BY strtok_to_array(a.tags, a.sep)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				33);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
+				"[id]",
+				"{}",
+				"{tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,49:49='a',<452>,1:49]], sep=[[@15,57:57='a',<452>,1:57]]}}",
+				"{query0={id=[[@3,9:10='id',<452>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<452>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<452>,1:7]], tags=[[@11,49:49='a',<452>,1:49]], sep=[[@15,57:57='a',<452>,1:57]]}}, ordered_by=[{name=tags, table_ref=a}, {name=sep, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayValuesPlacementV0Test() {
+		final String query = "VALUES (strtok_to_array(a.tags, a.sep))";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				8);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={values={matrix={1={row={1={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}}}}}",
+				"[$1]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[]}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayInsertPlacementV0Test() {
+		final String query = "INSERT INTO tab_out(tok_vals) SELECT strtok_to_array(a.tags, a.sep) FROM tab1 a";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:37) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				37);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=tok_vals, table_ref=null}}}}}}",
+				"[tok_vals]",
+				"{}",
+				"{tab1={tags=[[@9,53:53='a',<452>,1:53]], sep=[[@13,61:61='a',<452>,1:61]]}, tab_out={tok_vals=[[@4,20:27='tok_vals',<452>,1:20]]}}",
+				"{query0={unnamed_0=[[@16,66:66=')',<288>,1:66]]}, insert1={tok_vals=[[@4,20:27='tok_vals',<452>,1:20]]}}",
+				"{def_insert1={query_dictionary={tok_vals=[[@4,20:27='tok_vals',<452>,1:20]]}, table_dictionary={tab_out={tok_vals=[[@4,20:27='tok_vals',<452>,1:20]]}}, def_query0={query_dictionary={unnamed_0=[[@16,66:66=')',<288>,1:66]]}, table_dictionary={tab1={tags=[[@9,53:53='a',<452>,1:53]], sep=[[@13,61:61='a',<452>,1:61]]}}, interface={unnamed_0=[{name=tags, table_ref=a}, {name=sep, table_ref=a}]}, table_alias={a=tab1}}, interface={tok_vals=[{name=unnamed_0, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayUpdatePlacementV0Test() {
+		final String query = "UPDATE tab1 SET tok_vals = strtok_to_array(tags, sep)";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=tok_vals, table_ref=null}}, to={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}}}}}}",
+				"[tok_vals]",
+				"{}",
+				"{tab1={tags=[[@7,43:46='tags',<452>,1:43], [@10,52:52=')',<288>,1:52]], sep=[[@9,49:51='sep',<452>,1:49], [@10,52:52=')',<288>,1:52]]}}",
+				"{update0={tok_vals=[[@3,16:23='tok_vals',<452>,1:16]]}}",
+				"{def_update0={assignments={tok_vals=[{name=tags, table_ref=tab1}, {name=sep, table_ref=tab1}]}, table_dictionary={tab1={tags=[[@7,43:46='tags',<452>,1:43], [@10,52:52=')',<288>,1:52]], sep=[[@9,49:51='sep',<452>,1:49], [@10,52:52=')',<288>,1:52]]}}, update_dictionary={tok_vals=[[@3,16:23='tok_vals',<452>,1:16]]}, target_table={tab1={tok_vals=[[@3,16:23='tok_vals',<452>,1:16]]}}, lhs_unresolved_columns={tok_vals={column={name=tok_vals, table_ref=null}, locations=[[@3,16:23='tok_vals',<452>,1:16]]}}}}");
+	}
+
+	@Test
+	public void snowflakeStrtokToArrayDeletePlacementV0Test() {
+		final String query = "DELETE FROM tab1 WHERE strtok_to_array(tags, sep) IS NOT NULL";
+		final SqlParseEventWalker extractor = runQuery(query);
+		final Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"routine 'strtok_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+				null,
+				1,
+				23);
+		assertNoFatalErrors(extractor);
+		assertOutputs(
+				extractor,
+				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}, operator=IS NOT NULL}}}}}",
+				"[]",
+				"{}",
+				"{tab1={tags=[[@6,39:42='tags',<452>,1:39]], sep=[[@8,45:47='sep',<452>,1:45]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={tab1={tags=[[@6,39:42='tags',<452>,1:39]], sep=[[@8,45:47='sep',<452>,1:45]]}}, filters=[{name=tags, table_ref=tab1}, {name=sep, table_ref=tab1}], interface=null}}");
+	}
 }

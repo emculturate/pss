@@ -12070,6 +12070,94 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
 	}
 
+	@Override
+	public void exitArray_conversion_seed_function(SQLSelectParserParser.Array_conversion_seed_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() == 2) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object argumentNode = subMap.remove("2");
+			if (argumentNode instanceof Map<?, ?> argumentMap) {
+				Map<String, Object> argsMap = (Map<String, Object>) argumentMap;
+				Object argsType = argsMap.remove(ASTWALKER_RULE_TYPE_KEY);
+				item.put(MUMBLE_PARAMETERS_KEY, argsMap.remove(argsType.toString()));
+				subMap.put(MUMBLE_FUNCTION_KEY, item);
+			}
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitArray_range_seed_function(SQLSelectParserParser.Array_range_seed_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() == 2) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object argumentNode = subMap.remove("2");
+			if (argumentNode instanceof Map<?, ?> argumentMap) {
+				Map<String, Object> argsMap = (Map<String, Object>) argumentMap;
+				Object argsType = argsMap.remove(ASTWALKER_RULE_TYPE_KEY);
+				item.put(MUMBLE_PARAMETERS_KEY, argsMap.remove(argsType.toString()));
+				subMap.put(MUMBLE_FUNCTION_KEY, item);
+			}
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitArray_position_seed_function(SQLSelectParserParser.Array_position_seed_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() == 2) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object argumentNode = subMap.remove("2");
+			if (argumentNode instanceof Map<?, ?> argumentMap) {
+				Map<String, Object> argsMap = (Map<String, Object>) argumentMap;
+				Object argsType = argsMap.remove(ASTWALKER_RULE_TYPE_KEY);
+				item.put(MUMBLE_PARAMETERS_KEY, argsMap.remove(argsType.toString()));
+				subMap.put(MUMBLE_FUNCTION_KEY, item);
+			}
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitArray_zip_seed_function(SQLSelectParserParser.Array_zip_seed_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() == 2) {
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object argumentNode = subMap.remove("2");
+			if (argumentNode instanceof Map<?, ?> argumentMap) {
+				Map<String, Object> argsMap = (Map<String, Object>) argumentMap;
+				Object argsType = argsMap.remove(ASTWALKER_RULE_TYPE_KEY);
+				item.put(MUMBLE_PARAMETERS_KEY, argsMap.remove(argsType.toString()));
+				subMap.put(MUMBLE_FUNCTION_KEY, item);
+			}
+		}
+
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
 	
 	@Override
 	public void exitRoutine_invocation( SQLSelectParserParser.Routine_invocationContext ctx) {

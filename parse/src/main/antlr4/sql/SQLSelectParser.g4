@@ -1265,6 +1265,10 @@ nonparenthesized_value_expression_primary
   | array_mutator_function
   | array_transform_function
   | array_unary_transform_function
+  | array_conversion_seed_function
+  | array_range_seed_function
+  | array_position_seed_function
+  | array_zip_seed_function
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
@@ -1335,6 +1339,43 @@ array_unary_transform_function_name
   : ARRAY_DISTINCT
   | ARRAY_COMPACT
   | ARRAY_SIZE
+  ;
+
+array_conversion_seed_function
+  : function=array_conversion_seed_function_name
+    LEFT_PAREN sql_argument_list RIGHT_PAREN
+  ;
+
+array_conversion_seed_function_name
+  : SPLIT_TO_ARRAY
+  | STRTOK_TO_ARRAY
+  ;
+
+array_range_seed_function
+  : function=array_range_seed_function_name
+    LEFT_PAREN sql_argument_list RIGHT_PAREN
+  ;
+
+array_range_seed_function_name
+  : ARRAY_GENERATE_RANGE
+  ;
+
+array_position_seed_function
+  : function=array_position_seed_function_name
+    LEFT_PAREN sql_argument_list RIGHT_PAREN
+  ;
+
+array_position_seed_function_name
+  : ARRAY_POSITION
+  ;
+
+array_zip_seed_function
+  : function=array_zip_seed_function_name
+    LEFT_PAREN sql_argument_list RIGHT_PAREN
+  ;
+
+array_zip_seed_function_name
+  : ARRAYS_ZIP
   ;
 /*
 ===============================================================================

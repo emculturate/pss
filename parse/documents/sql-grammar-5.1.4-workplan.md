@@ -2174,8 +2174,40 @@ Use bounded batches and close each before moving forward:
         - Focused unary transform suite and strict-golden reconciliation only.
         - Do not run Phase15/Smoketest/full parser ladder here; defer to Slice D final sign-off.
 3. **D3 (4.11 conversion/predicate/split-to-array):**
-   - Lock the exact target function set first, then implement signature-specific routing and tests.
-   - Enforce full matrix coverage and argument-shape diagnostics.
+   - Lock exact target function set, then implement signature-specific routing and tests.
+   - Safe bounded sequence (execute in order; run focused validation at each step, defer full ladder to Slice D final sign-off):
+     1. **D3.1 target-set lock + signature map (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) — complete (2026-11-17)**
+        - Exact 4.11 target list is frozen in this workplan/accounting with no placeholder terms.
+        - Signature-family map locked before code changes:
+          - conversion: `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`
+          - range: `ARRAY_GENERATE_RANGE`
+          - position/predicate: `ARRAY_POSITION`
+          - zip: `ARRAYS_ZIP`
+          - object conversion (GC3): `ARRAYS_TO_OBJECT`
+     2. **D3.2 seed grammar routing by signature family — complete (2026-11-17)**
+        - Added minimal dedicated grammar routes for representative functions by family:
+          - conversion: `SPLIT_TO_ARRAY`
+          - range: `ARRAY_GENERATE_RANGE`
+          - position/predicate: `ARRAY_POSITION`
+          - zip: `ARRAYS_ZIP`
+        - Kept routing explicit with narrow seed rules and no broad grammar refactor; object-conversion family (`ARRAYS_TO_OBJECT`) remains GC3-scoped pending lexer/token readiness.
+     3. **D3.3 seed walker handling by signature family — complete (2026-11-17)**
+        - Added signature-specific walker handling for seeded conversion/range/position/zip routes.
+        - Reused existing function-map + sql-argument handling shape and Snowflake dialect affinity recording path.
+     4. **D3.4 strict seed tests per family — complete (2026-11-17)**
+        - Added strict seed tests for representative conversion/range/position/zip routes (`SPLIT_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`).
+        - Added missing-alias fatal controls for eligible argument positions and reconciled full extractor goldens + positional diagnostics.
+     5. **D3.5 per-function matrix expansion — complete (2026-11-17)**
+        - Expand to full per-function placement matrix (`SELECT`/`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE` as applicable).
+        - Add unresolved/ambiguous/missing-alias and substitution-variable typing controls for eligible argument positions.
+        - Completed strict placement matrix for `SPLIT_TO_ARRAY`, `ARRAY_POSITION`, `ARRAY_GENERATE_RANGE`, `ARRAYS_ZIP`, and `STRTOK_TO_ARRAY` (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full literal goldens and positional diagnostics.
+        - Focused validation green: `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test`.
+     6. **D3.6 GC3 explicit closure (`ARRAYS_TO_OBJECT`)**
+        - Complete `ARRAYS_TO_OBJECT` routing/tests explicitly (no implicit carryover).
+        - Record explicit GC3 completion evidence in Entry 4 accounting.
+     7. **D3.7 D3 focused closeout**
+        - Run focused D3 family suites and reconcile strict literal/token-position goldens.
+        - Do not run Phase15/Smoketest/full parser ladder here; defer to Slice D final sign-off.
 
 **Validation policy for Stage D (reordered sign-off):**
 - **Per substep/batch (D1, D2.1…D2.5, D3 increments):** run focused family suites only and reconcile strict literal goldens/diagnostics.
@@ -2399,7 +2431,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress (Slice D / D1 + GC2) | Grammar/walker routes for `ARRAY_TO_STRING` + `ARRAY_SLICE` are active; `ARRAY_REPEAT` remains explicit GC2 scope and must close with strict per-function matrix. |
 | **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | In progress (Slice D / D2.2 complete; GC2 planned) | Unary route is live for `ARRAY_DISTINCT`/`ARRAY_COMPACT`/`ARRAY_SIZE` with strict per-function placement + resolution matrix closure and green validation ladder; continue D2.3→D2.5 with explicit GC2 closure for `ARRAY_REVERSE` and `ARRAY_SUM`. |
-| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | Not started (GC3 planned) | Implement explicit target set and add signature-shape + diagnostic contracts per function, including explicit GC3 closure for `ARRAYS_TO_OBJECT`. |
+| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | In progress (Slice D / D3.5 complete; GC3 planned) | D3.1 target set + signature-family map are locked; D3.2 seed grammar routes, D3.3 seed walker handling, D3.4 strict seed tests, and D3.5 per-function placement matrix closure are complete for conversion/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`); continue D3.6→D3.7 for explicit GC3 closure for `ARRAYS_TO_OBJECT`. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
 **Slice C closeout record (2026-11-17):**
@@ -2420,6 +2452,15 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
   - `mvn -pl parse -Dtest=sql.walker.Phase15DerivedColumnGateTestSuite test`
   - `mvn -pl parse -Dtest=sql.walker.SmoketestQualityGateTestSuite test`
   - `mvn -pl parse test`
+
+**Slice D D3 kickoff record (2026-11-17):**
+- D3.1 complete: locked explicit 4.11 target set (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) and fixed signature-family map (conversion/range/position/zip/object conversion) before code-routing work.
+- D3.2 complete: seeded dedicated grammar routes for representative conversion/range/position/zip functions (`SPLIT_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`) with explicit narrow routing and no broad grammar refactor.
+- D3.3 complete: added seed walker handling for the same representative conversion/range/position/zip routes, preserving routine-style argument mapping and Snowflake dialect affinity warning behavior.
+- D3.4 complete: added strict seed tests (happy + eligible missing-alias fatal controls) for `SPLIT_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, and `ARRAYS_ZIP` in `SqlEventWalkerSnowflakeArrayTransformTests`; focused transform suite green.
+- D3.5 started: completed strict `SPLIT_TO_ARRAY` placement matrix (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full goldens + diagnostics in `SqlEventWalkerSnowflakeArrayTransformTests`; focused transform suite green.
+- D3.5 advanced: completed strict `ARRAY_POSITION` placement matrix (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full goldens + diagnostics in `SqlEventWalkerSnowflakeArrayTransformTests`; focused transform suite green.
+- D3.5 complete: completed strict placement matrix closure for `ARRAY_GENERATE_RANGE`, `ARRAYS_ZIP`, and routed `STRTOK_TO_ARRAY` (including seed + missing-alias fatal + placement matrix), with focused transform suite green (`mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test`).
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

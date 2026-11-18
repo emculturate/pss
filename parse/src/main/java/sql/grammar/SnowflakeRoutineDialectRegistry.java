@@ -27,7 +27,13 @@ public final class SnowflakeRoutineDialectRegistry {
 			"array_slice",
 			"array_distinct",
 			"array_compact",
-			"array_size");
+			"array_size",
+			"split_to_array",
+			"strtok_to_array",
+			"array_generate_range",
+			"array_position",
+			"arrays_zip",
+			"arrays_to_object");
 
 	private SnowflakeRoutineDialectRegistry() {
 	}
