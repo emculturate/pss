@@ -1328,6 +1328,7 @@ array_transform_function
 array_transform_function_name
   : ARRAY_TO_STRING
   | ARRAY_SLICE
+  | ARRAY_REPEAT
   ;
 
 array_unary_transform_function
@@ -1339,6 +1340,11 @@ array_unary_transform_function_name
   : ARRAY_DISTINCT
   | ARRAY_COMPACT
   | ARRAY_SIZE
+  | ARRAY_SORT
+  | ARRAY_MAX
+  | ARRAY_MIN
+  | ARRAY_REVERSE
+  | ARRAY_SUM
   ;
 
 array_conversion_seed_function
@@ -1349,6 +1355,7 @@ array_conversion_seed_function
 array_conversion_seed_function_name
   : SPLIT_TO_ARRAY
   | STRTOK_TO_ARRAY
+  | ARRAYS_TO_OBJECT
   ;
 
 array_range_seed_function
@@ -2768,7 +2775,11 @@ nonreserved_keywords
   | ARRAY_SORT
   | ARRAY_MAX
   | ARRAY_MIN
+  | ARRAY_REVERSE
+  | ARRAY_SUM
+  | ARRAY_REPEAT
   | ARRAYS_ZIP
+  | ARRAYS_TO_OBJECT
   | SPLIT_TO_ARRAY
   | STRTOK_TO_ARRAY
   | TO_ARRAY
@@ -3728,10 +3739,11 @@ STATEMENT_TIMESTAMP : S T A T E M E N T UNDERLINE T I M E S T A M P;
 TRANSACTION_TIMESTAMP : T R A N S A C T I O N UNDERLINE T I M E S T A M P;
 TIMEOFDAY : T I M E O F D A Y;
 
-// Entry 4 late-added ARRAY gap tokens (D2.4 / D3.6), kept near Identifier to minimize token-ID impact.
+// Entry 4 late-added ARRAY gap tokens, kept near Identifier to minimize token-ID impact.
 ARRAY_REVERSE : A R R A Y UNDERLINE R E V E R S E;
 ARRAY_SUM : A R R A Y UNDERLINE S U M;
 ARRAYS_TO_OBJECT : A R R A Y S UNDERLINE T O UNDERLINE O B J E C T;
+ARRAY_REPEAT : A R R A Y UNDERLINE R E P E A T;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*

@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D:** complete remaining D2.3/D2.4/D2.5 and D3.6/D3.7, then run the Slice D final sign-off checklist.
+  - **Slice D:** D2.3/D2.4/D2.5 and D3.6/D3.7 are complete; finish the outstanding `ARRAY_REPEAT` work under 4.9, then run the Slice D final sign-off checklist.
   - **Slice E:** complete `4.5` advanced `FLATTEN` parity and `4.12` higher-order (`FILTER`/`TRANSFORM`/`REDUCE`) closure.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2216,15 +2216,18 @@ Use bounded batches and close each before moving forward:
      2. **D2.2 route expansion (`ARRAY_COMPACT`, `ARRAY_SIZE`)**
         - Extend unary name set in grammar route.
         - Add strict per-function core matrix (SELECT/WHERE/ORDER BY/VALUES/INSERT/UPDATE/DELETE as applicable).
-     3. **D2.3 route expansion (`ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`)**
+     3. **D2.3 route expansion (`ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`) — complete (2026-11-18)**
         - Extend unary name set and complete per-function strict matrix.
         - Add unresolved/ambiguous/missing-alias controls and substitution typing checks.
-     4. **D2.4 GC2 unary closure (`ARRAY_REVERSE`, `ARRAY_SUM`)**
+        - Completed with 78 new strict tests (28 sort, 25 max, 25 min); focused transform suite: 162 passed, zero failures/errors/skips. See the D2.3 completion record below.
+     4. **D2.4 GC2 unary closure (`ARRAY_REVERSE`, `ARRAY_SUM`) — complete (2026-11-18)**
         - After lexer/token readiness, extend unary route and complete strict per-function matrix.
         - Record explicit GC2 completion evidence in Entry 4 accounting.
-     5. **D2.5 D2 focused closeout**
+        - Completed with 54 new strict tests (27 per function); focused transform suite: 216 passed, zero failures/errors/skips. This closes the GC2 unary portion only; `ARRAY_REPEAT` remains open under 4.9.
+     5. **D2.5 D2 focused closeout — complete (2026-11-18)**
         - Focused unary transform suite and strict-golden reconciliation only.
         - Do not run Phase15/Smoketest/full parser ladder here; defer to Slice D final sign-off.
+        - Fresh Maven and VS Code focused runs both passed 216/216; no golden reconciliation or additional production changes were needed.
 3. **D3 (4.11 conversion/predicate/split-to-array):**
    - Lock exact target function set, then implement signature-specific routing and tests.
    - Safe bounded sequence (execute in order; run focused validation at each step, defer full ladder to Slice D final sign-off):
@@ -2242,7 +2245,7 @@ Use bounded batches and close each before moving forward:
           - range: `ARRAY_GENERATE_RANGE`
           - position/predicate: `ARRAY_POSITION`
           - zip: `ARRAYS_ZIP`
-        - Kept routing explicit with narrow seed rules and no broad grammar refactor; object-conversion family (`ARRAYS_TO_OBJECT`) remains GC3-scoped pending lexer/token readiness.
+        - Kept routing explicit with narrow seed rules and no broad grammar refactor; object conversion (`ARRAYS_TO_OBJECT`) was initially deferred to GC3 and is now completed under D3.6 below.
      3. **D3.3 seed walker handling by signature family — complete (2026-11-17)**
         - Added signature-specific walker handling for seeded conversion/range/position/zip routes.
         - Reused existing function-map + sql-argument handling shape and Snowflake dialect affinity recording path.
@@ -2254,12 +2257,14 @@ Use bounded batches and close each before moving forward:
         - Add unresolved/ambiguous/missing-alias and substitution-variable typing controls for eligible argument positions.
         - Completed strict placement matrix for `SPLIT_TO_ARRAY`, `ARRAY_POSITION`, `ARRAY_GENERATE_RANGE`, `ARRAYS_ZIP`, and `STRTOK_TO_ARRAY` (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full literal goldens and positional diagnostics.
         - Focused validation green: `mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test`.
-     6. **D3.6 GC3 explicit closure (`ARRAYS_TO_OBJECT`)**
+     6. **D3.6 GC3 explicit closure (`ARRAYS_TO_OBJECT`) — complete (2026-11-18)**
         - Complete `ARRAYS_TO_OBJECT` routing/tests explicitly (no implicit carryover).
         - Record explicit GC3 completion evidence in Entry 4 accounting.
-     7. **D3.7 D3 focused closeout**
+        - Routed explicitly through the existing conversion-family grammar/walker and added 40 cases: 38 full-golden extractor tests and two parser-only malformed-argument syntax controls. Focused Maven and VS Code runs pass 256/256. D3.7 focused closeout is recorded below.
+     7. **D3.7 D3 focused closeout — complete (2026-11-18)**
         - Run focused D3 family suites and reconcile strict literal/token-position goldens.
         - Do not run Phase15/Smoketest/full parser ladder here; defer to Slice D final sign-off.
+        - Fresh Maven and VS Code runs of `SqlEventWalkerSnowflakeArrayTransformTests`, covering all six D3 functions, pass 256/256. Existing full literal goldens and positioned diagnostics pass unchanged; no reconciliation or production-code changes were required.
 
 **Validation policy for Stage D (reordered sign-off):**
 - **Per substep/batch (D1, D2.1…D2.5, D3 increments):** run focused family suites only and reconcile strict literal goldens/diagnostics.
@@ -2321,11 +2326,13 @@ All five gap functions are in-scope for Entry 4 closure. Sequence them in bounde
      - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
      - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (unary transforms/scalar)
    - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
+   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` have dedicated unary routing and 27 strict tests each; focused transform suite passes 216/216. `ARRAY_REPEAT` (4.9) and the Slice D sign-off ladder remain open.
 
 3. **GC3 — Slice D conversion extension**
    - Function: `ARRAYS_TO_OBJECT`
    - Attach to: **4.11**
    - Deliverables: conversion-family routing, argument-shape diagnostics, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
+   - D3.6 implementation and D3.7 focused closeout complete (2026-11-18): dedicated conversion-family routing, both-argument resolution/substitution controls, all twelve placement sites, and malformed-comma diagnostics are covered. Focused transform suite passes 256/256; broad Slice D sign-off remains open.
 
 4. **GC4 — matrix/accounting closeout**
    - Update Entry 4 matrix/accounting tables to list all five functions as completed.
@@ -2481,9 +2488,9 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress (Slice D / D1 + GC2) | Grammar/walker routes for `ARRAY_TO_STRING` + `ARRAY_SLICE` are active; `ARRAY_REPEAT` remains explicit GC2 scope and must close with strict per-function matrix. |
-| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | In progress (Slice D / D2.2 complete; GC2 planned) | Unary route is live for `ARRAY_DISTINCT`/`ARRAY_COMPACT`/`ARRAY_SIZE` with strict per-function placement + resolution matrix closure and green validation ladder; continue D2.3→D2.5 with explicit GC2 closure for `ARRAY_REVERSE` and `ARRAY_SUM`. |
-| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | In progress (Slice D / D3.5 complete; GC3 planned) | D3.1 target set + signature-family map are locked; D3.2 seed grammar routes, D3.3 seed walker handling, D3.4 strict seed tests, and D3.5 per-function placement matrix closure are complete for conversion/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`); continue D3.6→D3.7 for explicit GC3 closure for `ARRAYS_TO_OBJECT`. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress (Slice D / D1 + GC2) | All three names have transform routing. `ARRAY_REPEAT` now has its lexer token, nonreserved-name handling, Snowflake registry entry, and passing routing seed. Its strict per-function matrix and manual token-ID golden repairs remain pending; see the checkpoint below. |
+| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | D2 focused closeout complete (D2.5); Slice D gates pending | All eight names use the unary route and Snowflake affinity registry. D2.3 and D2.4 add independent full placement/resolution/substitution/diagnostic matrices for sort/max/min/reverse/sum. Fresh D2.5 Maven and VS Code focused runs pass 216/216 with no golden changes required. The GC2 unary portion is complete; the broad Slice D sign-off ladder remains deferred. |
+| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) | D3 focused closeout complete (D3.7); Slice D gates pending | All six functions have explicit family routing. D3.6 completes GC3 implementation for `ARRAYS_TO_OBJECT` with 40 new placement, both-argument resolution/substitution, scope, dialect, and syntax cases. Fresh D3.7 Maven and VS Code focused runs pass 256/256 with unchanged strict goldens and positioned diagnostics. The Slice D sign-off ladder remains open. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
 **Slice C closeout record (2026-11-17):**
@@ -2505,6 +2512,33 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
   - `mvn -pl parse -Dtest=sql.walker.SmoketestQualityGateTestSuite test`
   - `mvn -pl parse test`
 
+**Slice D D2.3 completion record (2026-11-18):**
+- Added the existing `ARRAY_SORT`, `ARRAY_MAX`, and `ARRAY_MIN` tokens to the unary transform name rule; reused the existing unary walker and registered all three names for Snowflake statement affinity. No lexer entries or token IDs changed.
+- Added 78 one-query-per-method tests in `SqlEventWalkerSnowflakeArrayTransformTests`: 28 for sort and 25 each for max/min. All 84 pre-existing tests and their goldens are unchanged.
+- Each function independently covers SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY, VALUES, INSERT, UPDATE, DELETE, DDL, and SCRIPT. Each also covers nested expressions, derived-output consumption, set-op sibling isolation, qualified/unqualified/unresolved/ambiguous/missing/hidden aliases, and predicand versus qualified-column substitutions.
+- All new tests assert six complete extractor goldens and the exact diagnostic list (including full messages, severity, code, line/column positions, and count). SCRIPT controls assert Snowflake/ANSI/Snowflake statement reset; schema-qualified UDF controls remain dialect-neutral; mixed PostgreSQL/Snowflake controls assert the fatal diagnostic.
+- `ARRAY_SORT` additionally preserves its existing generic two-/three-argument forms, including descending/null-ordering flags and substitution typing for optional arguments.
+- Traceability: AR-C38/39/40 identify sort/max/min core cases; AR-M20/21/22/23/24 cover unresolved/ambiguous/missing-or-hidden/schema-qualified/mixed-dialect controls; AR-R18/19/20 cover nesting-and-derived/set-op/SCRIPT controls.
+- Validation: the three initial routing tests failed before implementation and passed afterward. `mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false test` passed **162/162**, with zero failures, errors, or skips. VS Code's test runner independently passed the same **162** tests.
+- Scope remains D2.3 only. D2.4 (`ARRAY_REVERSE`/`ARRAY_SUM`), D2.5, and the Slice D sign-off ladder are not claimed complete.
+
+**Slice D D2.4 completion record (2026-11-18):**
+- Added the already-declared `ARRAY_REVERSE` and `ARRAY_SUM` tokens to the unary transform name rule and registered their Snowflake affinity, reusing the existing unary walker. Added both names to the nonreserved-keyword rule, consistent with the other array functions, so schema-qualified UDFs and ordinary column names remain supported. Lexer declarations and token IDs are unchanged.
+- Added 54 one-query-per-method tests in `SqlEventWalkerSnowflakeArrayTransformTests`, 27 per function. All 162 pre-existing tests and their goldens, including the D2.3 additions, are unchanged.
+- Each function independently covers SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY, VALUES, INSERT, UPDATE, DELETE, DDL, and SCRIPT; nested expressions, derived-output consumption, and set-op sibling isolation; qualified/unqualified/unresolved/ambiguous/missing/hidden aliases; and predicand versus qualified-column substitutions.
+- Every new test asserts six complete extractor goldens and the exact diagnostic list, including full messages, severity, code, line/column positions, and count. Additional controls cover uppercase calls, NULL operands, dialect-neutral schema-qualified UDFs and same-named columns, mixed PostgreSQL/Snowflake diagnostics, and Snowflake/ANSI/Snowflake SCRIPT reset.
+- Traceability: AR-C39/40 identify the reverse/sum core cases; AR-M20..24 identify resolution and dialect controls; AR-R18..20 identify nesting/derived, set-op, and SCRIPT controls. Function-name suffixes distinguish these cases from D2.3.
+- Validation: both new seed tests failed before implementation and passed afterward. `mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false test` passed **216/216**, with zero failures, errors, or skips. VS Code's test runner independently passed the same **216** tests. The complete lexer-rule section matches the committed baseline; generated lexer constants remain `ARRAY_REVERSE=452`, `ARRAY_SUM=453`, `ARRAYS_TO_OBJECT=454`, and `Identifier=455`.
+- This completes D2.4 and the GC2 unary portion, not all GC2 work. `ARRAY_REPEAT` remains open in 4.9; D2.5 and the broad Slice D sign-off ladder are not claimed complete.
+
+**Slice D D2.5 focused closeout record (2026-11-18):**
+- Confirmed all eight 4.10 unary function names are present in the dedicated unary grammar route and shared Snowflake affinity registry.
+- Reran `mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false test`: **216 passed**, zero failures, errors, or skips.
+- Independently reran the same focused class through VS Code's test runner: **216 passed**, zero failures.
+- Existing strict extractor goldens and diagnostic assertions pass unchanged; no golden reconciliation, lexer/token-ID changes, or additional production-code changes were needed for D2.5.
+- D2 focused closeout is complete. This is not a full parser/release sign-off: Phase15, Smoketest, and the full parser ladder were deliberately not run, as required by the bounded sequence.
+- Remaining Slice D work includes `ARRAY_REPEAT` under 4.9, D3.6/D3.7 for `ARRAYS_TO_OBJECT`, and the final Slice D sign-off ladder.
+
 **Slice D D3 kickoff record (2026-11-17):**
 - D3.1 complete: locked explicit 4.11 target set (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`) and fixed signature-family map (conversion/range/position/zip/object conversion) before code-routing work.
 - D3.2 complete: seeded dedicated grammar routes for representative conversion/range/position/zip functions (`SPLIT_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`) with explicit narrow routing and no broad grammar refactor.
@@ -2513,6 +2547,55 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 - D3.5 started: completed strict `SPLIT_TO_ARRAY` placement matrix (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full goldens + diagnostics in `SqlEventWalkerSnowflakeArrayTransformTests`; focused transform suite green.
 - D3.5 advanced: completed strict `ARRAY_POSITION` placement matrix (`WHERE`/`ORDER BY`/`VALUES`/`INSERT`/`UPDATE`/`DELETE`) with full goldens + diagnostics in `SqlEventWalkerSnowflakeArrayTransformTests`; focused transform suite green.
 - D3.5 complete: completed strict placement matrix closure for `ARRAY_GENERATE_RANGE`, `ARRAYS_ZIP`, and routed `STRTOK_TO_ARRAY` (including seed + missing-alias fatal + placement matrix), with focused transform suite green (`mvn -pl parse -Dtest=sql.walker.SqlEventWalkerSnowflakeArrayTransformTests test`).
+
+**Slice D D3.6 completion record (2026-11-18):**
+- Added the already-declared `ARRAYS_TO_OBJECT` token to the explicit conversion-family name rule and nonreserved-keyword list. Reused the existing conversion walker, ordered argument-list handling, and existing Snowflake registry entry; no duplicate walker or dialect logic was introduced.
+- Added 40 one-query-per-method cases in `SqlEventWalkerSnowflakeArrayTransformTests`: 38 tests assert all six complete extractor goldens and the exact diagnostic list; two parser-only syntax tests assert exact error counts and full positioned diagnostics for missing/trailing commas without walking rejected syntax trees.
+- Independently covered SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY, VALUES, INSERT, UPDATE, DELETE, DDL, and SCRIPT; nested expressions, derived-output consumption, and set-op sibling isolation; and qualified/unqualified operands.
+- Both key-array and value-array positions independently cover unresolved, ambiguous, missing/hidden aliases, predicand substitutions, qualified-column substitutions, and NULL operands. Combined column-variable, array-literal, NULL key/value element, uppercase, schema-qualified UDF, same-named column, mixed-dialect, and SCRIPT-reset controls are also included.
+- Traceability: AR-C40 core/placement and argument-shape cases; AR-M20..24 resolution/dialect/syntax controls; AR-R18..20 nesting/derived, set-op, and SCRIPT controls.
+- The parser records argument expressions; it does not execute the function or validate runtime key types, array lengths, or resulting object contents.
+- Validation: the initial routing test failed before implementation and passed afterward. `mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false test` passed **256/256**, zero failures/errors/skips; VS Code independently passed **256** tests. All 216 existing test methods/goldens are unchanged.
+- Lexer declarations match the committed baseline; generated constants remain `ARRAYS_TO_OBJECT=454` and `Identifier=455`. D3.7 is deliberately still open, per the requested D3.6-only scope; no Phase15/Smoketest/full parser ladder was run.
+
+**Slice D D3.7 focused closeout record (2026-11-18):**
+- Confirmed `SqlEventWalkerSnowflakeArrayTransformTests` is the focused family host for all six D3 functions: `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, and `ARRAYS_TO_OBJECT`.
+- Fresh `mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false test` completed successfully (exit code 0): **256 passed**, zero failures, errors, or skips.
+- Independently reran the same focused class through VS Code's test runner: **256 passed**, zero failures.
+- Full literal extractor goldens and positioned diagnostic assertions passed unchanged. D3.7 required no test/golden reconciliation, new tests, production-code changes, or lexer/token-ID changes.
+- D3 focused closeout and GC3 focused accounting are complete, not full parser/release sign-off. Phase15, Smoketest, and the full parser ladder were deliberately not run.
+- Remaining Slice D work is `ARRAY_REPEAT` under 4.9/GC2, followed by the single final Slice D sign-off ladder.
+
+**Slice D ARRAY_REPEAT implementation checkpoint (2026-11-18; incomplete):**
+- Added `ARRAY_REPEAT` immediately before `Identifier`, included it in the existing multi-argument transform route and nonreserved-keyword list, and registered Snowflake affinity. The existing transform walker is reused unchanged.
+- The new routing seed failed before implementation (expected one dedicated transform node, observed zero) and passed afterward.
+- The strict per-function matrix is not yet generated. No existing golden strings were rewritten. Final Slice D sign-off has not run and is blocked on matrix completion and the developer's manual token-ID repairs.
+- The preceding D2/D3 passing counts describe runs before this lexer addition; they are not a claim that the current full suite is green.
+- Official generated Java lexer snapshots confirm one new token, `ARRAY_REPEAT=455`, and a uniform **+1** shift for all 21 following tokens. All earlier token IDs are unchanged. Apply this complete manual worklist from highest ID downward:
+
+| Token | Before | After | Delta |
+|---|---:|---:|---:|
+| BAD | 475 | 476 | +1 |
+| RIGHT_BRACKET | 474 | 475 | +1 |
+| Bracket_Identifier | 473 | 474 | +1 |
+| JINJA_CLOSE | 472 | 473 | +1 |
+| JINJA_OPEN | 471 | 472 | +1 |
+| NOTHING | 470 | 471 | +1 |
+| DO | 469 | 470 | +1 |
+| CONSTRAINT | 468 | 469 | +1 |
+| CONFLICT | 467 | 468 | +1 |
+| White_Space | 466 | 467 | +1 |
+| Space | 465 | 466 | +1 |
+| Pivot_Identifier | 464 | 465 | +1 |
+| Character_String_Literal | 463 | 464 | +1 |
+| LineComment | 462 | 463 | +1 |
+| BlockComment | 461 | 462 | +1 |
+| Dollar_Sign_Identifier | 460 | 461 | +1 |
+| Double_Quoted_Numeric_Identifier | 459 | 460 | +1 |
+| Numeric_Identifier | 458 | 459 | +1 |
+| Scientific_Numeric_Literal | 457 | 458 | +1 |
+| EXPONEN | 456 | 457 | +1 |
+| Identifier | 455 | 456 | +1 |
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 
