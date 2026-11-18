@@ -59,9 +59,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 7);
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
-				"[shifted]", "{}", "{events={ts=[[@7,23:23='a',<452>,1:23]]}}",
-				"{query0={shifted=[[@12,32:38='shifted',<452>,1:32]]}}",
-				"{def_query0={query_dictionary={shifted=[[@12,32:38='shifted',<452>,1:32]]}, table_dictionary={events={ts=[[@7,23:23='a',<452>,1:23]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}");
+				"[shifted]", "{}", "{events={ts=[[@7,23:23='a',<455>,1:23]]}}",
+				"{query0={shifted=[[@12,32:38='shifted',<455>,1:32]]}}",
+				"{def_query0={query_dictionary={shifted=[[@12,32:38='shifted',<455>,1:32]]}, table_dictionary={events={ts=[[@7,23:23='a',<455>,1:23]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -70,9 +70,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 8);
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}}}",
-				"[shifted]", "{}", "{events={ts=[[@8,24:24='a',<452>,1:24]]}}",
-				"{query0={shifted=[[@13,33:39='shifted',<452>,1:33]]}}",
-				"{def_query0={query_dictionary={shifted=[[@13,33:39='shifted',<452>,1:33]]}, table_dictionary={events={ts=[[@8,24:24='a',<452>,1:24]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[shifted]", "{}", "{events={ts=[[@8,24:24='a',<455>,1:24]]}}",
+				"{query0={shifted=[[@13,33:39='shifted',<455>,1:33]]}}",
+				"{def_query0={query_dictionary={shifted=[[@13,33:39='shifted',<455>,1:33]]}, table_dictionary={events={ts=[[@8,24:24='a',<455>,1:24]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -90,8 +90,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 19);
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=b}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={ts=[[@10,35:35='b',<452>,1:35]]}}", "{}",
-				"{table_dictionary={accounts={ts=[[@10,35:35='b',<452>,1:35]]}}, filters=[{name=ts, table_ref=b}], table_alias={b=accounts}}");
+				"[]", "{}", "{accounts={ts=[[@10,35:35='b',<455>,1:35]]}}", "{}",
+				"{table_dictionary={accounts={ts=[[@10,35:35='b',<455>,1:35]]}}, filters=[{name=ts, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -110,9 +110,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 36);
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=shifted, table_ref=null}}}}}}",
-				"[shifted]", "{}", "{events={ts=[[@13,52:52='a',<452>,1:52]]}, target={shifted=[[@4,20:26='shifted',<452>,1:20]]}}",
-				"{query0={shifted=[[@18,61:67='shifted',<452>,1:61]]}, insert1={shifted=[[@4,20:26='shifted',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={shifted=[[@4,20:26='shifted',<452>,1:20]]}, table_dictionary={target={shifted=[[@4,20:26='shifted',<452>,1:20]]}}, def_query0={query_dictionary={shifted=[[@18,61:67='shifted',<452>,1:61]]}, table_dictionary={events={ts=[[@13,52:52='a',<452>,1:52]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}, interface={shifted=[{name=shifted, table_ref=query0}]}}}");
+				"[shifted]", "{}", "{events={ts=[[@13,52:52='a',<455>,1:52]]}, target={shifted=[[@4,20:26='shifted',<455>,1:20]]}}",
+				"{query0={shifted=[[@18,61:67='shifted',<455>,1:61]]}, insert1={shifted=[[@4,20:26='shifted',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={shifted=[[@4,20:26='shifted',<455>,1:20]]}, table_dictionary={target={shifted=[[@4,20:26='shifted',<455>,1:20]]}}, def_query0={query_dictionary={shifted=[[@18,61:67='shifted',<455>,1:61]]}, table_dictionary={events={ts=[[@13,52:52='a',<455>,1:52]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}, interface={shifted=[{name=shifted, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -121,9 +121,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 23);
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=ts, table_ref=null}}, to={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=null}}}}}}}}}",
-				"[ts]", "{}", "{events={ts=[[@11,39:40='ts',<452>,1:39]]}}",
-				"{update0={ts=[[@3,18:19='ts',<452>,1:18]]}}",
-				"{def_update0={assignments={ts=[{name=ts, table_ref=events}]}, table_dictionary={events={ts=[[@11,39:40='ts',<452>,1:39]]}}, update_dictionary={ts=[[@3,18:19='ts',<452>,1:18]]}, target_table={events={ts=[[@3,18:19='ts',<452>,1:18], [@11,39:40='ts',<452>,1:39], [@12,41:41=')',<288>,1:41]]}}, lhs_unresolved_columns={ts={column={name=ts, table_ref=null}, locations=[[@3,18:19='ts',<452>,1:18], [@11,39:40='ts',<452>,1:39], [@12,41:41=')',<288>,1:41]]}}}}");
+				"[ts]", "{}", "{events={ts=[[@11,39:40='ts',<455>,1:39]]}}",
+				"{update0={ts=[[@3,18:19='ts',<455>,1:18]]}}",
+				"{def_update0={assignments={ts=[{name=ts, table_ref=events}]}, table_dictionary={events={ts=[[@11,39:40='ts',<455>,1:39]]}}, update_dictionary={ts=[[@3,18:19='ts',<455>,1:18]]}, target_table={events={ts=[[@3,18:19='ts',<455>,1:18], [@11,39:40='ts',<455>,1:39], [@12,41:41=')',<288>,1:41]]}}, lhs_unresolved_columns={ts={column={name=ts, table_ref=null}, locations=[[@3,18:19='ts',<455>,1:18], [@11,39:40='ts',<455>,1:39], [@12,41:41=')',<288>,1:41]]}}}}");
 	}
 
 	@Test
@@ -132,8 +132,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 25);
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=null}}}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}}}",
-				"[]", "{}", "{events={ts=[[@10,41:42='ts',<452>,1:41]]}}", "{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={ts=[[@10,41:42='ts',<452>,1:41]]}}, filters=[{name=ts, table_ref=events}], interface=null}}");
+				"[]", "{}", "{events={ts=[[@10,41:42='ts',<455>,1:41]]}}", "{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={ts=[[@10,41:42='ts',<455>,1:41]]}}, filters=[{name=ts, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -142,9 +142,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertSingleSnowflakeDatetimeAddWarning(parser, 1, 24);
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={ts=[[@11,40:40='a',<452>,1:40]]}}",
-				"{query0={shifted=[[@16,49:55='shifted',<452>,1:49]]}}",
-				"{def_create1={def_query0={query_dictionary={shifted=[[@16,49:55='shifted',<452>,1:49]]}, table_dictionary={events={ts=[[@11,40:40='a',<452>,1:40]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={ts=[[@11,40:40='a',<455>,1:40]]}}",
+				"{query0={shifted=[[@16,49:55='shifted',<455>,1:49]]}}",
+				"{def_create1={def_query0={query_dictionary={shifted=[[@16,49:55='shifted',<455>,1:49]]}, table_dictionary={events={ts=[[@11,40:40='a',<455>,1:40]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -154,8 +154,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={literal=1}, value={source_type=DATE, literal=2026-01-01}}}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={shifted=[[@11,45:51='shifted',<452>,1:45]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={shifted=[[@11,45:51='shifted',<452>,1:45]]}, interface={shifted=[]}}}}}");
+				"{SCRIPT={1={query0={shifted=[[@11,45:51='shifted',<455>,1:45]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={shifted=[[@11,45:51='shifted',<455>,1:45]]}, interface={shifted=[]}}}}}");
 	}
 
 	@Test
@@ -179,9 +179,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("select datediff(day, a.start_ts, a.end_ts) as delta from events a", "QUERY");
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={alias=delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=a}}, right={column={name=end_ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
-				"[delta]", "{}", "{events={start_ts=[[@5,21:21='a',<452>,1:21]], end_ts=[[@9,33:33='a',<452>,1:33]]}}",
-				"{query0={delta=[[@14,46:50='delta',<452>,1:46]]}}",
-				"{def_query0={query_dictionary={delta=[[@14,46:50='delta',<452>,1:46]]}, table_dictionary={events={start_ts=[[@5,21:21='a',<452>,1:21]], end_ts=[[@9,33:33='a',<452>,1:33]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}}");
+				"[delta]", "{}", "{events={start_ts=[[@5,21:21='a',<455>,1:21]], end_ts=[[@9,33:33='a',<455>,1:33]]}}",
+				"{query0={delta=[[@14,46:50='delta',<455>,1:46]]}}",
+				"{def_query0={query_dictionary={delta=[[@14,46:50='delta',<455>,1:46]]}, table_dictionary={events={start_ts=[[@5,21:21='a',<455>,1:21]], end_ts=[[@9,33:33='a',<455>,1:33]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -189,9 +189,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("(select datediff(day, a.start_ts, a.end_ts) as delta from events a)", "TUPLE");
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={alias=delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=a}}, right={column={name=end_ts, table_ref=a}}}}}}}",
-				"[delta]", "{}", "{events={start_ts=[[@6,22:22='a',<452>,1:22]], end_ts=[[@10,34:34='a',<452>,1:34]]}}",
-				"{query0={delta=[[@15,47:51='delta',<452>,1:47]]}}",
-				"{def_query0={query_dictionary={delta=[[@15,47:51='delta',<452>,1:47]]}, table_dictionary={events={start_ts=[[@6,22:22='a',<452>,1:22]], end_ts=[[@10,34:34='a',<452>,1:34]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[delta]", "{}", "{events={start_ts=[[@6,22:22='a',<455>,1:22]], end_ts=[[@10,34:34='a',<455>,1:34]]}}",
+				"{query0={delta=[[@15,47:51='delta',<455>,1:47]]}}",
+				"{def_query0={query_dictionary={delta=[[@15,47:51='delta',<455>,1:47]]}, table_dictionary={events={start_ts=[[@6,22:22='a',<455>,1:22]], end_ts=[[@10,34:34='a',<455>,1:34]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -207,9 +207,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("join accounts b on datediff(day, b.start_ts, b.end_ts) > 0", "JOIN_EXTENSION");
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=b}}, right={column={name=end_ts, table_ref=b}}}}, right={literal=0}, operator=>}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={start_ts=[[@8,33:33='b',<452>,1:33]], end_ts=[[@12,45:45='b',<452>,1:45]]}}",
+				"[]", "{}", "{accounts={start_ts=[[@8,33:33='b',<455>,1:33]], end_ts=[[@12,45:45='b',<455>,1:45]]}}",
 				"{}",
-				"{table_dictionary={accounts={start_ts=[[@8,33:33='b',<452>,1:33]], end_ts=[[@12,45:45='b',<452>,1:45]]}}, filters=[{name=start_ts, table_ref=b}, {name=end_ts, table_ref=b}], table_alias={b=accounts}}");
+				"{table_dictionary={accounts={start_ts=[[@8,33:33='b',<455>,1:33]], end_ts=[[@12,45:45='b',<455>,1:45]]}}, filters=[{name=start_ts, table_ref=b}, {name=end_ts, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -226,9 +226,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (delta) select datediff(day, a.start_ts, a.end_ts) as delta from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={alias=delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=a}}, right={column={name=end_ts, table_ref=a}}}}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=delta, table_ref=null}}}}}}",
-				"[delta]", "{}", "{events={start_ts=[[@11,48:48='a',<452>,1:48]], end_ts=[[@15,60:60='a',<452>,1:60]]}, target={delta=[[@4,20:24='delta',<452>,1:20]]}}",
-				"{query0={delta=[[@20,73:77='delta',<452>,1:73]]}, insert1={delta=[[@4,20:24='delta',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={delta=[[@4,20:24='delta',<452>,1:20]]}, table_dictionary={target={delta=[[@4,20:24='delta',<452>,1:20]]}}, def_query0={query_dictionary={delta=[[@20,73:77='delta',<452>,1:73]]}, table_dictionary={events={start_ts=[[@11,48:48='a',<452>,1:48]], end_ts=[[@15,60:60='a',<452>,1:60]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}, interface={delta=[{name=delta, table_ref=query0}]}}}");
+				"[delta]", "{}", "{events={start_ts=[[@11,48:48='a',<455>,1:48]], end_ts=[[@15,60:60='a',<455>,1:60]]}, target={delta=[[@4,20:24='delta',<455>,1:20]]}}",
+				"{query0={delta=[[@20,73:77='delta',<455>,1:73]]}, insert1={delta=[[@4,20:24='delta',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={delta=[[@4,20:24='delta',<455>,1:20]]}, table_dictionary={target={delta=[[@4,20:24='delta',<455>,1:20]]}}, def_query0={query_dictionary={delta=[[@20,73:77='delta',<455>,1:73]]}, table_dictionary={events={start_ts=[[@11,48:48='a',<455>,1:48]], end_ts=[[@15,60:60='a',<455>,1:60]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}, interface={delta=[{name=delta, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -236,9 +236,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("update events set delta = datediff(day, start_ts, end_ts)", "UPDATE");
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=delta, table_ref=null}}, to={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=null}}, right={column={name=end_ts, table_ref=null}}}}}}}}}",
-				"[delta]", "{}", "{events={start_ts=[[@9,40:47='start_ts',<452>,1:40], [@12,56:56=')',<288>,1:56]], end_ts=[[@11,50:55='end_ts',<452>,1:50], [@12,56:56=')',<288>,1:56]]}}",
-				"{update0={delta=[[@3,18:22='delta',<452>,1:18]]}}",
-				"{def_update0={assignments={delta=[{name=start_ts, table_ref=events}, {name=end_ts, table_ref=events}]}, table_dictionary={events={start_ts=[[@9,40:47='start_ts',<452>,1:40], [@12,56:56=')',<288>,1:56]], end_ts=[[@11,50:55='end_ts',<452>,1:50], [@12,56:56=')',<288>,1:56]]}}, update_dictionary={delta=[[@3,18:22='delta',<452>,1:18]]}, target_table={events={delta=[[@3,18:22='delta',<452>,1:18]]}}, lhs_unresolved_columns={delta={column={name=delta, table_ref=null}, locations=[[@3,18:22='delta',<452>,1:18]]}}}}");
+				"[delta]", "{}", "{events={start_ts=[[@9,40:47='start_ts',<455>,1:40], [@12,56:56=')',<288>,1:56]], end_ts=[[@11,50:55='end_ts',<455>,1:50], [@12,56:56=')',<288>,1:56]]}}",
+				"{update0={delta=[[@3,18:22='delta',<455>,1:18]]}}",
+				"{def_update0={assignments={delta=[{name=start_ts, table_ref=events}, {name=end_ts, table_ref=events}]}, table_dictionary={events={start_ts=[[@9,40:47='start_ts',<455>,1:40], [@12,56:56=')',<288>,1:56]], end_ts=[[@11,50:55='end_ts',<455>,1:50], [@12,56:56=')',<288>,1:56]]}}, update_dictionary={delta=[[@3,18:22='delta',<455>,1:18]]}, target_table={events={delta=[[@3,18:22='delta',<455>,1:18]]}}, lhs_unresolved_columns={delta={column={name=delta, table_ref=null}, locations=[[@3,18:22='delta',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -246,9 +246,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("delete from events where datediff(day, start_ts, end_ts) > 0", "DELETE");
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=null}}, right={column={name=end_ts, table_ref=null}}}}, right={literal=0}, operator=>}}}}}",
-				"[]", "{}", "{events={start_ts=[[@8,39:46='start_ts',<452>,1:39]], end_ts=[[@10,49:54='end_ts',<452>,1:49]]}}",
+				"[]", "{}", "{events={start_ts=[[@8,39:46='start_ts',<455>,1:39]], end_ts=[[@10,49:54='end_ts',<455>,1:49]]}}",
 				"{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={start_ts=[[@8,39:46='start_ts',<452>,1:39]], end_ts=[[@10,49:54='end_ts',<452>,1:49]]}}, filters=[{name=start_ts, table_ref=events}, {name=end_ts, table_ref=events}], interface=null}}");
+				"{def_delete0={query_dictionary={}, table_dictionary={events={start_ts=[[@8,39:46='start_ts',<455>,1:39]], end_ts=[[@10,49:54='end_ts',<455>,1:49]]}}, filters=[{name=start_ts, table_ref=events}, {name=end_ts, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -256,9 +256,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("create view v as select datediff(day, a.start_ts, a.end_ts) as delta from events a", "DDL");
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={alias=delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={column={name=start_ts, table_ref=a}}, right={column={name=end_ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={start_ts=[[@9,38:38='a',<452>,1:38]], end_ts=[[@13,50:50='a',<452>,1:50]]}}",
-				"{query0={delta=[[@18,63:67='delta',<452>,1:63]]}}",
-				"{def_create1={def_query0={query_dictionary={delta=[[@18,63:67='delta',<452>,1:63]]}, table_dictionary={events={start_ts=[[@9,38:38='a',<452>,1:38]], end_ts=[[@13,50:50='a',<452>,1:50]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={start_ts=[[@9,38:38='a',<455>,1:38]], end_ts=[[@13,50:50='a',<455>,1:50]]}}",
+				"{query0={delta=[[@18,63:67='delta',<455>,1:63]]}}",
+				"{def_create1={def_query0={query_dictionary={delta=[[@18,63:67='delta',<455>,1:63]]}, table_dictionary={events={start_ts=[[@9,38:38='a',<455>,1:38]], end_ts=[[@13,50:50='a',<455>,1:50]]}}, interface={delta=[{name=start_ts, table_ref=a}, {name=end_ts, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -267,8 +267,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={alias=delta, datetime_function={function_name=datediff, level={canonical=DAY, text=day, form=KEYWORD}, left={source_type=DATE, literal=2026-01-01}, right={source_type=DATE, literal=2026-01-03}}}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={delta=[[@12,62:66='delta',<452>,1:62]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={delta=[[@12,62:66='delta',<452>,1:62]]}, interface={delta=[]}}}}}");
+				"{SCRIPT={1={query0={delta=[[@12,62:66='delta',<455>,1:62]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={delta=[[@12,62:66='delta',<455>,1:62]]}, interface={delta=[]}}}}}");
 	}
 
 	@Test
@@ -368,9 +368,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("select date_bin(INTERVAL '1 day', a.ts, a.origin_ts) as binned from events a", "QUERY");
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=a}}, 3={column={name=origin_ts, table_ref=a}}}, function_name=date_bin}, alias=binned}}, from={table={alias=a, table=events}}}}",
-				"[binned]", "{}", "{events={origin_ts=[[@10,40:40='a',<452>,1:40]], ts=[[@6,34:34='a',<452>,1:34]]}}",
-				"{query0={binned=[[@15,56:61='binned',<452>,1:56]]}}",
-				"{def_query0={query_dictionary={binned=[[@15,56:61='binned',<452>,1:56]]}, table_dictionary={events={origin_ts=[[@10,40:40='a',<452>,1:40]], ts=[[@6,34:34='a',<452>,1:34]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}}");
+				"[binned]", "{}", "{events={origin_ts=[[@10,40:40='a',<455>,1:40]], ts=[[@6,34:34='a',<455>,1:34]]}}",
+				"{query0={binned=[[@15,56:61='binned',<455>,1:56]]}}",
+				"{def_query0={query_dictionary={binned=[[@15,56:61='binned',<455>,1:56]]}, table_dictionary={events={origin_ts=[[@10,40:40='a',<455>,1:40]], ts=[[@6,34:34='a',<455>,1:34]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -378,9 +378,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("(select date_bin(INTERVAL '1 day', a.ts, a.origin_ts) as binned from events a)", "TUPLE");
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=a}}, 3={column={name=origin_ts, table_ref=a}}}, function_name=date_bin}, alias=binned}}}}",
-				"[binned]", "{}", "{events={origin_ts=[[@11,41:41='a',<452>,1:41]], ts=[[@7,35:35='a',<452>,1:35]]}}",
-				"{query0={binned=[[@16,57:62='binned',<452>,1:57]]}}",
-				"{def_query0={query_dictionary={binned=[[@16,57:62='binned',<452>,1:57]]}, table_dictionary={events={origin_ts=[[@11,41:41='a',<452>,1:41]], ts=[[@7,35:35='a',<452>,1:35]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[binned]", "{}", "{events={origin_ts=[[@11,41:41='a',<455>,1:41]], ts=[[@7,35:35='a',<455>,1:35]]}}",
+				"{query0={binned=[[@16,57:62='binned',<455>,1:57]]}}",
+				"{def_query0={query_dictionary={binned=[[@16,57:62='binned',<455>,1:57]]}, table_dictionary={events={origin_ts=[[@11,41:41='a',<455>,1:41]], ts=[[@7,35:35='a',<455>,1:35]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -398,9 +398,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("join accounts b on date_bin(INTERVAL '1 day', b.ts, b.origin_ts) > DATE '2026-01-01'", "JOIN_EXTENSION");
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=b}}, 3={column={name=origin_ts, table_ref=b}}}, function_name=date_bin}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={origin_ts=[[@13,52:52='b',<452>,1:52]], ts=[[@9,46:46='b',<452>,1:46]]}}",
+				"[]", "{}", "{accounts={origin_ts=[[@13,52:52='b',<455>,1:52]], ts=[[@9,46:46='b',<455>,1:46]]}}",
 				"{}",
-				"{table_dictionary={accounts={origin_ts=[[@13,52:52='b',<452>,1:52]], ts=[[@9,46:46='b',<452>,1:46]]}}, filters=[{name=ts, table_ref=b}, {name=origin_ts, table_ref=b}], table_alias={b=accounts}}");
+				"{table_dictionary={accounts={origin_ts=[[@13,52:52='b',<455>,1:52]], ts=[[@9,46:46='b',<455>,1:46]]}}, filters=[{name=ts, table_ref=b}, {name=origin_ts, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -418,9 +418,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (binned) select date_bin(INTERVAL '1 day', a.ts, a.origin_ts) as binned from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=a}}, 3={column={name=origin_ts, table_ref=a}}}, function_name=date_bin}, alias=binned}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=binned, table_ref=null}}}}}}",
-				"[binned]", "{}", "{events={origin_ts=[[@16,68:68='a',<452>,1:68]], ts=[[@12,62:62='a',<452>,1:62]]}, target={binned=[[@4,20:25='binned',<452>,1:20]]}}",
-				"{query0={binned=[[@21,84:89='binned',<452>,1:84]]}, insert1={binned=[[@4,20:25='binned',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={binned=[[@4,20:25='binned',<452>,1:20]]}, table_dictionary={target={binned=[[@4,20:25='binned',<452>,1:20]]}}, def_query0={query_dictionary={binned=[[@21,84:89='binned',<452>,1:84]]}, table_dictionary={events={origin_ts=[[@16,68:68='a',<452>,1:68]], ts=[[@12,62:62='a',<452>,1:62]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}, interface={binned=[{name=binned, table_ref=query0}]}}}");
+				"[binned]", "{}", "{events={origin_ts=[[@16,68:68='a',<455>,1:68]], ts=[[@12,62:62='a',<455>,1:62]]}, target={binned=[[@4,20:25='binned',<455>,1:20]]}}",
+				"{query0={binned=[[@21,84:89='binned',<455>,1:84]]}, insert1={binned=[[@4,20:25='binned',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={binned=[[@4,20:25='binned',<455>,1:20]]}, table_dictionary={target={binned=[[@4,20:25='binned',<455>,1:20]]}}, def_query0={query_dictionary={binned=[[@21,84:89='binned',<455>,1:84]]}, table_dictionary={events={origin_ts=[[@16,68:68='a',<455>,1:68]], ts=[[@12,62:62='a',<455>,1:62]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}, interface={binned=[{name=binned, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -428,9 +428,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("update events set binned_ts = date_bin(INTERVAL '1 day', ts, origin_ts)", "UPDATE");
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=binned_ts, table_ref=null}}, to={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=null}}, 3={column={name=origin_ts, table_ref=null}}}, function_name=date_bin}}}}}}}",
-				"[binned_ts]", "{}", "{events={origin_ts=[[@12,61:69='origin_ts',<452>,1:61], [@13,70:70=')',<288>,1:70]], ts=[[@10,57:58='ts',<452>,1:57], [@13,70:70=')',<288>,1:70]]}}",
-				"{update0={binned_ts=[[@3,18:26='binned_ts',<452>,1:18]]}}",
-				"{def_update0={assignments={binned_ts=[{name=ts, table_ref=events}, {name=origin_ts, table_ref=events}]}, table_dictionary={events={origin_ts=[[@12,61:69='origin_ts',<452>,1:61], [@13,70:70=')',<288>,1:70]], ts=[[@10,57:58='ts',<452>,1:57], [@13,70:70=')',<288>,1:70]]}}, update_dictionary={binned_ts=[[@3,18:26='binned_ts',<452>,1:18]]}, target_table={events={binned_ts=[[@3,18:26='binned_ts',<452>,1:18]]}}, lhs_unresolved_columns={binned_ts={column={name=binned_ts, table_ref=null}, locations=[[@3,18:26='binned_ts',<452>,1:18]]}}}}");
+				"[binned_ts]", "{}", "{events={origin_ts=[[@12,61:69='origin_ts',<455>,1:61], [@13,70:70=')',<288>,1:70]], ts=[[@10,57:58='ts',<455>,1:57], [@13,70:70=')',<288>,1:70]]}}",
+				"{update0={binned_ts=[[@3,18:26='binned_ts',<455>,1:18]]}}",
+				"{def_update0={assignments={binned_ts=[{name=ts, table_ref=events}, {name=origin_ts, table_ref=events}]}, table_dictionary={events={origin_ts=[[@12,61:69='origin_ts',<455>,1:61], [@13,70:70=')',<288>,1:70]], ts=[[@10,57:58='ts',<455>,1:57], [@13,70:70=')',<288>,1:70]]}}, update_dictionary={binned_ts=[[@3,18:26='binned_ts',<455>,1:18]]}, target_table={events={binned_ts=[[@3,18:26='binned_ts',<455>,1:18]]}}, lhs_unresolved_columns={binned_ts={column={name=binned_ts, table_ref=null}, locations=[[@3,18:26='binned_ts',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -438,9 +438,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("delete from events where date_bin(INTERVAL '1 day', ts, origin_ts) > DATE '2026-01-01'", "DELETE");
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=null}}, 3={column={name=origin_ts, table_ref=null}}}, function_name=date_bin}}, right={source_type=DATE, literal=2026-01-01}, operator=>}}}}}",
-				"[]", "{}", "{events={origin_ts=[[@11,56:64='origin_ts',<452>,1:56]], ts=[[@9,52:53='ts',<452>,1:52]]}}",
+				"[]", "{}", "{events={origin_ts=[[@11,56:64='origin_ts',<455>,1:56]], ts=[[@9,52:53='ts',<455>,1:52]]}}",
 				"{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={origin_ts=[[@11,56:64='origin_ts',<452>,1:56]], ts=[[@9,52:53='ts',<452>,1:52]]}}, filters=[{name=ts, table_ref=events}, {name=origin_ts, table_ref=events}], interface=null}}");
+				"{def_delete0={query_dictionary={}, table_dictionary={events={origin_ts=[[@11,56:64='origin_ts',<455>,1:56]], ts=[[@9,52:53='ts',<455>,1:52]]}}, filters=[{name=ts, table_ref=events}, {name=origin_ts, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -448,9 +448,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("create view v as select date_bin(INTERVAL '1 day', a.ts, a.origin_ts) as binned from events a", "DDL");
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={column={name=ts, table_ref=a}}, 3={column={name=origin_ts, table_ref=a}}}, function_name=date_bin}, alias=binned}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={origin_ts=[[@14,57:57='a',<452>,1:57]], ts=[[@10,51:51='a',<452>,1:51]]}}",
-				"{query0={binned=[[@19,73:78='binned',<452>,1:73]]}}",
-				"{def_create1={def_query0={query_dictionary={binned=[[@19,73:78='binned',<452>,1:73]]}, table_dictionary={events={origin_ts=[[@14,57:57='a',<452>,1:57]], ts=[[@10,51:51='a',<452>,1:51]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={origin_ts=[[@14,57:57='a',<455>,1:57]], ts=[[@10,51:51='a',<455>,1:51]]}}",
+				"{query0={binned=[[@19,73:78='binned',<455>,1:73]]}}",
+				"{def_create1={def_query0={query_dictionary={binned=[[@19,73:78='binned',<455>,1:73]]}, table_dictionary={events={origin_ts=[[@14,57:57='a',<455>,1:57]], ts=[[@10,51:51='a',<455>,1:51]]}}, interface={binned=[{name=ts, table_ref=a}, {name=origin_ts, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -459,8 +459,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={function={parameters={1={source_type=INTERVAL, literal=1 day}, 2={source_type=DATE, literal=2026-01-02}, 3={source_type=DATE, literal=2026-01-01}}, function_name=date_bin}, alias=binned}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={binned=[[@13,75:80='binned',<452>,1:75]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={binned=[[@13,75:80='binned',<452>,1:75]]}, interface={binned=[]}}}}}");
+				"{SCRIPT={1={query0={binned=[[@13,75:80='binned',<455>,1:75]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={binned=[[@13,75:80='binned',<455>,1:75]]}, interface={binned=[]}}}}}");
 	}
 
 	@Test
@@ -488,9 +488,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("select age(a.end_ts, a.start_ts) as age_delta from events a", "QUERY");
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={function={parameters={1={column={name=end_ts, table_ref=a}}, 2={column={name=start_ts, table_ref=a}}}, function_name=age}, alias=age_delta}}, from={table={alias=a, table=events}}}}",
-				"[age_delta]", "{}", "{events={start_ts=[[@7,21:21='a',<452>,1:21]], end_ts=[[@3,11:11='a',<452>,1:11]]}}",
-				"{query0={age_delta=[[@12,36:44='age_delta',<452>,1:36]]}}",
-				"{def_query0={query_dictionary={age_delta=[[@12,36:44='age_delta',<452>,1:36]]}, table_dictionary={events={start_ts=[[@7,21:21='a',<452>,1:21]], end_ts=[[@3,11:11='a',<452>,1:11]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}}");
+				"[age_delta]", "{}", "{events={start_ts=[[@7,21:21='a',<455>,1:21]], end_ts=[[@3,11:11='a',<455>,1:11]]}}",
+				"{query0={age_delta=[[@12,36:44='age_delta',<455>,1:36]]}}",
+				"{def_query0={query_dictionary={age_delta=[[@12,36:44='age_delta',<455>,1:36]]}, table_dictionary={events={start_ts=[[@7,21:21='a',<455>,1:21]], end_ts=[[@3,11:11='a',<455>,1:11]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -498,9 +498,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("(select age(a.end_ts, a.start_ts) as age_delta from events a)", "TUPLE");
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=end_ts, table_ref=a}}, 2={column={name=start_ts, table_ref=a}}}, function_name=age}, alias=age_delta}}}}",
-				"[age_delta]", "{}", "{events={start_ts=[[@8,22:22='a',<452>,1:22]], end_ts=[[@4,12:12='a',<452>,1:12]]}}",
-				"{query0={age_delta=[[@13,37:45='age_delta',<452>,1:37]]}}",
-				"{def_query0={query_dictionary={age_delta=[[@13,37:45='age_delta',<452>,1:37]]}, table_dictionary={events={start_ts=[[@8,22:22='a',<452>,1:22]], end_ts=[[@4,12:12='a',<452>,1:12]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[age_delta]", "{}", "{events={start_ts=[[@8,22:22='a',<455>,1:22]], end_ts=[[@4,12:12='a',<455>,1:12]]}}",
+				"{query0={age_delta=[[@13,37:45='age_delta',<455>,1:37]]}}",
+				"{def_query0={query_dictionary={age_delta=[[@13,37:45='age_delta',<455>,1:37]]}, table_dictionary={events={start_ts=[[@8,22:22='a',<455>,1:22]], end_ts=[[@4,12:12='a',<455>,1:12]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -518,9 +518,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("join accounts b on age(b.end_ts, b.start_ts) is not null", "JOIN_EXTENSION");
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={function={parameters={1={column={name=end_ts, table_ref=b}}, 2={column={name=start_ts, table_ref=b}}}, function_name=age}}, operator=is not null}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={start_ts=[[@10,33:33='b',<452>,1:33]], end_ts=[[@6,23:23='b',<452>,1:23]]}}",
+				"[]", "{}", "{accounts={start_ts=[[@10,33:33='b',<455>,1:33]], end_ts=[[@6,23:23='b',<455>,1:23]]}}",
 				"{}",
-				"{table_dictionary={accounts={start_ts=[[@10,33:33='b',<452>,1:33]], end_ts=[[@6,23:23='b',<452>,1:23]]}}, filters=[{name=end_ts, table_ref=b}, {name=start_ts, table_ref=b}], table_alias={b=accounts}}");
+				"{table_dictionary={accounts={start_ts=[[@10,33:33='b',<455>,1:33]], end_ts=[[@6,23:23='b',<455>,1:23]]}}, filters=[{name=end_ts, table_ref=b}, {name=start_ts, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -538,9 +538,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (age_delta) select age(a.end_ts, a.start_ts) as age_delta from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=end_ts, table_ref=a}}, 2={column={name=start_ts, table_ref=a}}}, function_name=age}, alias=age_delta}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=age_delta, table_ref=null}}}}}}",
-				"[age_delta]", "{}", "{events={start_ts=[[@13,52:52='a',<452>,1:52]], end_ts=[[@9,42:42='a',<452>,1:42]]}, target={age_delta=[[@4,20:28='age_delta',<452>,1:20]]}}",
-				"{query0={age_delta=[[@18,67:75='age_delta',<452>,1:67]]}, insert1={age_delta=[[@4,20:28='age_delta',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={age_delta=[[@4,20:28='age_delta',<452>,1:20]]}, table_dictionary={target={age_delta=[[@4,20:28='age_delta',<452>,1:20]]}}, def_query0={query_dictionary={age_delta=[[@18,67:75='age_delta',<452>,1:67]]}, table_dictionary={events={start_ts=[[@13,52:52='a',<452>,1:52]], end_ts=[[@9,42:42='a',<452>,1:42]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}, interface={age_delta=[{name=age_delta, table_ref=query0}]}}}");
+				"[age_delta]", "{}", "{events={start_ts=[[@13,52:52='a',<455>,1:52]], end_ts=[[@9,42:42='a',<455>,1:42]]}, target={age_delta=[[@4,20:28='age_delta',<455>,1:20]]}}",
+				"{query0={age_delta=[[@18,67:75='age_delta',<455>,1:67]]}, insert1={age_delta=[[@4,20:28='age_delta',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={age_delta=[[@4,20:28='age_delta',<455>,1:20]]}, table_dictionary={target={age_delta=[[@4,20:28='age_delta',<455>,1:20]]}}, def_query0={query_dictionary={age_delta=[[@18,67:75='age_delta',<455>,1:67]]}, table_dictionary={events={start_ts=[[@13,52:52='a',<455>,1:52]], end_ts=[[@9,42:42='a',<455>,1:42]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}, interface={age_delta=[{name=age_delta, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -548,9 +548,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("update events set age_delta = age(end_ts, start_ts)", "UPDATE");
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=age_delta, table_ref=null}}, to={function={parameters={1={column={name=end_ts, table_ref=null}}, 2={column={name=start_ts, table_ref=null}}}, function_name=age}}}}}}}",
-				"[age_delta]", "{}", "{events={start_ts=[[@9,42:49='start_ts',<452>,1:42], [@10,50:50=')',<288>,1:50]], end_ts=[[@7,34:39='end_ts',<452>,1:34], [@10,50:50=')',<288>,1:50]]}}",
-				"{update0={age_delta=[[@3,18:26='age_delta',<452>,1:18]]}}",
-				"{def_update0={assignments={age_delta=[{name=end_ts, table_ref=events}, {name=start_ts, table_ref=events}]}, table_dictionary={events={start_ts=[[@9,42:49='start_ts',<452>,1:42], [@10,50:50=')',<288>,1:50]], end_ts=[[@7,34:39='end_ts',<452>,1:34], [@10,50:50=')',<288>,1:50]]}}, update_dictionary={age_delta=[[@3,18:26='age_delta',<452>,1:18]]}, target_table={events={age_delta=[[@3,18:26='age_delta',<452>,1:18]]}}, lhs_unresolved_columns={age_delta={column={name=age_delta, table_ref=null}, locations=[[@3,18:26='age_delta',<452>,1:18]]}}}}");
+				"[age_delta]", "{}", "{events={start_ts=[[@9,42:49='start_ts',<455>,1:42], [@10,50:50=')',<288>,1:50]], end_ts=[[@7,34:39='end_ts',<455>,1:34], [@10,50:50=')',<288>,1:50]]}}",
+				"{update0={age_delta=[[@3,18:26='age_delta',<455>,1:18]]}}",
+				"{def_update0={assignments={age_delta=[{name=end_ts, table_ref=events}, {name=start_ts, table_ref=events}]}, table_dictionary={events={start_ts=[[@9,42:49='start_ts',<455>,1:42], [@10,50:50=')',<288>,1:50]], end_ts=[[@7,34:39='end_ts',<455>,1:34], [@10,50:50=')',<288>,1:50]]}}, update_dictionary={age_delta=[[@3,18:26='age_delta',<455>,1:18]]}, target_table={events={age_delta=[[@3,18:26='age_delta',<455>,1:18]]}}, lhs_unresolved_columns={age_delta={column={name=age_delta, table_ref=null}, locations=[[@3,18:26='age_delta',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -558,9 +558,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("delete from events where age(end_ts, start_ts) is not null", "DELETE");
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={function={parameters={1={column={name=end_ts, table_ref=null}}, 2={column={name=start_ts, table_ref=null}}}, function_name=age}}, operator=is not null}}}}}",
-				"[]", "{}", "{events={start_ts=[[@8,37:44='start_ts',<452>,1:37]], end_ts=[[@6,29:34='end_ts',<452>,1:29]]}}",
+				"[]", "{}", "{events={start_ts=[[@8,37:44='start_ts',<455>,1:37]], end_ts=[[@6,29:34='end_ts',<455>,1:29]]}}",
 				"{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={start_ts=[[@8,37:44='start_ts',<452>,1:37]], end_ts=[[@6,29:34='end_ts',<452>,1:29]]}}, filters=[{name=end_ts, table_ref=events}, {name=start_ts, table_ref=events}], interface=null}}");
+				"{def_delete0={query_dictionary={}, table_dictionary={events={start_ts=[[@8,37:44='start_ts',<455>,1:37]], end_ts=[[@6,29:34='end_ts',<455>,1:29]]}}, filters=[{name=end_ts, table_ref=events}, {name=start_ts, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -568,9 +568,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("create view v as select age(a.end_ts, a.start_ts) as age_delta from events a", "DDL");
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={function={parameters={1={column={name=end_ts, table_ref=a}}, 2={column={name=start_ts, table_ref=a}}}, function_name=age}, alias=age_delta}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={start_ts=[[@11,38:38='a',<452>,1:38]], end_ts=[[@7,28:28='a',<452>,1:28]]}}",
-				"{query0={age_delta=[[@16,53:61='age_delta',<452>,1:53]]}}",
-				"{def_create1={def_query0={query_dictionary={age_delta=[[@16,53:61='age_delta',<452>,1:53]]}, table_dictionary={events={start_ts=[[@11,38:38='a',<452>,1:38]], end_ts=[[@7,28:28='a',<452>,1:28]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={start_ts=[[@11,38:38='a',<455>,1:38]], end_ts=[[@7,28:28='a',<455>,1:28]]}}",
+				"{query0={age_delta=[[@16,53:61='age_delta',<455>,1:53]]}}",
+				"{def_create1={def_query0={query_dictionary={age_delta=[[@16,53:61='age_delta',<455>,1:53]]}, table_dictionary={events={start_ts=[[@11,38:38='a',<455>,1:38]], end_ts=[[@7,28:28='a',<455>,1:28]]}}, interface={age_delta=[{name=end_ts, table_ref=a}, {name=start_ts, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -579,8 +579,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={function={parameters={1={source_type=TIMESTAMP, literal=2026-01-03 00:00:00}, 2={source_type=TIMESTAMP, literal=2026-01-01 00:00:00}}, function_name=age}, alias=age_delta}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={age_delta=[[@10,80:88='age_delta',<452>,1:80]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={age_delta=[[@10,80:88='age_delta',<452>,1:80]]}, interface={age_delta=[]}}}}}");
+				"{SCRIPT={1={query0={age_delta=[[@10,80:88='age_delta',<455>,1:80]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={age_delta=[[@10,80:88='age_delta',<455>,1:80]]}, interface={age_delta=[]}}}}}");
 	}
 
 	@Test
@@ -608,9 +608,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("select make_timestamp(a.y, a.m, a.d, a.h, a.mi, a.s) as made_ts from events a", "QUERY");
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={function={parameters={1={column={name=y, table_ref=a}}, 2={column={name=m, table_ref=a}}, 3={column={name=d, table_ref=a}}, 4={column={name=h, table_ref=a}}, 5={column={name=mi, table_ref=a}}, 6={column={name=s, table_ref=a}}}, function_name=make_timestamp}, alias=made_ts}}, from={table={alias=a, table=events}}}}",
-				"[made_ts]", "{}", "{events={s=[[@23,48:48='a',<452>,1:48]], d=[[@11,32:32='a',<452>,1:32]], h=[[@15,37:37='a',<452>,1:37]], y=[[@3,22:22='a',<452>,1:22]], mi=[[@19,42:42='a',<452>,1:42]], m=[[@7,27:27='a',<452>,1:27]]}}",
-				"{query0={made_ts=[[@28,56:62='made_ts',<452>,1:56]]}}",
-				"{def_query0={query_dictionary={made_ts=[[@28,56:62='made_ts',<452>,1:56]]}, table_dictionary={events={s=[[@23,48:48='a',<452>,1:48]], d=[[@11,32:32='a',<452>,1:32]], h=[[@15,37:37='a',<452>,1:37]], y=[[@3,22:22='a',<452>,1:22]], mi=[[@19,42:42='a',<452>,1:42]], m=[[@7,27:27='a',<452>,1:27]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}}");
+				"[made_ts]", "{}", "{events={s=[[@23,48:48='a',<455>,1:48]], d=[[@11,32:32='a',<455>,1:32]], h=[[@15,37:37='a',<455>,1:37]], y=[[@3,22:22='a',<455>,1:22]], mi=[[@19,42:42='a',<455>,1:42]], m=[[@7,27:27='a',<455>,1:27]]}}",
+				"{query0={made_ts=[[@28,56:62='made_ts',<455>,1:56]]}}",
+				"{def_query0={query_dictionary={made_ts=[[@28,56:62='made_ts',<455>,1:56]]}, table_dictionary={events={s=[[@23,48:48='a',<455>,1:48]], d=[[@11,32:32='a',<455>,1:32]], h=[[@15,37:37='a',<455>,1:37]], y=[[@3,22:22='a',<455>,1:22]], mi=[[@19,42:42='a',<455>,1:42]], m=[[@7,27:27='a',<455>,1:27]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -618,9 +618,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("(select make_timestamp(a.y, a.m, a.d, a.h, a.mi, a.s) as made_ts from events a)", "TUPLE");
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=y, table_ref=a}}, 2={column={name=m, table_ref=a}}, 3={column={name=d, table_ref=a}}, 4={column={name=h, table_ref=a}}, 5={column={name=mi, table_ref=a}}, 6={column={name=s, table_ref=a}}}, function_name=make_timestamp}, alias=made_ts}}}}",
-				"[made_ts]", "{}", "{events={s=[[@24,49:49='a',<452>,1:49]], d=[[@12,33:33='a',<452>,1:33]], h=[[@16,38:38='a',<452>,1:38]], y=[[@4,23:23='a',<452>,1:23]], mi=[[@20,43:43='a',<452>,1:43]], m=[[@8,28:28='a',<452>,1:28]]}}",
-				"{query0={made_ts=[[@29,57:63='made_ts',<452>,1:57]]}}",
-				"{def_query0={query_dictionary={made_ts=[[@29,57:63='made_ts',<452>,1:57]]}, table_dictionary={events={s=[[@24,49:49='a',<452>,1:49]], d=[[@12,33:33='a',<452>,1:33]], h=[[@16,38:38='a',<452>,1:38]], y=[[@4,23:23='a',<452>,1:23]], mi=[[@20,43:43='a',<452>,1:43]], m=[[@8,28:28='a',<452>,1:28]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[made_ts]", "{}", "{events={s=[[@24,49:49='a',<455>,1:49]], d=[[@12,33:33='a',<455>,1:33]], h=[[@16,38:38='a',<455>,1:38]], y=[[@4,23:23='a',<455>,1:23]], mi=[[@20,43:43='a',<455>,1:43]], m=[[@8,28:28='a',<455>,1:28]]}}",
+				"{query0={made_ts=[[@29,57:63='made_ts',<455>,1:57]]}}",
+				"{def_query0={query_dictionary={made_ts=[[@29,57:63='made_ts',<455>,1:57]]}, table_dictionary={events={s=[[@24,49:49='a',<455>,1:49]], d=[[@12,33:33='a',<455>,1:33]], h=[[@16,38:38='a',<455>,1:38]], y=[[@4,23:23='a',<455>,1:23]], mi=[[@20,43:43='a',<455>,1:43]], m=[[@8,28:28='a',<455>,1:28]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -638,9 +638,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("join accounts b on make_timestamp(b.y, b.m, b.d, b.h, b.mi, b.s) > TIMESTAMP '2026-01-01 00:00:00'", "JOIN_EXTENSION");
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={function={parameters={1={column={name=y, table_ref=b}}, 2={column={name=m, table_ref=b}}, 3={column={name=d, table_ref=b}}, 4={column={name=h, table_ref=b}}, 5={column={name=mi, table_ref=b}}, 6={column={name=s, table_ref=b}}}, function_name=make_timestamp}}, right={source_type=TIMESTAMP, literal=2026-01-01 00:00:00}, operator=>}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={s=[[@26,60:60='b',<452>,1:60]], d=[[@14,44:44='b',<452>,1:44]], h=[[@18,49:49='b',<452>,1:49]], y=[[@6,34:34='b',<452>,1:34]], mi=[[@22,54:54='b',<452>,1:54]], m=[[@10,39:39='b',<452>,1:39]]}}",
+				"[]", "{}", "{accounts={s=[[@26,60:60='b',<455>,1:60]], d=[[@14,44:44='b',<455>,1:44]], h=[[@18,49:49='b',<455>,1:49]], y=[[@6,34:34='b',<455>,1:34]], mi=[[@22,54:54='b',<455>,1:54]], m=[[@10,39:39='b',<455>,1:39]]}}",
 				"{}",
-				"{table_dictionary={accounts={s=[[@26,60:60='b',<452>,1:60]], d=[[@14,44:44='b',<452>,1:44]], h=[[@18,49:49='b',<452>,1:49]], y=[[@6,34:34='b',<452>,1:34]], mi=[[@22,54:54='b',<452>,1:54]], m=[[@10,39:39='b',<452>,1:39]]}}, filters=[{name=y, table_ref=b}, {name=m, table_ref=b}, {name=d, table_ref=b}, {name=h, table_ref=b}, {name=mi, table_ref=b}, {name=s, table_ref=b}], table_alias={b=accounts}}");
+				"{table_dictionary={accounts={s=[[@26,60:60='b',<455>,1:60]], d=[[@14,44:44='b',<455>,1:44]], h=[[@18,49:49='b',<455>,1:49]], y=[[@6,34:34='b',<455>,1:34]], mi=[[@22,54:54='b',<455>,1:54]], m=[[@10,39:39='b',<455>,1:39]]}}, filters=[{name=y, table_ref=b}, {name=m, table_ref=b}, {name=d, table_ref=b}, {name=h, table_ref=b}, {name=mi, table_ref=b}, {name=s, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -658,9 +658,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (made_ts) select make_timestamp(a.y, a.m, a.d, a.h, a.mi, a.s) as made_ts from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=y, table_ref=a}}, 2={column={name=m, table_ref=a}}, 3={column={name=d, table_ref=a}}, 4={column={name=h, table_ref=a}}, 5={column={name=mi, table_ref=a}}, 6={column={name=s, table_ref=a}}}, function_name=make_timestamp}, alias=made_ts}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=made_ts, table_ref=null}}}}}}",
-				"[made_ts]", "{}", "{events={s=[[@29,77:77='a',<452>,1:77]], d=[[@17,61:61='a',<452>,1:61]], h=[[@21,66:66='a',<452>,1:66]], y=[[@9,51:51='a',<452>,1:51]], mi=[[@25,71:71='a',<452>,1:71]], m=[[@13,56:56='a',<452>,1:56]]}, target={made_ts=[[@4,20:26='made_ts',<452>,1:20]]}}",
-				"{query0={made_ts=[[@34,85:91='made_ts',<452>,1:85]]}, insert1={made_ts=[[@4,20:26='made_ts',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={made_ts=[[@4,20:26='made_ts',<452>,1:20]]}, table_dictionary={target={made_ts=[[@4,20:26='made_ts',<452>,1:20]]}}, def_query0={query_dictionary={made_ts=[[@34,85:91='made_ts',<452>,1:85]]}, table_dictionary={events={s=[[@29,77:77='a',<452>,1:77]], d=[[@17,61:61='a',<452>,1:61]], h=[[@21,66:66='a',<452>,1:66]], y=[[@9,51:51='a',<452>,1:51]], mi=[[@25,71:71='a',<452>,1:71]], m=[[@13,56:56='a',<452>,1:56]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}, interface={made_ts=[{name=made_ts, table_ref=query0}]}}}");
+				"[made_ts]", "{}", "{events={s=[[@29,77:77='a',<455>,1:77]], d=[[@17,61:61='a',<455>,1:61]], h=[[@21,66:66='a',<455>,1:66]], y=[[@9,51:51='a',<455>,1:51]], mi=[[@25,71:71='a',<455>,1:71]], m=[[@13,56:56='a',<455>,1:56]]}, target={made_ts=[[@4,20:26='made_ts',<455>,1:20]]}}",
+				"{query0={made_ts=[[@34,85:91='made_ts',<455>,1:85]]}, insert1={made_ts=[[@4,20:26='made_ts',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={made_ts=[[@4,20:26='made_ts',<455>,1:20]]}, table_dictionary={target={made_ts=[[@4,20:26='made_ts',<455>,1:20]]}}, def_query0={query_dictionary={made_ts=[[@34,85:91='made_ts',<455>,1:85]]}, table_dictionary={events={s=[[@29,77:77='a',<455>,1:77]], d=[[@17,61:61='a',<455>,1:61]], h=[[@21,66:66='a',<455>,1:66]], y=[[@9,51:51='a',<455>,1:51]], mi=[[@25,71:71='a',<455>,1:71]], m=[[@13,56:56='a',<455>,1:56]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}, interface={made_ts=[{name=made_ts, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -668,9 +668,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("update events set made_ts = make_timestamp(y, m, d, h, mi, s)", "UPDATE");
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=made_ts, table_ref=null}}, to={function={parameters={1={column={name=y, table_ref=null}}, 2={column={name=m, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=h, table_ref=null}}, 5={column={name=mi, table_ref=null}}, 6={column={name=s, table_ref=null}}}, function_name=make_timestamp}}}}}}}",
-				"[made_ts]", "{}", "{events={s=[[@17,59:59='s',<452>,1:59], [@18,60:60=')',<288>,1:60]], d=[[@11,49:49='d',<452>,1:49], [@18,60:60=')',<288>,1:60]], h=[[@13,52:52='h',<452>,1:52], [@18,60:60=')',<288>,1:60]], y=[[@7,43:43='y',<452>,1:43], [@18,60:60=')',<288>,1:60]], mi=[[@15,55:56='mi',<452>,1:55], [@18,60:60=')',<288>,1:60]], m=[[@9,46:46='m',<452>,1:46], [@18,60:60=')',<288>,1:60]]}}",
-				"{update0={made_ts=[[@3,18:24='made_ts',<452>,1:18]]}}",
-				"{def_update0={assignments={made_ts=[{name=y, table_ref=events}, {name=m, table_ref=events}, {name=d, table_ref=events}, {name=h, table_ref=events}, {name=mi, table_ref=events}, {name=s, table_ref=events}]}, table_dictionary={events={s=[[@17,59:59='s',<452>,1:59], [@18,60:60=')',<288>,1:60]], d=[[@11,49:49='d',<452>,1:49], [@18,60:60=')',<288>,1:60]], h=[[@13,52:52='h',<452>,1:52], [@18,60:60=')',<288>,1:60]], y=[[@7,43:43='y',<452>,1:43], [@18,60:60=')',<288>,1:60]], mi=[[@15,55:56='mi',<452>,1:55], [@18,60:60=')',<288>,1:60]], m=[[@9,46:46='m',<452>,1:46], [@18,60:60=')',<288>,1:60]]}}, update_dictionary={made_ts=[[@3,18:24='made_ts',<452>,1:18]]}, target_table={events={made_ts=[[@3,18:24='made_ts',<452>,1:18]]}}, lhs_unresolved_columns={made_ts={column={name=made_ts, table_ref=null}, locations=[[@3,18:24='made_ts',<452>,1:18]]}}}}");
+				"[made_ts]", "{}", "{events={s=[[@17,59:59='s',<455>,1:59], [@18,60:60=')',<288>,1:60]], d=[[@11,49:49='d',<455>,1:49], [@18,60:60=')',<288>,1:60]], h=[[@13,52:52='h',<455>,1:52], [@18,60:60=')',<288>,1:60]], y=[[@7,43:43='y',<455>,1:43], [@18,60:60=')',<288>,1:60]], mi=[[@15,55:56='mi',<455>,1:55], [@18,60:60=')',<288>,1:60]], m=[[@9,46:46='m',<455>,1:46], [@18,60:60=')',<288>,1:60]]}}",
+				"{update0={made_ts=[[@3,18:24='made_ts',<455>,1:18]]}}",
+				"{def_update0={assignments={made_ts=[{name=y, table_ref=events}, {name=m, table_ref=events}, {name=d, table_ref=events}, {name=h, table_ref=events}, {name=mi, table_ref=events}, {name=s, table_ref=events}]}, table_dictionary={events={s=[[@17,59:59='s',<455>,1:59], [@18,60:60=')',<288>,1:60]], d=[[@11,49:49='d',<455>,1:49], [@18,60:60=')',<288>,1:60]], h=[[@13,52:52='h',<455>,1:52], [@18,60:60=')',<288>,1:60]], y=[[@7,43:43='y',<455>,1:43], [@18,60:60=')',<288>,1:60]], mi=[[@15,55:56='mi',<455>,1:55], [@18,60:60=')',<288>,1:60]], m=[[@9,46:46='m',<455>,1:46], [@18,60:60=')',<288>,1:60]]}}, update_dictionary={made_ts=[[@3,18:24='made_ts',<455>,1:18]]}, target_table={events={made_ts=[[@3,18:24='made_ts',<455>,1:18]]}}, lhs_unresolved_columns={made_ts={column={name=made_ts, table_ref=null}, locations=[[@3,18:24='made_ts',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -678,9 +678,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("delete from events where make_timestamp(y, m, d, h, mi, s) > TIMESTAMP '2026-01-01 00:00:00'", "DELETE");
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={function={parameters={1={column={name=y, table_ref=null}}, 2={column={name=m, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=h, table_ref=null}}, 5={column={name=mi, table_ref=null}}, 6={column={name=s, table_ref=null}}}, function_name=make_timestamp}}, right={source_type=TIMESTAMP, literal=2026-01-01 00:00:00}, operator=>}}}}}",
-				"[]", "{}", "{events={s=[[@16,56:56='s',<452>,1:56]], d=[[@10,46:46='d',<452>,1:46]], h=[[@12,49:49='h',<452>,1:49]], y=[[@6,40:40='y',<452>,1:40]], mi=[[@14,52:53='mi',<452>,1:52]], m=[[@8,43:43='m',<452>,1:43]]}}",
+				"[]", "{}", "{events={s=[[@16,56:56='s',<455>,1:56]], d=[[@10,46:46='d',<455>,1:46]], h=[[@12,49:49='h',<455>,1:49]], y=[[@6,40:40='y',<455>,1:40]], mi=[[@14,52:53='mi',<455>,1:52]], m=[[@8,43:43='m',<455>,1:43]]}}",
 				"{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={s=[[@16,56:56='s',<452>,1:56]], d=[[@10,46:46='d',<452>,1:46]], h=[[@12,49:49='h',<452>,1:49]], y=[[@6,40:40='y',<452>,1:40]], mi=[[@14,52:53='mi',<452>,1:52]], m=[[@8,43:43='m',<452>,1:43]]}}, filters=[{name=y, table_ref=events}, {name=m, table_ref=events}, {name=d, table_ref=events}, {name=h, table_ref=events}, {name=mi, table_ref=events}, {name=s, table_ref=events}], interface=null}}");
+				"{def_delete0={query_dictionary={}, table_dictionary={events={s=[[@16,56:56='s',<455>,1:56]], d=[[@10,46:46='d',<455>,1:46]], h=[[@12,49:49='h',<455>,1:49]], y=[[@6,40:40='y',<455>,1:40]], mi=[[@14,52:53='mi',<455>,1:52]], m=[[@8,43:43='m',<455>,1:43]]}}, filters=[{name=y, table_ref=events}, {name=m, table_ref=events}, {name=d, table_ref=events}, {name=h, table_ref=events}, {name=mi, table_ref=events}, {name=s, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -688,9 +688,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("create view v as select make_timestamp(a.y, a.m, a.d, a.h, a.mi, a.s) as made_ts from events a", "DDL");
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={function={parameters={1={column={name=y, table_ref=a}}, 2={column={name=m, table_ref=a}}, 3={column={name=d, table_ref=a}}, 4={column={name=h, table_ref=a}}, 5={column={name=mi, table_ref=a}}, 6={column={name=s, table_ref=a}}}, function_name=make_timestamp}, alias=made_ts}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={s=[[@27,65:65='a',<452>,1:65]], d=[[@15,49:49='a',<452>,1:49]], h=[[@19,54:54='a',<452>,1:54]], y=[[@7,39:39='a',<452>,1:39]], mi=[[@23,59:59='a',<452>,1:59]], m=[[@11,44:44='a',<452>,1:44]]}}",
-				"{query0={made_ts=[[@32,73:79='made_ts',<452>,1:73]]}}",
-				"{def_create1={def_query0={query_dictionary={made_ts=[[@32,73:79='made_ts',<452>,1:73]]}, table_dictionary={events={s=[[@27,65:65='a',<452>,1:65]], d=[[@15,49:49='a',<452>,1:49]], h=[[@19,54:54='a',<452>,1:54]], y=[[@7,39:39='a',<452>,1:39]], mi=[[@23,59:59='a',<452>,1:59]], m=[[@11,44:44='a',<452>,1:44]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={s=[[@27,65:65='a',<455>,1:65]], d=[[@15,49:49='a',<455>,1:49]], h=[[@19,54:54='a',<455>,1:54]], y=[[@7,39:39='a',<455>,1:39]], mi=[[@23,59:59='a',<455>,1:59]], m=[[@11,44:44='a',<455>,1:44]]}}",
+				"{query0={made_ts=[[@32,73:79='made_ts',<455>,1:73]]}}",
+				"{def_create1={def_query0={query_dictionary={made_ts=[[@32,73:79='made_ts',<455>,1:73]]}, table_dictionary={events={s=[[@27,65:65='a',<455>,1:65]], d=[[@15,49:49='a',<455>,1:49]], h=[[@19,54:54='a',<455>,1:54]], y=[[@7,39:39='a',<455>,1:39]], mi=[[@23,59:59='a',<455>,1:59]], m=[[@11,44:44='a',<455>,1:44]]}}, interface={made_ts=[{name=y, table_ref=a}, {name=m, table_ref=a}, {name=d, table_ref=a}, {name=h, table_ref=a}, {name=mi, table_ref=a}, {name=s, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -699,8 +699,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={function={parameters={1={literal=2026}, 2={literal=1}, 3={literal=2}, 4={literal=3}, 5={literal=4}, 6={literal=5}}, function_name=make_timestamp}, alias=made_ts}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={made_ts=[[@16,46:52='made_ts',<452>,1:46]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={made_ts=[[@16,46:52='made_ts',<452>,1:46]]}, interface={made_ts=[]}}}}}");
+				"{SCRIPT={1={query0={made_ts=[[@16,46:52='made_ts',<455>,1:46]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={made_ts=[[@16,46:52='made_ts',<455>,1:46]]}, interface={made_ts=[]}}}}}");
 	}
 
 	@Test
@@ -768,9 +768,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("select justify_interval(a.iv) as normalized_iv from events a", "QUERY");
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={function={parameters={1={column={name=iv, table_ref=a}}}, function_name=justify_interval}, alias=normalized_iv}}, from={table={alias=a, table=events}}}}",
-				"[normalized_iv]", "{}", "{events={iv=[[@3,24:24='a',<452>,1:24]]}}",
-				"{query0={normalized_iv=[[@8,33:45='normalized_iv',<452>,1:33]]}}",
-				"{def_query0={query_dictionary={normalized_iv=[[@8,33:45='normalized_iv',<452>,1:33]]}, table_dictionary={events={iv=[[@3,24:24='a',<452>,1:24]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}}");
+				"[normalized_iv]", "{}", "{events={iv=[[@3,24:24='a',<455>,1:24]]}}",
+				"{query0={normalized_iv=[[@8,33:45='normalized_iv',<455>,1:33]]}}",
+				"{def_query0={query_dictionary={normalized_iv=[[@8,33:45='normalized_iv',<455>,1:33]]}, table_dictionary={events={iv=[[@3,24:24='a',<455>,1:24]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -778,9 +778,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("(select justify_interval(a.iv) as normalized_iv from events a)", "TUPLE");
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=iv, table_ref=a}}}, function_name=justify_interval}, alias=normalized_iv}}}}",
-				"[normalized_iv]", "{}", "{events={iv=[[@4,25:25='a',<452>,1:25]]}}",
-				"{query0={normalized_iv=[[@9,34:46='normalized_iv',<452>,1:34]]}}",
-				"{def_query0={query_dictionary={normalized_iv=[[@9,34:46='normalized_iv',<452>,1:34]]}, table_dictionary={events={iv=[[@4,25:25='a',<452>,1:25]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"[normalized_iv]", "{}", "{events={iv=[[@4,25:25='a',<455>,1:25]]}}",
+				"{query0={normalized_iv=[[@9,34:46='normalized_iv',<455>,1:34]]}}",
+				"{def_query0={query_dictionary={normalized_iv=[[@9,34:46='normalized_iv',<455>,1:34]]}, table_dictionary={events={iv=[[@4,25:25='a',<455>,1:25]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -798,9 +798,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("join accounts b on justify_interval(b.iv) is not null", "JOIN_EXTENSION");
 		assertOutputs(parser.getSnippet(),
 				"{JOIN_EXTENSION={1={join=join, on={condition={left={function={parameters={1={column={name=iv, table_ref=b}}}, function_name=justify_interval}}, operator=is not null}}}, 2={table={alias=b, table=accounts}}}}",
-				"[]", "{}", "{accounts={iv=[[@6,36:36='b',<452>,1:36]]}}",
+				"[]", "{}", "{accounts={iv=[[@6,36:36='b',<455>,1:36]]}}",
 				"{}",
-				"{table_dictionary={accounts={iv=[[@6,36:36='b',<452>,1:36]]}}, filters=[{name=iv, table_ref=b}], table_alias={b=accounts}}");
+				"{table_dictionary={accounts={iv=[[@6,36:36='b',<455>,1:36]]}}, filters=[{name=iv, table_ref=b}], table_alias={b=accounts}}");
 	}
 
 	@Test
@@ -818,9 +818,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (normalized_iv) select justify_interval(a.iv) as normalized_iv from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={function={parameters={1={column={name=iv, table_ref=a}}}, function_name=justify_interval}, alias=normalized_iv}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=normalized_iv, table_ref=null}}}}}}",
-				"[normalized_iv]", "{}", "{events={iv=[[@9,59:59='a',<452>,1:59]]}, target={normalized_iv=[[@4,20:32='normalized_iv',<452>,1:20]]}}",
-				"{query0={normalized_iv=[[@14,68:80='normalized_iv',<452>,1:68]]}, insert1={normalized_iv=[[@4,20:32='normalized_iv',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={normalized_iv=[[@4,20:32='normalized_iv',<452>,1:20]]}, table_dictionary={target={normalized_iv=[[@4,20:32='normalized_iv',<452>,1:20]]}}, def_query0={query_dictionary={normalized_iv=[[@14,68:80='normalized_iv',<452>,1:68]]}, table_dictionary={events={iv=[[@9,59:59='a',<452>,1:59]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}, interface={normalized_iv=[{name=normalized_iv, table_ref=query0}]}}}");
+				"[normalized_iv]", "{}", "{events={iv=[[@9,59:59='a',<455>,1:59]]}, target={normalized_iv=[[@4,20:32='normalized_iv',<455>,1:20]]}}",
+				"{query0={normalized_iv=[[@14,68:80='normalized_iv',<455>,1:68]]}, insert1={normalized_iv=[[@4,20:32='normalized_iv',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={normalized_iv=[[@4,20:32='normalized_iv',<455>,1:20]]}, table_dictionary={target={normalized_iv=[[@4,20:32='normalized_iv',<455>,1:20]]}}, def_query0={query_dictionary={normalized_iv=[[@14,68:80='normalized_iv',<455>,1:68]]}, table_dictionary={events={iv=[[@9,59:59='a',<455>,1:59]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}, interface={normalized_iv=[{name=normalized_iv, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -828,9 +828,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("update events set normalized_iv = justify_interval(iv)", "UPDATE");
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=normalized_iv, table_ref=null}}, to={function={parameters={1={column={name=iv, table_ref=null}}}, function_name=justify_interval}}}}}}}",
-				"[normalized_iv]", "{}", "{events={iv=[[@7,51:52='iv',<452>,1:51], [@8,53:53=')',<288>,1:53]]}}",
-				"{update0={normalized_iv=[[@3,18:30='normalized_iv',<452>,1:18]]}}",
-				"{def_update0={assignments={normalized_iv=[{name=iv, table_ref=events}]}, table_dictionary={events={iv=[[@7,51:52='iv',<452>,1:51], [@8,53:53=')',<288>,1:53]]}}, update_dictionary={normalized_iv=[[@3,18:30='normalized_iv',<452>,1:18]]}, target_table={events={normalized_iv=[[@3,18:30='normalized_iv',<452>,1:18]]}}, lhs_unresolved_columns={normalized_iv={column={name=normalized_iv, table_ref=null}, locations=[[@3,18:30='normalized_iv',<452>,1:18]]}}}}");
+				"[normalized_iv]", "{}", "{events={iv=[[@7,51:52='iv',<455>,1:51], [@8,53:53=')',<288>,1:53]]}}",
+				"{update0={normalized_iv=[[@3,18:30='normalized_iv',<455>,1:18]]}}",
+				"{def_update0={assignments={normalized_iv=[{name=iv, table_ref=events}]}, table_dictionary={events={iv=[[@7,51:52='iv',<455>,1:51], [@8,53:53=')',<288>,1:53]]}}, update_dictionary={normalized_iv=[[@3,18:30='normalized_iv',<455>,1:18]]}, target_table={events={normalized_iv=[[@3,18:30='normalized_iv',<455>,1:18]]}}, lhs_unresolved_columns={normalized_iv={column={name=normalized_iv, table_ref=null}, locations=[[@3,18:30='normalized_iv',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -838,9 +838,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("delete from events where justify_interval(iv) is not null", "DELETE");
 		assertOutputs(parser.getSnippet(),
 				"{DELETE={delete={table={alias=null, table=events}, where={condition={left={function={parameters={1={column={name=iv, table_ref=null}}}, function_name=justify_interval}}, operator=is not null}}}}}",
-				"[]", "{}", "{events={iv=[[@6,42:43='iv',<452>,1:42]]}}",
+				"[]", "{}", "{events={iv=[[@6,42:43='iv',<455>,1:42]]}}",
 				"{}",
-				"{def_delete0={query_dictionary={}, table_dictionary={events={iv=[[@6,42:43='iv',<452>,1:42]]}}, filters=[{name=iv, table_ref=events}], interface=null}}");
+				"{def_delete0={query_dictionary={}, table_dictionary={events={iv=[[@6,42:43='iv',<455>,1:42]]}}, filters=[{name=iv, table_ref=events}], interface=null}}");
 	}
 
 	@Test
@@ -848,9 +848,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("create view v as select justify_interval(a.iv) as normalized_iv from events a", "DDL");
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={function={parameters={1={column={name=iv, table_ref=a}}}, function_name=justify_interval}, alias=normalized_iv}}, from={table={alias=a, table=events}}}}}}",
-				"[]", "{}", "{events={iv=[[@7,41:41='a',<452>,1:41]]}}",
-				"{query0={normalized_iv=[[@12,50:62='normalized_iv',<452>,1:50]]}}",
-				"{def_create1={def_query0={query_dictionary={normalized_iv=[[@12,50:62='normalized_iv',<452>,1:50]]}, table_dictionary={events={iv=[[@7,41:41='a',<452>,1:41]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}}}");
+				"[]", "{}", "{events={iv=[[@7,41:41='a',<455>,1:41]]}}",
+				"{query0={normalized_iv=[[@12,50:62='normalized_iv',<455>,1:50]]}}",
+				"{def_create1={def_query0={query_dictionary={normalized_iv=[[@12,50:62='normalized_iv',<455>,1:50]]}, table_dictionary={events={iv=[[@7,41:41='a',<455>,1:41]]}}, interface={normalized_iv=[{name=iv, table_ref=a}]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -859,8 +859,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={function={parameters={1={source_type=INTERVAL, literal=36 hours}}, function_name=justify_interval}, alias=normalized_iv}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={normalized_iv=[[@7,48:60='normalized_iv',<452>,1:48]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={normalized_iv=[[@7,48:60='normalized_iv',<452>,1:48]]}, interface={normalized_iv=[]}}}}}");
+				"{SCRIPT={1={query0={normalized_iv=[[@7,48:60='normalized_iv',<455>,1:48]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={normalized_iv=[[@7,48:60='normalized_iv',<455>,1:48]]}, interface={normalized_iv=[]}}}}}");
 	}
 
 	@Test
@@ -909,8 +909,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{QUERY={select={1={1={function_name=clock_timestamp}, alias=now_clock}}, from={table={alias=a, table=events}}}}",
 				"[now_clock]", "{}", "{events={}}",
-				"{query0={now_clock=[[@5,28:36='now_clock',<452>,1:28]]}}",
-				"{def_query0={query_dictionary={now_clock=[[@5,28:36='now_clock',<452>,1:28]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}}");
+				"{query0={now_clock=[[@5,28:36='now_clock',<455>,1:28]]}}",
+				"{def_query0={query_dictionary={now_clock=[[@5,28:36='now_clock',<455>,1:28]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}}");
 	}
 
 	@Test
@@ -919,8 +919,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{TUPLE={from={table={alias=a, table=events}}, select={1={1={function_name=clock_timestamp}, alias=now_clock}}}}",
 				"[now_clock]", "{}", "{events={}}",
-				"{query0={now_clock=[[@6,29:37='now_clock',<452>,1:29]]}}",
-				"{def_query0={query_dictionary={now_clock=[[@6,29:37='now_clock',<452>,1:29]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}, table_alias={query0=query0}}");
+				"{query0={now_clock=[[@6,29:37='now_clock',<455>,1:29]]}}",
+				"{def_query0={query_dictionary={now_clock=[[@6,29:37='now_clock',<455>,1:29]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}, table_alias={query0=query0}}");
 	}
 
 	@Test
@@ -958,9 +958,9 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		SqlParserAccess parser = parseSnippet("insert into target (captured_at) select clock_timestamp() as captured_at from events a", "INSERT");
 		assertOutputs(parser.getSnippet(),
 				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, select={1={1={function_name=clock_timestamp}, alias=captured_at}}}, target_table={table={alias=null, table=target}}, columns={1={column={name=captured_at, table_ref=null}}}}}}",
-				"[captured_at]", "{}", "{events={}, target={captured_at=[[@4,20:30='captured_at',<452>,1:20]]}}",
-				"{query0={captured_at=[[@11,61:71='captured_at',<452>,1:61]]}, insert1={captured_at=[[@4,20:30='captured_at',<452>,1:20]]}}",
-				"{def_insert1={query_dictionary={captured_at=[[@4,20:30='captured_at',<452>,1:20]]}, table_dictionary={target={captured_at=[[@4,20:30='captured_at',<452>,1:20]]}}, def_query0={query_dictionary={captured_at=[[@11,61:71='captured_at',<452>,1:61]]}, table_dictionary={events={}}, interface={captured_at=[]}, table_alias={a=events}}, interface={captured_at=[{name=captured_at, table_ref=query0}]}}}");
+				"[captured_at]", "{}", "{events={}, target={captured_at=[[@4,20:30='captured_at',<455>,1:20]]}}",
+				"{query0={captured_at=[[@11,61:71='captured_at',<455>,1:61]]}, insert1={captured_at=[[@4,20:30='captured_at',<455>,1:20]]}}",
+				"{def_insert1={query_dictionary={captured_at=[[@4,20:30='captured_at',<455>,1:20]]}, table_dictionary={target={captured_at=[[@4,20:30='captured_at',<455>,1:20]]}}, def_query0={query_dictionary={captured_at=[[@11,61:71='captured_at',<455>,1:61]]}, table_dictionary={events={}}, interface={captured_at=[]}, table_alias={a=events}}, interface={captured_at=[{name=captured_at, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -969,8 +969,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{UPDATE={update={table={alias=null, table=events}, assignments={1={set={column={name=captured_at, table_ref=null}}, to={1={function_name=clock_timestamp}}}}}}}",
 				"[captured_at]", "{}", "{events={}}",
-				"{update0={captured_at=[[@3,18:28='captured_at',<452>,1:18]]}}",
-				"{def_update0={assignments={captured_at=[]}, table_dictionary={events={}}, update_dictionary={captured_at=[[@3,18:28='captured_at',<452>,1:18]]}, target_table={events={captured_at=[[@3,18:28='captured_at',<452>,1:18]]}}, lhs_unresolved_columns={captured_at={column={name=captured_at, table_ref=null}, locations=[[@3,18:28='captured_at',<452>,1:18]]}}}}");
+				"{update0={captured_at=[[@3,18:28='captured_at',<455>,1:18]]}}",
+				"{def_update0={assignments={captured_at=[]}, table_dictionary={events={}}, update_dictionary={captured_at=[[@3,18:28='captured_at',<455>,1:18]]}, target_table={events={captured_at=[[@3,18:28='captured_at',<455>,1:18]]}}, lhs_unresolved_columns={captured_at={column={name=captured_at, table_ref=null}, locations=[[@3,18:28='captured_at',<455>,1:18]]}}}}");
 	}
 
 	@Test
@@ -989,8 +989,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{DDL={create={type=view, name={table=v}, query={select={1={1={function_name=clock_timestamp}, alias=now_clock}}, from={table={alias=a, table=events}}}}}}",
 				"[]", "{}", "{events={}}",
-				"{query0={now_clock=[[@9,45:53='now_clock',<452>,1:45]]}}",
-				"{def_create1={def_query0={query_dictionary={now_clock=[[@9,45:53='now_clock',<452>,1:45]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}}}");
+				"{query0={now_clock=[[@9,45:53='now_clock',<455>,1:45]]}}",
+				"{def_create1={def_query0={query_dictionary={now_clock=[[@9,45:53='now_clock',<455>,1:45]]}, table_dictionary={events={}}, interface={now_clock=[]}, table_alias={a=events}}}}");
 	}
 
 	@Test
@@ -999,8 +999,8 @@ public class SqlEventWalkerDatetimeFunctionSnippetTests extends AbstractSqlParse
 		assertOutputs(parser.getSnippet(),
 				"{SCRIPT={1={select={1={1={function_name=clock_timestamp}, alias=now_clock}}}}}",
 				"[]", "{SCRIPT={1={}}}", "{SCRIPT={1={}}}",
-				"{SCRIPT={1={query0={now_clock=[[@5,28:36='now_clock',<452>,1:28]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={now_clock=[[@5,28:36='now_clock',<452>,1:28]]}, interface={now_clock=[]}}}}}");
+				"{SCRIPT={1={query0={now_clock=[[@5,28:36='now_clock',<455>,1:28]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={now_clock=[[@5,28:36='now_clock',<455>,1:28]]}, interface={now_clock=[]}}}}}");
 	}
 
 	@Test

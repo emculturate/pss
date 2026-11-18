@@ -1968,6 +1968,10 @@ Matrix result: **DF-01..DF-96 and TE coverage obligations are fully assigned and
 tokens, `DATEADD` through `TIMEOFDAY`, immediately before `Identifier`. Existing
 token IDs 1–392 remain unchanged; former IDs 393–413 shift by +26. Supply the
 replacement list in descending old-ID order, matching exact `<nnn>` strings.
+Use generated lexer constant snapshots (before/after
+`parse/target/generated-sources/antlr4/sql/SQLSelectParserLexer.java`) rather
+than runTests mismatch output to build the full replacement set:
+`python3 tools/token_id_worklist_from_vocab.py <old.java> <new.java>`.
 No existing golden was edited. Part aliases remain identifiers, and the new
 function tokens remain eligible for generic/qualified UDF calls until dedicated
 date/time productions are implemented.

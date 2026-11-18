@@ -62,6 +62,7 @@ Or list entries: `jar tf "$JAR" 'META-INF/pss-parse/**'`
 
 ## Parser implementation rules (this repository)
 
+- **Lexer additions - automatic required workflow:** Whenever a task adds lexer items, follow [the lexer token-ID policy](.cursor/rules/lexer-token-id-golden-policy.mdc) without waiting for a separate request. Before editing, generate and snapshot `parse/target/generated-sources/antlr4/sql/SQLSelectParserLexer.java`; append new keywords immediately before `Identifier`; regenerate and snapshot the after image. Compare the generated Java token constants with `tools/token_id_worklist_from_vocab.py`. Include the entire named before/after token-ID table, sorted highest ID first, in the final response/summary, together with the additions and expected increment. Include every shifted token, even those absent from test failures. Existing golden corrections are manual IDE work for the developer, not automatic agent edits.
 - **Open parser / grammar / walker work (5.1.4 line):** [`parse/documents/sql-grammar-5.1.4-workplan.md`](parse/documents/sql-grammar-5.1.4-workplan.md) — single master plan (Entries 1–12). Older `*-workplan.md` files in `parse/documents/` are retired stubs.
 - **Set-op convert egress (Phase 2.8 + 15.6):** `.cursor/rules/set-op-convert-egress-scoping.mdc` — bundle build vs egress reads, S4 sibling isolation, no post-bundle fallback; canonical test `setOpSiblingIsolationInvariantV0Test`
 - **Relational modifiers:** `.cursor/rules/relational-modifier-resolution.mdc` → `parse/documents/relational-modifier-resolution-policy.md`

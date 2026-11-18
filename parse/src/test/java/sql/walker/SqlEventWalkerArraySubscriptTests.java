@@ -40,10 +40,10 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={arr=[[@9,26:28='arr',<452>,1:26]]}}",
+				"{query0={arr=[[@9,26:28='arr',<455>,1:26]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={arr=[[@9,26:28='arr',<452>,1:26]]}, interface={arr=[]}}}",
+				"{def_query0={query_dictionary={arr=[[@9,26:28='arr',<455>,1:26]]}, interface={arr=[]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -72,13 +72,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{enrollment_services__ccp={first_name=[[@6,17:17='e',<452>,1:17]], email=[[@2,8:8='e',<452>,1:8]]}}",
+				"{enrollment_services__ccp={first_name=[[@6,17:17='e',<455>,1:17]], email=[[@2,8:8='e',<455>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={arr=[[@11,34:36='arr',<452>,1:34]]}}",
+				"{query0={arr=[[@11,34:36='arr',<455>,1:34]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={arr=[[@11,34:36='arr',<452>,1:34]]}, table_dictionary={enrollment_services__ccp={first_name=[[@6,17:17='e',<452>,1:17]], email=[[@2,8:8='e',<452>,1:8]]}}, interface={arr=[{name=email, table_ref=e}, {name=first_name, table_ref=e}]}, table_alias={e=enrollment_services__ccp}}}",
+				"{def_query0={query_dictionary={arr=[[@11,34:36='arr',<455>,1:34]]}, table_dictionary={enrollment_services__ccp={first_name=[[@6,17:17='e',<455>,1:17]], email=[[@2,8:8='e',<455>,1:8]]}}, interface={arr=[{name=email, table_ref=e}, {name=first_name, table_ref=e}]}, table_alias={e=enrollment_services__ccp}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -129,10 +129,10 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@11,31:31='x',<452>,1:31]]}}",
+				"{query0={x=[[@11,31:31='x',<455>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@11,31:31='x',<452>,1:31]]}, interface={x=[]}}}",
+				"{def_query0={query_dictionary={x=[[@11,31:31='x',<455>,1:31]]}, interface={x=[]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -155,10 +155,10 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@11,33:33='x',<452>,1:33]]}}",
+				"{query0={x=[[@11,33:33='x',<455>,1:33]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@11,33:33='x',<452>,1:33]]}, interface={x=[]}}}",
+				"{def_query0={query_dictionary={x=[[@11,33:33='x',<455>,1:33]]}, interface={x=[]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -179,13 +179,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@3,13:15='col',<452>,1:13]]}}",
+				"{tab1={col=[[@3,13:15='col',<455>,1:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@11,29:29='x',<452>,1:29]]}}",
+				"{query0={x=[[@11,29:29='x',<455>,1:29]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@11,29:29='x',<452>,1:29]]}, table_dictionary={tab1={col=[[@3,13:15='col',<452>,1:13]]}}, interface={x=[{name=col, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={x=[[@11,29:29='x',<455>,1:29]]}, table_dictionary={tab1={col=[[@3,13:15='col',<455>,1:13]]}}, interface={x=[{name=col, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -206,13 +206,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@3,13:15='col',<452>,1:13]], idx=[[@8,23:25='idx',<452>,1:23]]}}",
+				"{tab1={col=[[@3,13:15='col',<455>,1:13]], idx=[[@8,23:25='idx',<455>,1:23]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@11,31:31='x',<452>,1:31]]}}",
+				"{query0={x=[[@11,31:31='x',<455>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@11,31:31='x',<452>,1:31]]}, table_dictionary={tab1={col=[[@3,13:15='col',<452>,1:13]], idx=[[@8,23:25='idx',<452>,1:23]]}}, interface={x=[{name=col, table_ref=tab1}, {name=idx, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={x=[[@11,31:31='x',<455>,1:31]]}, table_dictionary={tab1={col=[[@3,13:15='col',<455>,1:13]], idx=[[@8,23:25='idx',<455>,1:23]]}}, interface={x=[{name=col, table_ref=tab1}, {name=idx, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -233,13 +233,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={a=[[@3,13:13='a',<452>,1:13]], b=[[@8,21:24='tab1',<452>,1:21]]}}",
+				"{tab1={a=[[@3,13:13='a',<455>,1:13]], b=[[@8,21:24='tab1',<455>,1:21]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@13,32:32='x',<452>,1:32]]}}",
+				"{query0={x=[[@13,32:32='x',<455>,1:32]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@13,32:32='x',<452>,1:32]]}, table_dictionary={tab1={a=[[@3,13:13='a',<452>,1:13]], b=[[@8,21:24='tab1',<452>,1:21]]}}, interface={x=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={x=[[@13,32:32='x',<455>,1:32]]}, table_dictionary={tab1={a=[[@3,13:13='a',<455>,1:13]], b=[[@8,21:24='tab1',<455>,1:21]]}}, interface={x=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -261,13 +261,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@3,13:15='col',<452>,1:13]], idx=[[@9,24:26='idx',<452>,1:24]]}}",
+				"{tab1={col=[[@3,13:15='col',<455>,1:13]], idx=[[@9,24:26='idx',<455>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={x=[[@13,33:33='x',<452>,1:33]]}}",
+				"{query0={x=[[@13,33:33='x',<455>,1:33]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={x=[[@13,33:33='x',<452>,1:33]]}, table_dictionary={tab1={col=[[@3,13:15='col',<452>,1:13]], idx=[[@9,24:26='idx',<452>,1:24]]}}, interface={x=[{name=col, table_ref=tab1}, {name=idx, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={x=[[@13,33:33='x',<455>,1:33]]}, table_dictionary={tab1={col=[[@3,13:15='col',<455>,1:13]], idx=[[@9,24:26='idx',<455>,1:24]]}}, interface={x=[{name=col, table_ref=tab1}, {name=idx, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -292,13 +292,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@7,31:33='cat',<452>,1:31], [@20,74:76='cat',<452>,1:74]]}}",
+				"{acs__categories={title=[[@7,31:33='cat',<455>,1:31], [@20,74:76='cat',<455>,1:74]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={product=[[@36,116:122='product',<452>,1:116]]}}",
+				"{query0={product=[[@36,116:122='product',<455>,1:116]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={product=[[@36,116:122='product',<452>,1:116]]}, table_dictionary={acs__categories={title=[[@7,31:33='cat',<452>,1:31], [@20,74:76='cat',<452>,1:74]]}}, interface={product=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
+				"{def_query0={query_dictionary={product=[[@36,116:122='product',<455>,1:116]]}, table_dictionary={acs__categories={title=[[@7,31:33='cat',<455>,1:31], [@20,74:76='cat',<455>,1:74]]}}, interface={product=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -323,13 +323,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@7,33:35='cat',<452>,1:33], [@26,101:103='cat',<452>,1:101]]}}",
+				"{acs__categories={title=[[@7,33:35='cat',<455>,1:33], [@26,101:103='cat',<455>,1:101]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={product=[[@58,173:179='product',<452>,1:173]]}}",
+				"{query0={product=[[@58,173:179='product',<455>,1:173]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={product=[[@58,173:179='product',<452>,1:173]]}, table_dictionary={acs__categories={title=[[@7,33:35='cat',<452>,1:33], [@26,101:103='cat',<452>,1:101]]}}, interface={product=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
+				"{def_query0={query_dictionary={product=[[@58,173:179='product',<455>,1:173]]}, table_dictionary={acs__categories={title=[[@7,33:35='cat',<455>,1:33], [@26,101:103='cat',<455>,1:101]]}}, interface={product=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -360,13 +360,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@7,33:35='cat',<452>,1:33], [@32,135:137='cat',<452>,1:135], [@66,210:212='cat',<452>,1:210], [@79,253:255='cat',<452>,1:253], [@118,450:452='cat',<452>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<452>,1:74]], client_value=[[@106,389:397='prod_abbr',<452>,1:389]], field_name=[[@143,503:511='prod_abbr',<452>,1:503]]}}",
+				"{acs__categories={title=[[@7,33:35='cat',<455>,1:33], [@32,135:137='cat',<455>,1:135], [@66,210:212='cat',<455>,1:210], [@79,253:255='cat',<455>,1:253], [@118,450:452='cat',<455>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<455>,1:74]], client_value=[[@106,389:397='prod_abbr',<455>,1:389]], field_name=[[@143,503:511='prod_abbr',<455>,1:503]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={product=[[@95,295:301='product',<452>,1:295]]}}",
+				"{query0={product=[[@95,295:301='product',<455>,1:295]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={product=[[@95,295:301='product',<452>,1:295]]}, table_dictionary={acs__categories={title=[[@7,33:35='cat',<452>,1:33], [@32,135:137='cat',<452>,1:135], [@66,210:212='cat',<452>,1:210], [@79,253:255='cat',<452>,1:253], [@118,450:452='cat',<452>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<452>,1:74]], client_value=[[@106,389:397='prod_abbr',<452>,1:389]], field_name=[[@143,503:511='prod_abbr',<452>,1:503]]}}, filters=[{name=client_value, table_ref=prod_abbr}, {name=title, table_ref=cat}, {name=field_name, table_ref=prod_abbr}], interface={product=[{name=eab_std_value, table_ref=prod_abbr}, {name=title, table_ref=cat}]}, table_alias={cat=acs__categories, prod_abbr=ref__standard_value_mapping_alr}}}",
+				"{def_query0={query_dictionary={product=[[@95,295:301='product',<455>,1:295]]}, table_dictionary={acs__categories={title=[[@7,33:35='cat',<455>,1:33], [@32,135:137='cat',<455>,1:135], [@66,210:212='cat',<455>,1:210], [@79,253:255='cat',<455>,1:253], [@118,450:452='cat',<455>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<455>,1:74]], client_value=[[@106,389:397='prod_abbr',<455>,1:389]], field_name=[[@143,503:511='prod_abbr',<455>,1:503]]}}, filters=[{name=client_value, table_ref=prod_abbr}, {name=title, table_ref=cat}, {name=field_name, table_ref=prod_abbr}], interface={product=[{name=eab_std_value, table_ref=prod_abbr}, {name=title, table_ref=cat}]}, table_alias={cat=acs__categories, prod_abbr=ref__standard_value_mapping_alr}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -397,13 +397,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@7,33:35='ctg',<452>,1:33], [@32,135:137='ctg',<452>,1:135], [@66,210:212='ctg',<452>,1:210], [@79,253:255='ctg',<452>,1:253], [@118,450:452='ctg',<452>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<452>,1:74]], client_value=[[@106,389:397='prod_abbr',<452>,1:389]], field_name=[[@143,503:511='prod_abbr',<452>,1:503]]}}",
+				"{acs__categories={title=[[@7,33:35='ctg',<455>,1:33], [@32,135:137='ctg',<455>,1:135], [@66,210:212='ctg',<455>,1:210], [@79,253:255='ctg',<455>,1:253], [@118,450:452='ctg',<455>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<455>,1:74]], client_value=[[@106,389:397='prod_abbr',<455>,1:389]], field_name=[[@143,503:511='prod_abbr',<455>,1:503]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={product=[[@95,295:301='product',<452>,1:295]]}}",
+				"{query0={product=[[@95,295:301='product',<455>,1:295]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={product=[[@95,295:301='product',<452>,1:295]]}, table_dictionary={acs__categories={title=[[@7,33:35='ctg',<452>,1:33], [@32,135:137='ctg',<452>,1:135], [@66,210:212='ctg',<452>,1:210], [@79,253:255='ctg',<452>,1:253], [@118,450:452='ctg',<452>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<452>,1:74]], client_value=[[@106,389:397='prod_abbr',<452>,1:389]], field_name=[[@143,503:511='prod_abbr',<452>,1:503]]}}, filters=[{name=client_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}, {name=field_name, table_ref=prod_abbr}], interface={product=[{name=eab_std_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}]}, table_alias={ctg=acs__categories, prod_abbr=ref__standard_value_mapping_alr}}}",
+				"{def_query0={query_dictionary={product=[[@95,295:301='product',<455>,1:295]]}, table_dictionary={acs__categories={title=[[@7,33:35='ctg',<455>,1:33], [@32,135:137='ctg',<455>,1:135], [@66,210:212='ctg',<455>,1:210], [@79,253:255='ctg',<455>,1:253], [@118,450:452='ctg',<455>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<455>,1:74]], client_value=[[@106,389:397='prod_abbr',<455>,1:389]], field_name=[[@143,503:511='prod_abbr',<455>,1:503]]}}, filters=[{name=client_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}, {name=field_name, table_ref=prod_abbr}], interface={product=[{name=eab_std_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}]}, table_alias={ctg=acs__categories, prod_abbr=ref__standard_value_mapping_alr}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -464,13 +464,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@7,33:35='ACA',<452>,1:33], [@26,105:107='ACA',<452>,1:105], [@69,238:240='ACA',<452>,1:238], [@112,370:372='ACA',<452>,1:370], [@155,502:504='ACA',<452>,1:502], [@198,640:642='ACA',<452>,1:640], [@242,796:798='ACA',<452>,1:796], [@267,882:884='ACA',<452>,1:882], [@292,967:969='ACA',<452>,1:967], [@317,1052:1054='ACA',<452>,1:1052], [@342,1143:1145='ACA',<452>,1:1143]]}}",
+				"{acs__categories={title=[[@7,33:35='ACA',<455>,1:33], [@26,105:107='ACA',<455>,1:105], [@69,238:240='ACA',<455>,1:238], [@112,370:372='ACA',<455>,1:370], [@155,502:504='ACA',<455>,1:502], [@198,640:642='ACA',<455>,1:640], [@242,796:798='ACA',<455>,1:796], [@267,882:884='ACA',<455>,1:882], [@292,967:969='ACA',<455>,1:967], [@317,1052:1054='ACA',<455>,1:1052], [@342,1143:1145='ACA',<455>,1:1143]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={source_type=[[@365,1242:1252='source_type',<452>,1:1242]]}}",
+				"{query0={source_type=[[@365,1242:1252='source_type',<455>,1:1242]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={source_type=[[@365,1242:1252='source_type',<452>,1:1242]]}, table_dictionary={acs__categories={title=[[@7,33:35='ACA',<452>,1:33], [@26,105:107='ACA',<452>,1:105], [@69,238:240='ACA',<452>,1:238], [@112,370:372='ACA',<452>,1:370], [@155,502:504='ACA',<452>,1:502], [@198,640:642='ACA',<452>,1:640], [@242,796:798='ACA',<452>,1:796], [@267,882:884='ACA',<452>,1:882], [@292,967:969='ACA',<452>,1:967], [@317,1052:1054='ACA',<452>,1:1052], [@342,1143:1145='ACA',<452>,1:1143]]}}, interface={source_type=[{name=title, table_ref=ACA}]}, table_alias={ACA=acs__categories}}}",
+				"{def_query0={query_dictionary={source_type=[[@365,1242:1252='source_type',<455>,1:1242]]}, table_dictionary={acs__categories={title=[[@7,33:35='ACA',<455>,1:33], [@26,105:107='ACA',<455>,1:105], [@69,238:240='ACA',<455>,1:238], [@112,370:372='ACA',<455>,1:370], [@155,502:504='ACA',<455>,1:502], [@198,640:642='ACA',<455>,1:640], [@242,796:798='ACA',<455>,1:796], [@267,882:884='ACA',<455>,1:882], [@292,967:969='ACA',<455>,1:967], [@317,1052:1054='ACA',<455>,1:1052], [@342,1143:1145='ACA',<455>,1:1143]]}}, interface={source_type=[{name=title, table_ref=ACA}]}, table_alias={ACA=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -495,10 +495,10 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 				"{tab1={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={nested_flag=[[@21,82:92='nested_flag',<452>,1:82]]}}",
+				"{query0={nested_flag=[[@21,82:92='nested_flag',<455>,1:82]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={nested_flag=[[@21,82:92='nested_flag',<452>,1:82]]}, table_dictionary={tab1={}}, interface={nested_flag=[]}}}",
+				"{def_query0={query_dictionary={nested_flag=[[@21,82:92='nested_flag',<455>,1:82]]}, table_dictionary={tab1={}}, interface={nested_flag=[]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -521,13 +521,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@9,39:41='ACA',<452>,1:39]]}}",
+				"{acs__categories={title=[[@9,39:41='ACA',<455>,1:39]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={source_type=[[@31,118:128='source_type',<452>,1:118]]}}",
+				"{query0={source_type=[[@31,118:128='source_type',<455>,1:118]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={source_type=[[@31,118:128='source_type',<452>,1:118]]}, table_dictionary={acs__categories={title=[[@9,39:41='ACA',<452>,1:39]]}}, interface={source_type=[{name=title, table_ref=ACA}]}, table_alias={ACA=acs__categories}}}",
+				"{def_query0={query_dictionary={source_type=[[@31,118:128='source_type',<455>,1:118]]}, table_dictionary={acs__categories={title=[[@9,39:41='ACA',<455>,1:39]]}}, interface={source_type=[{name=title, table_ref=ACA}]}, table_alias={ACA=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -548,13 +548,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@1,7:9='col',<452>,1:7], [@13,58:60='col',<452>,1:58]]}}",
+				"{tab1={col=[[@1,7:9='col',<455>,1:7], [@13,58:60='col',<455>,1:58]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col=[[@1,7:9='col',<452>,1:7]]}}",
+				"{query0={col=[[@1,7:9='col',<455>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col=[[@1,7:9='col',<452>,1:7]]}, table_dictionary={tab1={col=[[@1,7:9='col',<452>,1:7], [@13,58:60='col',<452>,1:58]]}}, filters=[{name=col, table_ref=tab1}], interface={col=[{name=col, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={col=[[@1,7:9='col',<455>,1:7]]}, table_dictionary={tab1={col=[[@1,7:9='col',<455>,1:7], [@13,58:60='col',<455>,1:58]]}}, filters=[{name=col, table_ref=tab1}], interface={col=[{name=col, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -575,13 +575,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@1,7:7='t',<452>,1:7], [@19,71:71='t',<452>,1:71]]}, tab2={}}",
+				"{tab1={col=[[@1,7:7='t',<455>,1:7], [@19,71:71='t',<455>,1:71]]}, tab2={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col=[[@3,9:11='col',<452>,1:9]]}}",
+				"{query0={col=[[@3,9:11='col',<455>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col=[[@3,9:11='col',<452>,1:9]]}, table_dictionary={tab1={col=[[@1,7:7='t',<452>,1:7], [@19,71:71='t',<452>,1:71]]}, tab2={}}, filters=[{name=col, table_ref=t}], interface={col=[{name=col, table_ref=t}]}, table_alias={t=tab1, u=tab2}}}",
+				"{def_query0={query_dictionary={col=[[@3,9:11='col',<455>,1:9]]}, table_dictionary={tab1={col=[[@1,7:7='t',<455>,1:7], [@19,71:71='t',<455>,1:71]]}, tab2={}}, filters=[{name=col, table_ref=t}], interface={col=[{name=col, table_ref=t}]}, table_alias={t=tab1, u=tab2}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -602,13 +602,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@1,7:9='col',<452>,1:7], [@6,30:32='col',<452>,1:30], [@16,72:74='col',<452>,1:72]]}}",
+				"{tab1={col=[[@1,7:9='col',<455>,1:7], [@6,30:32='col',<455>,1:30], [@16,72:74='col',<455>,1:72]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col=[[@1,7:9='col',<452>,1:7]]}}",
+				"{query0={col=[[@1,7:9='col',<455>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col=[[@1,7:9='col',<452>,1:7]]}, table_dictionary={tab1={col=[[@1,7:9='col',<452>,1:7], [@6,30:32='col',<452>,1:30], [@16,72:74='col',<452>,1:72]]}}, grouped_by=[{name=col, table_ref=tab1}], filters=[{name=col, table_ref=tab1}], interface={col=[{name=col, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={col=[[@1,7:9='col',<455>,1:7]]}, table_dictionary={tab1={col=[[@1,7:9='col',<455>,1:7], [@6,30:32='col',<455>,1:30], [@16,72:74='col',<455>,1:72]]}}, grouped_by=[{name=col, table_ref=tab1}], filters=[{name=col, table_ref=tab1}], interface={col=[{name=col, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -629,13 +629,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col=[[@26,107:107='t',<452>,1:107], [@14,56:58='col',<452>,1:56], [@24,97:99='END',<12>,1:97]]}}",
+				"{tab1={col=[[@26,107:107='t',<455>,1:107], [@14,56:58='col',<455>,1:56], [@24,97:99='END',<12>,1:97]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{update0={flag=[[@4,18:21='flag',<452>,1:18]]}}",
+				"{update0={flag=[[@4,18:21='flag',<455>,1:18]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_update0={assignments={flag=[{name=col, table_ref=tab1}]}, table_dictionary={tab1={col=[[@26,107:107='t',<452>,1:107], [@14,56:58='col',<452>,1:56], [@24,97:99='END',<12>,1:97]]}}, update_dictionary={flag=[[@4,18:21='flag',<452>,1:18]]}, target_table={tab1={flag=[[@4,18:21='flag',<452>,1:18]]}}, filters=[{name=col, table_ref=t}], table_alias={t=tab1}, lhs_unresolved_columns={flag={column={name=flag, table_ref=null}, locations=[[@4,18:21='flag',<452>,1:18]]}}}}",
+				"{def_update0={assignments={flag=[{name=col, table_ref=tab1}]}, table_dictionary={tab1={col=[[@26,107:107='t',<455>,1:107], [@14,56:58='col',<455>,1:56], [@24,97:99='END',<12>,1:97]]}}, update_dictionary={flag=[[@4,18:21='flag',<455>,1:18]]}, target_table={tab1={flag=[[@4,18:21='flag',<455>,1:18]]}}, filters=[{name=col, table_ref=t}], table_alias={t=tab1}, lhs_unresolved_columns={flag={column={name=flag, table_ref=null}, locations=[[@4,18:21='flag',<455>,1:18]]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -656,13 +656,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={col=[[@1,7:9='col',<452>,1:7]], title=[[@12,66:68='cat',<452>,1:66], [@25,109:111='cat',<452>,1:109]]}}",
+				"{acs__categories={col=[[@1,7:9='col',<455>,1:7]], title=[[@12,66:68='cat',<455>,1:66], [@25,109:111='cat',<455>,1:109]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col=[[@1,7:9='col',<452>,1:7]]}}",
+				"{query0={col=[[@1,7:9='col',<455>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col=[[@1,7:9='col',<452>,1:7]]}, table_dictionary={acs__categories={col=[[@1,7:9='col',<452>,1:7]], title=[[@12,66:68='cat',<452>,1:66], [@25,109:111='cat',<452>,1:109]]}}, filters=[{name=title, table_ref=cat}], interface={col=[{name=col, table_ref=acs__categories}]}, table_alias={cat=acs__categories}}}",
+				"{def_query0={query_dictionary={col=[[@1,7:9='col',<455>,1:7]]}, table_dictionary={acs__categories={col=[[@1,7:9='col',<455>,1:7]], title=[[@12,66:68='cat',<455>,1:66], [@25,109:111='cat',<455>,1:109]]}}, filters=[{name=title, table_ref=cat}], interface={col=[{name=col, table_ref=acs__categories}]}, table_alias={cat=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -684,13 +684,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@1,7:9='cat',<452>,1:7], [@9,51:53='cat',<452>,1:51], [@19,92:94='cat',<452>,1:92], [@32,135:137='cat',<452>,1:135]]}}",
+				"{acs__categories={title=[[@1,7:9='cat',<455>,1:7], [@9,51:53='cat',<455>,1:51], [@19,92:94='cat',<455>,1:92], [@32,135:137='cat',<455>,1:135]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={title=[[@3,11:15='title',<452>,1:11]]}}",
+				"{query0={title=[[@3,11:15='title',<455>,1:11]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={title=[[@3,11:15='title',<452>,1:11]]}, table_dictionary={acs__categories={title=[[@1,7:9='cat',<452>,1:7], [@9,51:53='cat',<452>,1:51], [@19,92:94='cat',<452>,1:92], [@32,135:137='cat',<452>,1:135]]}}, grouped_by=[{name=title, table_ref=cat}], filters=[{name=title, table_ref=cat}], interface={title=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
+				"{def_query0={query_dictionary={title=[[@3,11:15='title',<455>,1:11]]}, table_dictionary={acs__categories={title=[[@1,7:9='cat',<455>,1:7], [@9,51:53='cat',<455>,1:51], [@19,92:94='cat',<455>,1:92], [@32,135:137='cat',<455>,1:135]]}}, grouped_by=[{name=title, table_ref=cat}], filters=[{name=title, table_ref=cat}], interface={title=[{name=title, table_ref=cat}]}, table_alias={cat=acs__categories}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -712,13 +712,13 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{acs__categories={title=[[@12,65:67='cat',<452>,1:65], [@25,108:110='cat',<452>,1:108], [@41,153:155='cat',<452>,1:153]]}}",
+				"{acs__categories={title=[[@12,65:67='cat',<455>,1:65], [@25,108:110='cat',<455>,1:108], [@41,153:155='cat',<455>,1:153]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{update0={product=[[@4,31:37='product',<452>,1:31]]}}",
+				"{update0={product=[[@4,31:37='product',<455>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_update0={assignments={product=[{name=title, table_ref=cat}]}, table_dictionary={acs__categories={title=[[@12,65:67='cat',<452>,1:65], [@25,108:110='cat',<452>,1:108], [@41,153:155='cat',<452>,1:153]]}}, update_dictionary={product=[[@4,31:37='product',<452>,1:31]]}, target_table={acs__categories={product=[[@4,31:37='product',<452>,1:31]]}}, filters=[{name=title, table_ref=cat}], table_alias={cat=acs__categories}, lhs_unresolved_columns={product={column={name=product, table_ref=null}, locations=[[@4,31:37='product',<452>,1:31]]}}}}",
+				"{def_update0={assignments={product=[{name=title, table_ref=cat}]}, table_dictionary={acs__categories={title=[[@12,65:67='cat',<455>,1:65], [@25,108:110='cat',<455>,1:108], [@41,153:155='cat',<455>,1:153]]}}, update_dictionary={product=[[@4,31:37='product',<455>,1:31]]}, target_table={acs__categories={product=[[@4,31:37='product',<455>,1:31]]}}, filters=[{name=title, table_ref=cat}], table_alias={cat=acs__categories}, lhs_unresolved_columns={product={column={name=product, table_ref=null}, locations=[[@4,31:37='product',<455>,1:31]]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 

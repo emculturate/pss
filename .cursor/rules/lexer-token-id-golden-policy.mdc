@@ -17,6 +17,48 @@ When adding lexer tokens (e.g. `LEFT_BRACKET` / `RIGHT_BRACKET` for array subscr
 - Bulk-update token IDs across the full test suite mid-task.
 - Re-run the entire walker golden corpus expecting to auto-fix `<nnn>` token references.
 
-## When many IDs shift
+## Automatic required process for every lexer addition
 
-Provide the user a **substitution list** (old token id → new token id, or a find/replace table) so they can apply it manually to save token cost. Do not mass-edit unrelated test files without explicit approval.
+Trigger this process whenever a task adds lexer items, even if the user does not
+ask for a token-ID report. Capture the before image **before changing the
+grammar**, then regenerate and capture the after image. Do not overwrite the
+before image with regenerated output. If changes already exist, identify the
+pre-addition revision and generate its lexer in an isolated worktree; never
+guess the old constants or disturb the current checkout.
+
+1. Add new lexer keywords at the end of the late-keyword block, immediately before
+   `Identifier`. Preserve existing lexer order.
+2. Use the count of inserted lexer terms as the expected shift increment.
+3. Build a complete old/new lexer-ID worklist from generated ANTLR lexer class
+   constants (not from failing test output).
+4. Include the entire sorted worklist (highest new token ID to lowest) in the
+   **final response/summary**, with token **name + before ID + after ID + delta**,
+   the added token names, and the expected increment. Include all existing tokens
+   following the additions, starting with `Identifier`, through the final token,
+   including comments, whitespace, and skip tokens absent from failing tests.
+   Never truncate the worklist or replace it with a link or selected examples.
+5. Verify the observed shifts match the expected increment and earlier token IDs
+   are unchanged. If not, report the discrepancy explicitly; do not infer a
+   uniform replacement. If no IDs shift, explicitly report that result.
+6. This is the developer's manual IDE worklist. Do not automatically modify
+   existing golden token IDs.
+
+### Commands
+
+```bash
+# 1) Capture old generated lexer constants before edits
+mvn -pl parse -DskipTests generate-sources
+cp parse/target/generated-sources/antlr4/sql/SQLSelectParserLexer.java /tmp/sql-lexer.before.java
+
+# 2) Make lexer keyword additions, then capture new generated lexer constants
+mvn -pl parse -DskipTests generate-sources
+cp parse/target/generated-sources/antlr4/sql/SQLSelectParserLexer.java /tmp/sql-lexer.after.java
+
+# 3) Produce comprehensive manual worklist
+python3 tools/token_id_worklist_from_vocab.py \
+  /tmp/sql-lexer.before.java \
+  /tmp/sql-lexer.after.java
+```
+
+Do not derive the replacement set from runTests-only mismatches; that can hide
+unseen token-ID shifts and lead to incorrect blanket replacements.

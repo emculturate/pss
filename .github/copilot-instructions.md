@@ -1,5 +1,28 @@
 # Copilot Instructions
 
+## Lexer Additions - Automatic Token-ID Worklist
+
+Whenever a task adds lexer items, automatically follow the
+[lexer token-ID policy](../.cursor/rules/lexer-token-id-golden-policy.mdc).
+Do not wait for the user to request a token report:
+
+1. Before editing, generate and snapshot
+   `parse/target/generated-sources/antlr4/sql/SQLSelectParserLexer.java`.
+2. Append new lexer keywords immediately before `Identifier`, preserving existing
+   token order. Count the additions as the expected ID increment.
+3. Regenerate and snapshot the after image, then compare the generated Java token
+   constants with `tools/token_id_worklist_from_vocab.py <before.java> <after.java>`.
+4. Include the **entire** worklist in the final response/summary: token name,
+   before ID, after ID, and delta, ordered highest ID to lowest. Include every
+   shifted token, regardless of whether tests expose it, plus the added token
+   names and expected increment.
+5. Leave existing golden token-ID replacements to the developer's careful manual
+   IDE edits. Do not automatically refresh them.
+
+This workflow takes precedence over the test-output report below for lexer
+additions and migration mappings. Test failure output is not a complete token
+inventory.
+
 ## Token ID Difference Report Workflow
 
 When the user asks to report token id differences (for example: "report token id differences", "check token id mismatches", or similar phrasing), do the following automatically:
