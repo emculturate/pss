@@ -3,7 +3,6 @@ package sql.latency;
 import java.io.IOException;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -15,6 +14,8 @@ import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 
 /**
  * Regression: former subMap skip-list rows complete through access + opt-in diagnostic paths.
@@ -22,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 public class PantoSubMapSkipListRegressionTest {
 
     private static final int ROW_ACQUIA = 28;
-    private static final int ROW_GIANT_CASE = 130;
 
     @Test
     public void diagnosticService_walkCatchParity_recordsStructuredMisalign() {
@@ -62,6 +62,7 @@ public class PantoSubMapSkipListRegressionTest {
 
     @Test
     public void sqlParserAccess_formerSkipRow28_noSubMapFatal() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_ACQUIA);
         SqlParserAccess access = new SqlParserAccess(false, false, false);
         access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
@@ -72,19 +73,8 @@ public class PantoSubMapSkipListRegressionTest {
     }
 
     @Test
-    public void sqlParserAccess_row130_fullCsvSql_noSubMapFatal() throws IOException {
-        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_GIANT_CASE);
-        SqlParserAccess access = new SqlParserAccess(false, false, false);
-        access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
-
-        for (String fatal : access.getFatalErrorList()) {
-            assertFalse("unexpected walker fatal: " + fatal, fatal.contains("subMap"));
-        }
-    }
-
-    @Ignore("Manual — 20-row diagnostic timing sweep; covered by PantoTimeoutCorpusE3GateTest")
-    @Test
     public void diagnosticService_formerSkipRows_underE3Gate() throws IOException {
+        assumeDiagnosticsEnabled();
         int[] formerSkipRows = {
                 28, 30, 31, 32, 41, 130, 314, 315, 1814, 2120,
                 4157, 4158, 4163, 4164, 4170, 4171, 5860, 5861, 5862, 5863

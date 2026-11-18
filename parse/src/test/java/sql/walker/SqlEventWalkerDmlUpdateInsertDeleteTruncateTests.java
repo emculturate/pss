@@ -4549,7 +4549,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				"{query0={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}, insert1={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_insert1={query_dictionary={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}, table_dictionary={hr.employees={score=[[@6,32:36='score',<452>,1:32]], emp_id=[[@8,39:44='emp_id',<452>,1:39]]}}, def_query0={query_dictionary={score=[[@6,32:36='score',<452>,1:32]], emp_id=[[@8,39:44='emp_id',<452>,1:39]]}, table_dictionary={perf_feed={score=[[@6,32:36='score',<452>,1:32]], emp_id=[[@8,39:44='emp_id',<452>,1:39]]}}, interface={score=[{name=score, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=[{name=score, table_ref=query0}], emp_id=[{name=emp_id, table_ref=query0}]}}}",
+				"{def_insert1={query_dictionary={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}, table_dictionary={hr.employees={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}}, def_query0={query_dictionary={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}, table_dictionary={perf_feed={score=[[@6,32:36='score',<455>,1:32]], emp_id=[[@8,39:44='emp_id',<455>,1:39]]}}, interface={score=[{name=score, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=[{name=score, table_ref=query0}], emp_id=[{name=emp_id, table_ref=query0}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 }

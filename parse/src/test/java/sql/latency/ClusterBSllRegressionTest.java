@@ -3,7 +3,6 @@ package sql.latency;
 import java.io.IOException;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -12,6 +11,8 @@ import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 
 /**
  * Cluster B production regression: ten rows where SLL produced false fatals but
@@ -39,6 +40,7 @@ public class ClusterBSllRegressionTest {
 
     @Test
     public void clusterB_productionAccessPath_zeroFatals() throws IOException {
+        assumeSlowTestsEnabled();
         for (int csvRow : PantoOutstandingSqlFixtures.clusterBRegressionRows()) {
             String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
             SqlParserAccess access = new SqlParserAccess(false, false, false);
@@ -47,9 +49,9 @@ public class ClusterBSllRegressionTest {
         }
     }
 
-    @Ignore("Manual — diagnostic timing parity; production path covered by clusterB_productionAccessPath_zeroFatals")
     @Test
     public void clusterB_diagnosticService_matchesAccessWalkerFatals() throws IOException {
+        assumeDiagnosticsEnabled();
         for (int csvRow : PantoOutstandingSqlFixtures.clusterBRegressionRows()) {
             String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
             ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);

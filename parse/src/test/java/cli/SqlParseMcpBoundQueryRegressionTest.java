@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 
 /**
  * Regression for bound-query CSV rows that previously failed in RMCP's MCP JSON-RPC path:
@@ -63,6 +64,7 @@ public class SqlParseMcpBoundQueryRegressionTest {
 
     @Test(timeout = 120_000)
     public void row129_parseSqlJsonRpc_largeAscii_reachesParser() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = McpBoundQueryFixtures.sqlForRow(LARGE_ASCII_ROW);
         assertTrue("row 129 fixture should be large", sql.length() > 70_000);
         assertFalse("row 129 fixture should be ASCII", containsNonAscii(sql));
@@ -76,6 +78,7 @@ public class SqlParseMcpBoundQueryRegressionTest {
 
     @Test(timeout = 120_000)
     public void row129_parseSqlStream_largeAscii_reachesParser() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = McpBoundQueryFixtures.sqlForRow(LARGE_ASCII_ROW);
         byte[] sqlBytes = sql.getBytes(StandardCharsets.UTF_8);
         byte[] request = McpTestFraming.parseSqlStreamRequest("129-stream", ENDPOINT, sqlBytes);
@@ -87,6 +90,7 @@ public class SqlParseMcpBoundQueryRegressionTest {
 
     @Test(timeout = 300_000)
     public void boundQueryRows_sequentialBulkRun_noFramingOrGsonFailures() throws IOException {
+        assumeSlowTestsEnabled();
         int[] allRows = {LARGE_ASCII_ROW, 314, 315, 475, 476, 1814, 1827, 1828};
         ByteArrayOutputStream combined = new ByteArrayOutputStream();
         List<String> expectedIds = new ArrayList<>();

@@ -31,6 +31,56 @@ the isolated output; use `parse/target-maven/` when inspecting an isolated build
 If the IDE reports missing Maven dependencies, its project model still needs
 repair; isolated tests do not depend on the IDE's compiled output.
 
+### Test suite selection
+
+**"Full suite" means the result-accuracy suite**, not slow corpus regressions or
+manual timing/benchmark probes. This is the default for Maven and the Testing
+sidebar. Agents must ask which set is intended if a request is ambiguous.
+
+| Set | VS Code test configuration | Maven selection |
+| --- | --- | --- |
+| Full result-accuracy suite (default) | `pss-quiet` | `mvn -f parse/pom.xml -Pisolated-build test` |
+| Release suite: accuracy plus slow corpus regressions | `pss-release` | `mvn -f parse/pom.xml -Pisolated-build,release-tests test` |
+| Manual diagnostics: also enables timing probes | `pss-diagnostics` | Add `diagnostic-tests` and select the diagnostic class/method |
+
+Set `java.test.defaultConfig` to the desired Java test configuration in
+[workspace settings](.vscode/settings.json). In the Testing sidebar, run the desired test, class,
+package, or all tests normally. Restore `pss-quiet` after a release/diagnostic
+run. Assertions and failed-test navigation remain in the sidebar.
+
+Slow/diagnostic tests remain discoverable but report **skipped** with an opt-in
+message unless enabled. This uses JUnit 4 assumptions, so it works in both
+Maven and the IDE, rather than relying on Maven-only exclusions. Selecting a
+test by name does not bypass its suite guard.
+
+The slow set contains the real-corpus MCP bound-query/Unicode regressions, the
+MCP row-28 fixture regression, Cluster B production parsing, row-130 production
+parsing, row-28 subMap regression, and diagnostic/production row-28 parity.
+Lightweight fixture/index checks, diagnostic exception mapping, and ordinary
+CLI framing/Unicode tests stay in the accuracy set. The overlapping row-130
+subMap check is covered by
+[`PantoRow130FullCsvRegressionTest`](parse/src/test/java/sql/latency/PantoRow130FullCsvRegressionTest.java),
+which also checks walker stack alignment without parsing that row twice.
+
+Manual latency probes use the diagnostic guard instead of permanent `@Ignore`,
+so opting in actually executes them. For example:
+
+```bash
+mvn -f parse/pom.xml -Pisolated-build,diagnostic-tests \
+  -Dtest=ParseLatencyDiagnosticTest#pantoRow28_acquia \
+  -Dpss.walker.test.verbose=false test
+```
+
+Diagnostic mode also enables slow regressions; release mode does **not** enable
+manual diagnostics. Prefer a targeted diagnostic run: the batch benchmark
+requires its generated manifest (`-Dpanto.timeout.manifest=/absolute/path/to/manifest.json`).
+Existing elapsed-time assertions are measurements, not hard parser-cancellation
+deadlines; this suite separation does not add process isolation or new timeouts.
+
+The **Run All Tests (Maven)** task runs accuracy tests; **Run Release Tests
+(Maven)** explicitly adds the slow regressions. Run the release suite before
+publishing a JAR; a passing accuracy run alone is not release sign-off.
+
 ## Command-Line SQL Parsing
 
 This project provides a command-line interface (CLI) to parse SQL statements directly from your terminal. The main class for this functionality is `cli.SqlParse`.

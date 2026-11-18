@@ -1,6 +1,6 @@
 package sql.latency;
 
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
 
 import sql.walker.SetOpTimingProbeFixtures;
@@ -8,6 +8,7 @@ import sql.walker.SetOpTimingProbeFixtures;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
 
 /**
  * Phase 2.8 diagnostic driver — points the latency service at representative
@@ -25,20 +26,24 @@ import static org.junit.Assert.assertTrue;
  *
  * <p>Run a single test with:
  * <pre>
- *   mvn -f parse/pom.xml -Dtest=ParseLatencyDiagnosticTest#pantRow28_acquia test
+ *   mvn -f parse/pom.xml -Pdiagnostic-tests -Dtest=ParseLatencyDiagnosticTest#pantoRow28_acquia test
  * </pre>
  *
  * <p>Run all with:
  * <pre>
- *   mvn -f parse/pom.xml -Dtest=ParseLatencyDiagnosticTest test
+ *   mvn -f parse/pom.xml -Pdiagnostic-tests -Dtest=ParseLatencyDiagnosticTest test
  * </pre>
  *
  * <p><b>Manual only:</b> excluded from default {@code mvn test} / package builds.
  */
-@Ignore("Manual — Phase 2.8 latency probes; mvn -pl parse -Dtest=ParseLatencyDiagnosticTest test")
 public class ParseLatencyDiagnosticTest {
 
     private static final long WARN_MS = 5_000L;
+
+    @Before
+    public void requireDiagnosticSuite() {
+        assumeDiagnosticsEnabled();
+    }
 
     // ── harness ───────────────────────────────────────────────────────────────
 

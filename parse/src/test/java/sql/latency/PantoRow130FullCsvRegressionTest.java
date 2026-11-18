@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -17,6 +16,8 @@ import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 
 /**
  * W4 Part 1 — row 130 regression on frozen handoff SQL ({@code csv-row-130.sql}).
@@ -37,6 +38,7 @@ public class PantoRow130FullCsvRegressionTest {
 
     @Test
     public void sqlParserAccess_fullCsv_noWalkerStackMisalign() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(CSV_ROW);
         SqlParserAccess access = new SqlParserAccess(false, false, false);
         access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
@@ -47,9 +49,9 @@ public class PantoRow130FullCsvRegressionTest {
         }
     }
 
-    @Ignore("Manual — row 130 diagnostic timing gate; mvn -pl parse -Dtest=PantoRow130FullCsvRegressionTest#diagnosticService_fullCsv_underE3Gate_noWalkerStackMisalign test")
     @Test
     public void diagnosticService_fullCsv_underE3Gate_noWalkerStackMisalign() throws IOException {
+        assumeDiagnosticsEnabled();
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(CSV_ROW);
         ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
 

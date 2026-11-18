@@ -29,6 +29,8 @@
     <maven.clean.plugin.version>3.3.2</maven.clean.plugin.version>
     <jacoco.version>0.8.12</jacoco.version>
     <pss.walker.test.verbose>false</pss.walker.test.verbose>
+    <pss.test.slow>false</pss.test.slow>
+    <pss.test.diagnostics>false</pss.test.diagnostics>
   </properties>
 
   <dependencies>
@@ -163,6 +165,8 @@
               </excludes>
               <systemPropertyVariables>
                   <pss.walker.test.verbose>${pss.walker.test.verbose}</pss.walker.test.verbose>
+                  <pss.test.slow>${pss.test.slow}</pss.test.slow>
+                  <pss.test.diagnostics>${pss.test.diagnostics}</pss.test.diagnostics>
               </systemPropertyVariables>
             </configuration>
      </plugin>
@@ -212,6 +216,18 @@
   <!-- Oracle Java extension (and mvn -Dtest=...) run single tests via Surefire with -Dtest set.
        Auto-enable walker symbol-tree dumps for those runs; full "mvn test" stays quiet. -->
   <profiles>
+    <profile>
+      <id>release-tests</id>
+      <properties>
+        <pss.test.slow>true</pss.test.slow>
+      </properties>
+    </profile>
+    <profile>
+      <id>diagnostic-tests</id>
+      <properties>
+        <pss.test.diagnostics>true</pss.test.diagnostics>
+      </properties>
+    </profile>
     <profile>
       <id>single-test-verbose-walker</id>
       <activation>

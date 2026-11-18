@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 
 /**
  * Parameterized MCP CLI regression for bound-query rows with non-ASCII {@code sqlText}.
@@ -69,6 +70,7 @@ public class SqlParseMcpBoundQueryUnicodeRegressionTest {
 
     @Test
     public void parseSqlJsonRpc_nonAsciiSql_reachesParserWithoutGsonFailure() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = McpBoundQueryFixtures.sqlForRow(csvRow);
         assertTrue("fixture should contain non-ASCII", containsNonAscii(sql));
 
@@ -84,6 +86,7 @@ public class SqlParseMcpBoundQueryUnicodeRegressionTest {
 
     @Test
     public void parseSqlStream_nonAsciiSql_reachesParserWithoutGsonFailure() throws IOException {
+        assumeSlowTestsEnabled();
         String sql = McpBoundQueryFixtures.sqlForRow(csvRow);
         byte[] sqlBytes = sql.getBytes(StandardCharsets.UTF_8);
         byte[] request = McpTestFraming.parseSqlStreamRequest(String.valueOf(csvRow), ENDPOINT, sqlBytes);

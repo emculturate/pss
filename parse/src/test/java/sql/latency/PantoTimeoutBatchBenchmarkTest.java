@@ -11,13 +11,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
 
 /**
  * Batch re-run of Panto outstanding {@code timeout_513} rows against the current
@@ -26,7 +26,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
  *
  * <pre>
  *   python3 tools/benchmark_panto_timeout_rows.py --issue timeout_513
- *   mvn -pl parse -Dtest=PantoTimeoutBatchBenchmarkTest#runTimeout513RowsFromManifest test
+ *   mvn -pl parse -Pdiagnostic-tests -Dtest=PantoTimeoutBatchBenchmarkTest#runTimeout513RowsFromManifest test
  * </pre>
  *
  * <p>Rows in {@link PantoCorpusSkipList} (subMap walker fatals) and
@@ -40,8 +40,8 @@ public class PantoTimeoutBatchBenchmarkTest {
     private static final long WARN_MS = 5_000L;
 
     @Test
-    @Ignore("Manual — re-benchmark timeout_513 rows; run with -Dtest=…#runTimeout513RowsFromManifest")
     public void runTimeout513RowsFromManifest() throws IOException {
+        assumeDiagnosticsEnabled();
         Path manifest = resolveManifestPath();
         List<ManifestRow> rows = loadManifest(manifest);
         boolean includeSkipList = Boolean.getBoolean("panto.skip.list.include");

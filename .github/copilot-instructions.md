@@ -1,5 +1,22 @@
 # Copilot Instructions
 
+## Test Suite Selection
+
+- "Full suite", "full test suite", and "all tests" mean the default
+  **result-accuracy suite**, not opt-in slow corpus regressions or manual
+  latency/benchmark diagnostics.
+- Use `pss-quiet` in the Testing sidebar, or Maven without `release-tests` /
+  `diagnostic-tests`, for that default suite.
+- Enable `pss-release` / `-Prelease-tests` only for an explicit slow/release
+  regression request. Enable `pss-diagnostics` / `-Pdiagnostic-tests` only for
+  explicitly requested manual probes.
+- If there is any uncertainty, ask the user which set they mean before running
+  tests. Give delegated agents the same instruction.
+- Report the selected set and skipped tests; accuracy-only success is not a
+  claim that slow regressions passed or the JAR is release-ready.
+
+See [test suite selection](../README.md#test-suite-selection).
+
 ## Lexer Additions - Automatic Token-ID Worklist
 
 Whenever a task adds lexer items, automatically follow the

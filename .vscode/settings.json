@@ -38,7 +38,7 @@
   "java.test.log.level": "verbose",
   "java.test.editor.enableShortcuts": true,
   "java.test.editor.revealOutput": "always",
-  "java.test.defaultConfig": "pss-fast-debug",
+  "java.test.defaultConfig": "pss-quiet",
   "java.test.config": [
     {
       "name": "pss-fast-debug",
@@ -76,6 +76,28 @@
       "workingDirectory": "${workspaceFolder}/parse",
       "vmArgs": [
         "-Dpss.walker.test.verbose=false",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    },
+    {
+      "name": "pss-release",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=false",
+        "-Dpss.test.slow=true",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    },
+    {
+      "name": "pss-diagnostics",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=false",
+        "-Dpss.test.diagnostics=true",
         "-Xmx2g",
         "-Xms256m"
       ]

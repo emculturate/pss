@@ -6,12 +6,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringJoiner;
 
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
 
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
 
 /**
  * Phase 2.8-E3 corpus gate — all {@code timeout_513} rows (74) plus named bucket canaries
@@ -30,10 +31,14 @@ import static org.junit.Assert.assertTrue;
  * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
  *
  * <p><b>Manual only:</b> excluded from default {@code mvn test} / package builds (~80s).
- * Run: {@code mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test}
+ * Run: {@code mvn -pl parse -Pdiagnostic-tests -Dtest=PantoTimeoutCorpusE3GateTest test}
  */
-@Ignore("Manual — 74-row E3 timing gate; mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test")
 public class PantoTimeoutCorpusE3GateTest {
+
+    @Before
+    public void requireDiagnosticSuite() {
+        assumeDiagnosticsEnabled();
+    }
 
     static final long E3_TIMEOUT_MS = PantoLatencyGateConstants.E3_TIMEOUT_MS;
 

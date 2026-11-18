@@ -16,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static testsupport.TestSuiteSelection.assumeSlowTestsEnabled;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -588,6 +589,7 @@ public class SqlParseMCPTest {
 
     @Test
     public void parseSqlWithNbsp_returnsJsonRpcIdAndParsesRow28Fixture() throws Exception {
+        assumeSlowTestsEnabled();
         Path row28 = Path.of("docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
         if (!Files.isRegularFile(row28)) {
             row28 = Path.of("parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
