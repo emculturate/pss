@@ -37,6 +37,25 @@
         <version>${maven.resources.plugin.version}</version>
         <executions>
           <execution>
+            <id>prepare-agent-kit-guide</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/agent-kit</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/agent-kit</directory>
+                  <filtering>true</filtering>
+                  <includes>
+                    <include>AGENT-KIT.md</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
             <id>copy-consumer-docs-bundle</id>
             <phase>generate-resources</phase>
             <goals>
@@ -95,6 +114,13 @@
                   <arg value="${pss.parse.api.version}"/>
                   <arg value="${project.version}"/>
                 </exec>
+                <zip destfile="${project.build.directory}/${project.artifactId}-${project.version}-agent-kit.zip">
+                  <zipfileset dir="${project.build.directory}/agent-kit" includes="AGENT-KIT.md"/>
+                  <zipfileset dir="${project.build.outputDirectory}/META-INF/pss-parse/${pss.parse.api.version}"
+                              includes="*.md"/>
+                  <zipfileset file="${project.basedir}/../docs/vendor/pss-parse/${pss.parse.api.version}/pss-parse-docs.manifest.json"
+                              fullpath="pss-parse-docs.manifest.json"/>
+                </zip>
               </target>
             </configuration>
           </execution>

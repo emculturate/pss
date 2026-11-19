@@ -56,8 +56,11 @@ the release-test suite. The principal handoff files for the current version are:
 
 - `parse/target/pss-parse-5.1.4-1-fat.jar`
 - `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
+- `pss-parse-docs/target/pss-parse-docs-5.1.4-1-agent-kit.zip`
 
 The standard parser and test JARs are also produced in `parse/target/`.
+The optional agent kit contains the same consumer guides plus installation
+instructions for dependent projects; see the [docs module](pss-parse-docs/README.md#agent-kit-manual--non-maven-consumers).
 Local packaging is not publication: do not run `deploy` or upload to Archiva
 without explicit owner authorization.
 

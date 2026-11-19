@@ -1,6 +1,6 @@
 # pss-parse-docs (Maven artifact)
 
-Maven JAR packaging the **pss-parse consumer documentation bundle** for a specific API version. This is **Option C** for sharing documentation alongside the parser.
+Maven module packaging the **pss-parse consumer documentation bundle** for a specific API version as a documentation JAR and an optional agent-kit ZIP. The JAR remains **Option C** for sharing documentation alongside the parser.
 
 ## Artifact coordinates
 
@@ -21,6 +21,7 @@ See `META-INF/pss-parse/pss-parse-docs.manifest.json` for the machine-readable l
 | `relational-modifier-resolution-policy.md` | PIVOT/UNPIVOT semantics, `derivation` buckets, and modifier column lineage |
 | `sql-grammar-extensions-since-2026-01-01.md` | Parse coverage and grammar extensions for pss-parse 5.1.4+ |
 | `phase-17.6.9-window-query-dictionary-policy.md` | Window clause policy: `window_partition_by` / `window_ordered_by` vs `query_dictionary` |
+| `ordered-select-list-output-alias-policy.md` | Ordered select-list aliases and interface lineage |
 | `set-operation-interface-duplicate-output-names-policy.md` | Set-op branch interface distinctness; duplicate output names, diagnostic cascade, author remediation |
 | `global-table-dictionary-cte-alias-policy.md` | 5.1.4 global `tableDictionary`: CTE/query aliases via `table_alias` |
 
@@ -32,9 +33,34 @@ From the repository root:
 mvn -pl pss-parse-docs package
 ```
 
-Output: `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
+Outputs:
+
+- `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
+- `pss-parse-docs/target/pss-parse-docs-5.1.4-1-agent-kit.zip`
 
 Building also refreshes `docs/vendor/pss-parse/<api-version>/` for Option D (submodule/subtree) consumers.
+
+### Agent kit (manual / non-Maven consumers)
+
+The ZIP contains `AGENT-KIT.md`, the eight consumer guides, and a
+`pss-parse-docs.manifest.json` whose paths are relative to the extracted
+directory. Extract into an empty staging directory, open `AGENT-KIT.md`, and
+follow its installation instructions. Copy the complete kit into the dependent
+project's versioned vendor directory, then merge its small instruction block
+into the project's enabled agent configuration. Existing instructions are
+never automatically overwritten.
+
+The ZIP reuses the documentation JAR's staged guides and the generated vendor
+manifest. Maven filters artifact/API versions into the
+[maintained bootstrap](src/agent-kit/AGENT-KIT.md); no separate ZIP guide
+allowlist or hand-maintained copy of the consumer docs is needed.
+Changing a bundled canonical guide and running `package` refreshes both
+formats. Version changes follow the parent POM properties.
+
+The kit supplements, rather than replaces, the documentation JAR. It is
+generated locally during `package`; it is not attached as an additional Maven
+publication artifact. Neither this build nor kit creation authorizes an
+Archiva upload.
 
 ## JAR layout
 
