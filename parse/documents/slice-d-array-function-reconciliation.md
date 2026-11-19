@@ -15,8 +15,9 @@ cases; D1.2.2 completes ARRAY_SLICE with 55 cases. D2.6 completes ARRAY_DISTINCT
 ARRAY_COMPACT and ARRAY_SIZE with 31 cases each. D3.8.1-D3.8.3 complete TO_ARRAY,
 AS_ARRAY and IS_ARRAY with 35, 32 and 37 cases respectively. D3.8.4/D3.9.1-D3.9.2
 complete SPLIT, SPLIT_TO_ARRAY and STRTOK_TO_ARRAY with 48, 53 and 53 cases.
-The focused host passes 694/694; 102 directly dependent composition tests also
-pass. Three older matrix remediations remain pending.
+D3.9.3-D3.9.5 complete ARRAY_GENERATE_RANGE, ARRAY_POSITION and ARRAYS_ZIP
+with 79, 50 and 90 cases. The focused host passes 890/890. All individual
+function batches are complete; D-SIG, D-AUDIT and final accuracy gates remain open.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
@@ -30,16 +31,17 @@ verification and reusable tooling added since the manual token-ID repair commit.
    There is no further absent lexer token within that fixed list.
 2. `ARRAY_REPEAT` now has its required strict matrix: 48 independent cases,
    including 45 six-output goldens and three parser-only syntax controls.
-3. **Three other assigned functions have incomplete per-function matrices:**
-   `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, and `ARRAYS_ZIP`.
+3. **All ten originally identified older-matrix remediations are complete.**
    `ARRAY_TO_STRING` and `ARRAY_SLICE` are complete under D1.2.1/D1.2.2, with
    exact diagnostics and their original extractor goldens retained.
    `ARRAY_DISTINCT`, `ARRAY_COMPACT` and `ARRAY_SIZE` are complete under D2.6,
    each with 29 six-output cases and two parser-only syntax controls.
    `SPLIT_TO_ARRAY` and `STRTOK_TO_ARRAY` are complete under D3.9.1/D3.9.2,
    each with 50 six-output cases and three parser-only syntax controls.
-   The remaining functions'
-   earlier green tests did not establish the workplan's full closure contract.
+   `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION` and `ARRAYS_ZIP` are complete under
+   D3.9.3-D3.9.5, with 79, 50 and 90 independently identified cases respectively.
+   This closes the individual function batches, not the cross-cutting audit
+   or the final accuracy sign-off ladder.
 4. **Four documented Snowflake functions were omitted from the conversion /
    predicate / split target list:** `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`.
    All four are explicitly approved for D3.8. `TO_ARRAY`, `AS_ARRAY` and
@@ -52,10 +54,11 @@ verification and reusable tooling added since the manual token-ID repair commit.
    another supposedly final token-ID repair pass.
 
 The initial source audit did not establish runtime certification. Subsequent
-manual token-ID repairs are committed, and the string-to-array batch passed
-694 focused-host tests plus 24 subscript and 78 table-function tests, all with
-zero failures/errors/skips. This does not close the remaining per-function
-gaps or the final Slice D sign-off ladder.
+manual token-ID repairs are committed, and the latest focused run passed
+890 tests with zero failures/errors/skips. The earlier string-to-array batch
+also passed 24 subscript and 78 table-function tests; no production code changed
+in the final three-function batch. D-SIG, D-AUDIT and the final Slice D sign-off
+ladder remain open.
 
 The bounded comparison is: the workplan's 4.9/4.10/4.11 assignments, Snowflake's
 documented `ARRAY_*`/`ARRAYS_*` family, explicit array conversion/type predicates,
@@ -105,9 +108,8 @@ Counts below are independent methods naming the function, not credits for
 incidental nested calls. All matching SQL call sites for the older ten functions
 were also searched across parser Java tests; they occur in this focused host.
 "Exact lists" counts complete diagnostic-list comparisons, not individual
-position/count assertions. An exact-list count of zero does **not** mean there
-are no diagnostic assertions. The older methods generally have individual
-diagnostic assertions and complete output goldens.
+position/count assertions. Retained older methods now have complete exact
+diagnostic lists alongside their original complete output goldens.
 
 | Function | Task | Lexer ID | Route | Registry | Methods | Six goldens | Exact lists | Current source assessment |
 |---|---|---:|---|---|---:|---:|---:|---|
@@ -124,19 +126,52 @@ diagnostic assertions and complete output goldens.
 | `ARRAY_SUM` | D2.4 | 453 | U | Yes | 27 | 27 | 27 | Expanded placement/resolution matrix present |
 | `SPLIT_TO_ARRAY` | D3.9.1 / T016 complete | 374 | C | Yes, retained compatibility | 53 | 50 | 53 | Optional delimiter; Redshift provenance; legacy affinity/goldens preserved; evidence below |
 | `STRTOK_TO_ARRAY` | D3.9.2 / T017 complete | 375 | C | Yes | 53 | 50 | 53 | Optional delimiter-set form and independent operand controls; evidence below |
-| `ARRAY_GENERATE_RANGE` | D3.5; remediation D3.9 | 366 | R | Yes | 7 | 7 | 0 | Literal-argument placements; no column-argument matrix |
-| `ARRAY_POSITION` | D3.5; remediation D3.9 | 367 | P | Yes | 8 | 8 | 0 | Matrix gaps |
-| `ARRAYS_ZIP` | D3.5; remediation D3.9 | 373 | Z | Yes | 8 | 8 | 0 | Matrix gaps |
+| `ARRAY_GENERATE_RANGE` | D3.9.3 / T018 complete | 366 | R | Yes | 79 | 76 | 79 | Two-/three-argument forms; independently isolated start/stop/step; original literal controls retained; evidence below |
+| `ARRAY_POSITION` | D3.9.4 / T019 complete | 367 | P | Yes | 50 | 47 | 50 | Independent needle/array controls; NULL/empty/duplicate/absent inputs and CASE projection; evidence below |
+| `ARRAYS_ZIP` | D3.9.5 / T020 complete | 373 | Z | Yes | 90 | 87 | 90 | One/two/three/four inputs; isolated variadic tail controls, unequal lengths and NULL/empty arrays; evidence below |
 | `ARRAYS_TO_OBJECT` | D3.6 | 454 | C | Yes | 40 | 38 | 40 | Expanded matrix plus two parser-only syntax cases present |
 | `TO_ARRAY` | D3.8.1 / T012 complete | 376 | C | Yes | 35 | 33 | 35 | Dedicated conversion route; scalar/VARIANT/NULL controls; evidence below |
 | `AS_ARRAY` | D3.8.2 / T013 complete | 377 | C | Yes | 32 | 30 | 32 | Dedicated conversion route; VARIANT/NULL controls; evidence below |
 | `IS_ARRAY` | D3.8.3 / T014 complete | 378 | C | Yes | 37 | 35 | 37 | Dedicated conversion route; bare predicates and projection/CASE; evidence below |
 | `SPLIT` | D3.8.4 / T015 complete | 456 | C | Yes | 48 | 45 | 48 | Dedicated route; legacy AST serialization and subscript/FLATTEN composition preserved; evidence below |
 
-Total: **694 methods**, of which 662 assert all six extractor outputs and 32
-are parser-only syntax controls. The focused run passes all 694. This is not a
+Total: **890 methods**, of which 849 assert all six extractor outputs and 41
+are parser-only syntax controls. The focused run passes all 890. This is not a
 claim that every signature-negative case across all 21 functions is established;
-D-SIG and the remaining per-function batches remain open.
+D-SIG, D-AUDIT and the final accuracy gates remain open.
+
+## Final individual-function batch: T018-T020
+
+The existing range, position and zip routes, walkers and registry entries
+already satisfy these new cases. Coverage-only work added 196 methods and
+strengthened all 23 retained legacy diagnostic lists, without changing old
+extractor goldens or any of the 671 unrelated host methods. One focused Maven
+run passed **890/890**, zero failures/errors/skips, exit 0. No production,
+lexer or toolkit changes were needed.
+
+- `ARRAY_GENERATE_RANGE(start, stop [, step])`: the main three-argument matrix
+  isolates every operand. Additional two-argument column/variable/NULL and
+  nested/derived/set-op cases preserve omitted step as two AST parameters.
+  Original literal-only controls remain intact. Positive/negative steps,
+  equal/reversed bounds and arithmetic expressions are parsed, not executed.
+  A zero-step control explicitly preserves the parser/runtime boundary:
+  Snowflake prohibits zero at execution, but PSS does not evaluate that value.
+- `ARRAY_POSITION(value_expr, array)`: both operands have independent
+  resolution and substitution controls. VARIANT-cast literal needles,
+  first/duplicate/absent values, empty arrays and SQL NULL/NULL-element inputs
+  have complete goldens. CASE projection preserves needle and array lineage.
+  Index values and database comparability/type rules are not evaluated.
+- `ARRAYS_ZIP(array [, array ...])`: the three-input matrix independently
+  exercises each operand; single-array controls and retained/two-array cases
+  cover the smaller forms. Four-array controls independently isolate the
+  fourth variadic operand and both substitution types. Unequal-length,
+  empty-array and NULL-element cases retain syntax and lineage without
+  materializing zipped objects or validating database runtime types.
+
+Generated method-level tables below identify every required placement,
+operand control, deep case, neutral UDF/name, SCRIPT reset, dialect case and
+exact parser-only malformed-syntax control. Cross-function D-SIG and D-AUDIT
+are still separate tasks; this is not final Slice D or release sign-off.
 
 ## D1.1 ARRAY_REPEAT method-level completion evidence
 
@@ -260,7 +295,7 @@ established consumer contracts. Index-bound cases assert parsing/lineage, not
 evaluated slices. Signature policy remains for D-SIG. One full focused run
 passed **377/377**, zero failures/errors/skips, exit 0.
 
-## Older-matrix gap ledger (three functions remain)
+## Older-matrix gap ledger (all ten remediations complete)
 
 The required placement list is SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY,
 VALUES, INSERT, UPDATE, DELETE, DDL, SCRIPT. A JOIN elsewhere in a query does not
@@ -273,12 +308,13 @@ incomplete matrices; completed rows below retain their closure evidence.
 | `ARRAY_SLICE` | Closed by D1.2.2 | All original gaps are covered by the 55-method evidence ledger above; existing extractor goldens retained. |
 | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE` | Closed by D2.6 | Independent 31-case matrices and exact legacy diagnostics; evidence below. |
 | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY` | Closed by D3.9.1/D3.9.2 | Independent 53-case matrices, optional delimiter forms and both operands' resolution/variable controls; evidence below. |
-| `ARRAY_POSITION`, `ARRAYS_ZIP` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | No independent unresolved, ambiguous, hidden-alias, variable-typing or nested/derived/set-op controls; missing-alias coverage is argument 1 only. |
-| `ARRAY_GENERATE_RANGE` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | All seven tests use `(1, 5)`. Column-resolution, variable typing, eligible-argument missing aliases, three-argument step, and deep controls are not independently covered. |
+| `ARRAY_POSITION` | Closed by D3.9.4 | Independent 50-case matrix, both operands' resolution/variable controls and exact legacy diagnostics; evidence below. |
+| `ARRAYS_ZIP` | Closed by D3.9.5 | Independent 90-case matrix, single/multiple inputs and isolated third/fourth operands; evidence below. |
+| `ARRAY_GENERATE_RANGE` | Closed by D3.9.3 | Independent 79-case matrix, start/stop/step controls and both signatures; all seven original literal cases preserved; evidence below. |
 
-The remaining rows are actual source gaps, not just missing method-name labels.
-The queries were inspected. Existing complete goldens must not be blindly refreshed while
-adding coverage. Preserve the one-query-per-method and exact diagnostic contract.
+These closures are supported by inspected SQL and generated named-method
+evidence, not just a green family total. Existing complete goldens were not
+refreshed. The one-query-per-method and exact diagnostic contract is retained.
 
 ## Four formerly omitted names now approved for D3.8
 
@@ -376,7 +412,7 @@ No other name in that bounded comparison remains unassigned in this report.
   `IS_ARRAY`, and `SPLIT`, one function per step under the strict full matrix.
 - [x] **D3.9.1..D3.9.2:** complete the older `SPLIT_TO_ARRAY` and
   `STRTOK_TO_ARRAY` matrices, including their optional delimiter forms.
-- [ ] **D3.9.3..D3.9.5:** complete `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`,
+- [x] **D3.9.3..D3.9.5:** complete `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`,
   and `ARRAYS_ZIP` matrices.
 - [ ] **D-SIG:** resolve and test the signature-validation boundary above across
   the final approved function list.
@@ -404,6 +440,9 @@ Retrieved 2026-11-18:
 - [STRTOK_TO_ARRAY](https://docs.snowflake.com/en/sql-reference/functions/strtok_to_array)
 - [Redshift SPLIT_TO_ARRAY](https://docs.aws.amazon.com/redshift/latest/dg/split_to_array.html)
 - [ARRAY_REPEAT](https://docs.snowflake.com/en/sql-reference/functions/array_repeat)
+- [ARRAY_GENERATE_RANGE](https://docs.snowflake.com/en/sql-reference/functions/array_generate_range)
+- [ARRAY_POSITION](https://docs.snowflake.com/en/sql-reference/functions/array_position)
+- [ARRAYS_ZIP](https://docs.snowflake.com/en/sql-reference/functions/arrays_zip)
 
 ## D2.6.1 ARRAY_DISTINCT method-level completion evidence
 
@@ -831,3 +870,247 @@ Focused host: 556 passed, zero failures/errors/skips; 533 six-output cases and 2
 | optional:literal | `arC52_strtokToArrayDefaultDelimiterLiteralV0Test` |
 
 Focused host: 694 passed, zero failures/errors/skips; 662 six-output cases and 32 syntax controls.
+
+## D3.9.3 ARRAY_GENERATE_RANGE method-level completion evidence
+
+79 methods; 76 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| form:DefaultStepLiteral:Select | `snowflakeArrayGenerateRangeSelectSeedV0Test` |
+| form:DefaultStepLiteral:Where | `snowflakeArrayGenerateRangeWherePlacementV0Test` |
+| form:DefaultStepLiteral:OrderBy | `snowflakeArrayGenerateRangeOrderByPlacementV0Test` |
+| form:DefaultStepLiteral:Values | `snowflakeArrayGenerateRangeValuesPlacementV0Test` |
+| form:DefaultStepLiteral:Insert | `snowflakeArrayGenerateRangeInsertPlacementV0Test` |
+| form:DefaultStepLiteral:Update | `snowflakeArrayGenerateRangeUpdatePlacementV0Test` |
+| form:DefaultStepLiteral:Delete | `snowflakeArrayGenerateRangeDeletePlacementV0Test` |
+| placement:Select | `arC53_arrayGenerateRangeSelectPlacementV0Test` |
+| placement:Where | `arC53_arrayGenerateRangeWherePlacementV0Test` |
+| placement:Join | `arC53_arrayGenerateRangeJoinPlacementV0Test` |
+| placement:Having | `arC53_arrayGenerateRangeHavingPlacementV0Test` |
+| placement:Qualify | `arC53_arrayGenerateRangeQualifyPlacementV0Test` |
+| placement:OrderBy | `arC53_arrayGenerateRangeOrderByPlacementV0Test` |
+| placement:Values | `arC53_arrayGenerateRangeValuesPlacementV0Test` |
+| placement:Insert | `arC53_arrayGenerateRangeInsertPlacementV0Test` |
+| placement:Update | `arC53_arrayGenerateRangeUpdatePlacementV0Test` |
+| placement:Delete | `arC53_arrayGenerateRangeDeletePlacementV0Test` |
+| placement:Ddl | `arC53_arrayGenerateRangeDdlPlacementV0Test` |
+| placement:Script | `arC53_arrayGenerateRangeScriptPlacementV0Test` |
+| arg1:Unqualified | `arC53_arrayGenerateRangeArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC53_arrayGenerateRangeArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC53_arrayGenerateRangeArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC53_arrayGenerateRangeArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC53_arrayGenerateRangeArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC53_arrayGenerateRangeArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC53_arrayGenerateRangeArg1ColumnVariableV0Test` |
+| arg1:Null | `arC53_arrayGenerateRangeArg1NullV0Test` |
+| arg2:Unqualified | `arC53_arrayGenerateRangeArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC53_arrayGenerateRangeArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC53_arrayGenerateRangeArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC53_arrayGenerateRangeArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC53_arrayGenerateRangeArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC53_arrayGenerateRangeArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC53_arrayGenerateRangeArg2ColumnVariableV0Test` |
+| arg2:Null | `arC53_arrayGenerateRangeArg2NullV0Test` |
+| arg3:Unqualified | `arC53_arrayGenerateRangeArg3UnqualifiedV0Test` |
+| arg3:Unresolved | `arC53_arrayGenerateRangeArg3UnresolvedV0Test` |
+| arg3:Ambiguous | `arC53_arrayGenerateRangeArg3AmbiguousV0Test` |
+| arg3:MissingAlias | `arC53_arrayGenerateRangeArg3MissingAliasV0Test` |
+| arg3:HiddenAlias | `arC53_arrayGenerateRangeArg3HiddenAliasV0Test` |
+| arg3:PredicandVariable | `arC53_arrayGenerateRangeArg3PredicandVariableV0Test` |
+| arg3:ColumnVariable | `arC53_arrayGenerateRangeArg3ColumnVariableV0Test` |
+| arg3:Null | `arC53_arrayGenerateRangeArg3NullV0Test` |
+| combined:unqualified | `arC53_arrayGenerateRangeUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC53_arrayGenerateRangeAllPredicandVariablesV0Test` |
+| combined:column | `arC53_arrayGenerateRangeAllColumnVariablesV0Test` |
+| deep:nested | `arC53_arrayGenerateRangeNestedExpressionV0Test` |
+| deep:derived | `arC53_arrayGenerateRangeDerivedOutputV0Test` |
+| deep:setop | `arC53_arrayGenerateRangeSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC53_arrayGenerateRangeQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC53_arrayGenerateRangeSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC53_arrayGenerateRangeUppercaseV0Test` |
+| dialect:mixed | `arC53_arrayGenerateRangeMixedDialectV0Test` |
+| syntax:TrailingComma | `arC53_arrayGenerateRangeTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC53_arrayGenerateRangeMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC53_arrayGenerateRangeMissingCommaSyntaxV0Test` |
+| form:DefaultStep:placement:Select | `arC53_arrayGenerateRangeDefaultStepSelectPlacementV0Test` |
+| form:DefaultStep:arg1:Unqualified | `arC53_arrayGenerateRangeDefaultStepArg1UnqualifiedV0Test` |
+| form:DefaultStep:arg1:PredicandVariable | `arC53_arrayGenerateRangeDefaultStepArg1PredicandVariableV0Test` |
+| form:DefaultStep:arg1:ColumnVariable | `arC53_arrayGenerateRangeDefaultStepArg1ColumnVariableV0Test` |
+| form:DefaultStep:arg1:Null | `arC53_arrayGenerateRangeDefaultStepArg1NullV0Test` |
+| form:DefaultStep:arg2:Unqualified | `arC53_arrayGenerateRangeDefaultStepArg2UnqualifiedV0Test` |
+| form:DefaultStep:arg2:PredicandVariable | `arC53_arrayGenerateRangeDefaultStepArg2PredicandVariableV0Test` |
+| form:DefaultStep:arg2:ColumnVariable | `arC53_arrayGenerateRangeDefaultStepArg2ColumnVariableV0Test` |
+| form:DefaultStep:arg2:Null | `arC53_arrayGenerateRangeDefaultStepArg2NullV0Test` |
+| form:DefaultStep:combined:predicand | `arC53_arrayGenerateRangeDefaultStepAllPredicandVariablesV0Test` |
+| form:DefaultStep:combined:column | `arC53_arrayGenerateRangeDefaultStepAllColumnVariablesV0Test` |
+| form:DefaultStep:deep:nested | `arC53_arrayGenerateRangeDefaultStepNestedExpressionV0Test` |
+| form:DefaultStep:deep:derived | `arC53_arrayGenerateRangeDefaultStepDerivedOutputV0Test` |
+| form:DefaultStep:deep:setop | `arC53_arrayGenerateRangeDefaultStepSetOpSiblingIsolationV0Test` |
+| input:positive-step | `arC53_arrayGenerateRangePositiveStepV0Test` |
+| input:negative-step | `arC53_arrayGenerateRangeNegativeStepV0Test` |
+| input:equal-bounds | `arC53_arrayGenerateRangeEqualBoundsV0Test` |
+| input:positive-step-descending-bounds | `arC53_arrayGenerateRangePositiveStepDescendingBoundsV0Test` |
+| input:negative-step-ascending-bounds | `arC53_arrayGenerateRangeNegativeStepAscendingBoundsV0Test` |
+| boundary:zero-step-runtime-validation | `arC53_arrayGenerateRangeZeroStepRuntimeBoundaryV0Test` |
+| input:integer-expressions | `arC53_arrayGenerateRangeArithmeticOperandsV0Test` |
+| input:all-null | `arC53_arrayGenerateRangeAllNullV0Test` |
+| form:DefaultStep:all-null | `arC53_arrayGenerateRangeDefaultStepAllNullV0Test` |
+
+## D3.9.4 ARRAY_POSITION method-level completion evidence
+
+50 methods; 47 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeArrayPositionSelectSeedV0Test` |
+| arg1:Qualified | `snowflakeArrayPositionSelectSeedV0Test` |
+| arg2:Qualified | `snowflakeArrayPositionSelectSeedV0Test` |
+| arg1:MissingAlias | `snowflakeArrayPositionMissingAliasFatalV0Test` |
+| placement:Where | `snowflakeArrayPositionWherePlacementV0Test` |
+| placement:OrderBy | `snowflakeArrayPositionOrderByPlacementV0Test` |
+| form:LegacyValues:Values | `snowflakeArrayPositionValuesPlacementV0Test` |
+| placement:Insert | `snowflakeArrayPositionInsertPlacementV0Test` |
+| placement:Update | `snowflakeArrayPositionUpdatePlacementV0Test` |
+| placement:Delete | `snowflakeArrayPositionDeletePlacementV0Test` |
+| placement:Join | `arC54_arrayPositionJoinPlacementV0Test` |
+| placement:Having | `arC54_arrayPositionHavingPlacementV0Test` |
+| placement:Qualify | `arC54_arrayPositionQualifyPlacementV0Test` |
+| placement:Values | `arC54_arrayPositionValuesPlacementV0Test` |
+| placement:Ddl | `arC54_arrayPositionDdlPlacementV0Test` |
+| placement:Script | `arC54_arrayPositionScriptPlacementV0Test` |
+| arg1:Unqualified | `arC54_arrayPositionArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC54_arrayPositionArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC54_arrayPositionArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC54_arrayPositionArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC54_arrayPositionArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC54_arrayPositionArg1ColumnVariableV0Test` |
+| arg1:Null | `arC54_arrayPositionArg1NullV0Test` |
+| arg2:Unqualified | `arC54_arrayPositionArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC54_arrayPositionArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC54_arrayPositionArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC54_arrayPositionArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC54_arrayPositionArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC54_arrayPositionArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC54_arrayPositionArg2ColumnVariableV0Test` |
+| arg2:Null | `arC54_arrayPositionArg2NullV0Test` |
+| combined:unqualified | `arC54_arrayPositionUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC54_arrayPositionAllPredicandVariablesV0Test` |
+| combined:column | `arC54_arrayPositionAllColumnVariablesV0Test` |
+| deep:nested | `arC54_arrayPositionNestedExpressionV0Test` |
+| deep:derived | `arC54_arrayPositionDerivedOutputV0Test` |
+| deep:setop | `arC54_arrayPositionSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC54_arrayPositionQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC54_arrayPositionSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC54_arrayPositionUppercaseV0Test` |
+| dialect:mixed | `arC54_arrayPositionMixedDialectV0Test` |
+| syntax:TrailingComma | `arC54_arrayPositionTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC54_arrayPositionMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC54_arrayPositionMissingCommaSyntaxV0Test` |
+| input:empty-array | `arC54_arrayPositionEmptyArrayV0Test` |
+| input:first-element | `arC54_arrayPositionFirstElementV0Test` |
+| input:duplicate-needle | `arC54_arrayPositionDuplicateNeedleV0Test` |
+| input:absent-needle | `arC54_arrayPositionAbsentNeedleV0Test` |
+| input:null-element-needle | `arC54_arrayPositionNullElementNeedleV0Test` |
+| input:both-null | `arC54_arrayPositionBothNullV0Test` |
+| input:needle-expression | `arC54_arrayPositionExpressionNeedleV0Test` |
+| composition:case-projection | `arC54_arrayPositionCaseProjectionV0Test` |
+
+## D3.9.5 ARRAYS_ZIP method-level completion evidence
+
+90 methods; 87 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| form:TwoArrays:Select | `snowflakeArraysZipSelectSeedV0Test` |
+| form:TwoArrays:arg1:MissingAlias | `snowflakeArraysZipMissingAliasFatalV0Test` |
+| form:TwoArrays:Where | `snowflakeArraysZipWherePlacementV0Test` |
+| form:TwoArrays:OrderBy | `snowflakeArraysZipOrderByPlacementV0Test` |
+| form:TwoArrays:Values | `snowflakeArraysZipValuesPlacementV0Test` |
+| form:TwoArrays:Insert | `snowflakeArraysZipInsertPlacementV0Test` |
+| form:TwoArrays:Update | `snowflakeArraysZipUpdatePlacementV0Test` |
+| form:TwoArrays:Delete | `snowflakeArraysZipDeletePlacementV0Test` |
+| placement:Select | `arC55_arraysZipSelectPlacementV0Test` |
+| placement:Where | `arC55_arraysZipWherePlacementV0Test` |
+| placement:Join | `arC55_arraysZipJoinPlacementV0Test` |
+| placement:Having | `arC55_arraysZipHavingPlacementV0Test` |
+| placement:Qualify | `arC55_arraysZipQualifyPlacementV0Test` |
+| placement:OrderBy | `arC55_arraysZipOrderByPlacementV0Test` |
+| placement:Values | `arC55_arraysZipValuesPlacementV0Test` |
+| placement:Insert | `arC55_arraysZipInsertPlacementV0Test` |
+| placement:Update | `arC55_arraysZipUpdatePlacementV0Test` |
+| placement:Delete | `arC55_arraysZipDeletePlacementV0Test` |
+| placement:Ddl | `arC55_arraysZipDdlPlacementV0Test` |
+| placement:Script | `arC55_arraysZipScriptPlacementV0Test` |
+| arg1:Unqualified | `arC55_arraysZipArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC55_arraysZipArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC55_arraysZipArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC55_arraysZipArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC55_arraysZipArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC55_arraysZipArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC55_arraysZipArg1ColumnVariableV0Test` |
+| arg1:Null | `arC55_arraysZipArg1NullV0Test` |
+| arg2:Unqualified | `arC55_arraysZipArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC55_arraysZipArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC55_arraysZipArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC55_arraysZipArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC55_arraysZipArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC55_arraysZipArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC55_arraysZipArg2ColumnVariableV0Test` |
+| arg2:Null | `arC55_arraysZipArg2NullV0Test` |
+| arg3:Unqualified | `arC55_arraysZipArg3UnqualifiedV0Test` |
+| arg3:Unresolved | `arC55_arraysZipArg3UnresolvedV0Test` |
+| arg3:Ambiguous | `arC55_arraysZipArg3AmbiguousV0Test` |
+| arg3:MissingAlias | `arC55_arraysZipArg3MissingAliasV0Test` |
+| arg3:HiddenAlias | `arC55_arraysZipArg3HiddenAliasV0Test` |
+| arg3:PredicandVariable | `arC55_arraysZipArg3PredicandVariableV0Test` |
+| arg3:ColumnVariable | `arC55_arraysZipArg3ColumnVariableV0Test` |
+| arg3:Null | `arC55_arraysZipArg3NullV0Test` |
+| combined:unqualified | `arC55_arraysZipUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC55_arraysZipAllPredicandVariablesV0Test` |
+| combined:column | `arC55_arraysZipAllColumnVariablesV0Test` |
+| deep:nested | `arC55_arraysZipNestedExpressionV0Test` |
+| deep:derived | `arC55_arraysZipDerivedOutputV0Test` |
+| deep:setop | `arC55_arraysZipSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC55_arraysZipQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC55_arraysZipSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC55_arraysZipUppercaseV0Test` |
+| dialect:mixed | `arC55_arraysZipMixedDialectV0Test` |
+| syntax:TrailingComma | `arC55_arraysZipTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC55_arraysZipMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC55_arraysZipMissingCommaSyntaxV0Test` |
+| form:SingleArray:placement:Select | `arC55_arraysZipSingleArraySelectPlacementV0Test` |
+| form:SingleArray:arg1:Unqualified | `arC55_arraysZipSingleArrayArg1UnqualifiedV0Test` |
+| form:SingleArray:arg1:Unresolved | `arC55_arraysZipSingleArrayArg1UnresolvedV0Test` |
+| form:SingleArray:arg1:Ambiguous | `arC55_arraysZipSingleArrayArg1AmbiguousV0Test` |
+| form:SingleArray:arg1:MissingAlias | `arC55_arraysZipSingleArrayArg1MissingAliasV0Test` |
+| form:SingleArray:arg1:HiddenAlias | `arC55_arraysZipSingleArrayArg1HiddenAliasV0Test` |
+| form:SingleArray:arg1:PredicandVariable | `arC55_arraysZipSingleArrayArg1PredicandVariableV0Test` |
+| form:SingleArray:arg1:ColumnVariable | `arC55_arraysZipSingleArrayArg1ColumnVariableV0Test` |
+| form:SingleArray:arg1:Null | `arC55_arraysZipSingleArrayArg1NullV0Test` |
+| form:SingleArray:deep:nested | `arC55_arraysZipSingleArrayNestedExpressionV0Test` |
+| form:SingleArray:deep:derived | `arC55_arraysZipSingleArrayDerivedOutputV0Test` |
+| form:SingleArray:deep:setop | `arC55_arraysZipSingleArraySetOpSiblingIsolationV0Test` |
+| form:FourArrays:placement:Select | `arC55_arraysZipFourArraysSelectPlacementV0Test` |
+| form:FourArrays:arg4:Unqualified | `arC55_arraysZipFourArraysArg4UnqualifiedV0Test` |
+| form:FourArrays:arg4:Unresolved | `arC55_arraysZipFourArraysArg4UnresolvedV0Test` |
+| form:FourArrays:arg4:Ambiguous | `arC55_arraysZipFourArraysArg4AmbiguousV0Test` |
+| form:FourArrays:arg4:MissingAlias | `arC55_arraysZipFourArraysArg4MissingAliasV0Test` |
+| form:FourArrays:arg4:HiddenAlias | `arC55_arraysZipFourArraysArg4HiddenAliasV0Test` |
+| form:FourArrays:arg4:PredicandVariable | `arC55_arraysZipFourArraysArg4PredicandVariableV0Test` |
+| form:FourArrays:arg4:ColumnVariable | `arC55_arraysZipFourArraysArg4ColumnVariableV0Test` |
+| form:FourArrays:arg4:Null | `arC55_arraysZipFourArraysArg4NullV0Test` |
+| form:FourArrays:combined:predicand | `arC55_arraysZipFourArraysAllPredicandVariablesV0Test` |
+| form:FourArrays:combined:column | `arC55_arraysZipFourArraysAllColumnVariablesV0Test` |
+| form:TwoArrays:arg2:MissingAlias | `arC55_arraysZipTwoArraysArg2MissingAliasV0Test` |
+| form:TwoArrays:arg2:PredicandVariable | `arC55_arraysZipTwoArraysArg2PredicandVariableV0Test` |
+| form:TwoArrays:arg2:ColumnVariable | `arC55_arraysZipTwoArraysArg2ColumnVariableV0Test` |
+| input:unequal-lengths | `arC55_arraysZipUnequalLengthsV0Test` |
+| input:all-empty | `arC55_arraysZipAllEmptyArraysV0Test` |
+| input:first-empty | `arC55_arraysZipFirstArrayEmptyV0Test` |
+| input:second-empty | `arC55_arraysZipSecondArrayEmptyV0Test` |
+| input:third-empty | `arC55_arraysZipThirdArrayEmptyV0Test` |
+| input:null-elements | `arC55_arraysZipNullElementsV0Test` |
+| input:all-null | `arC55_arraysZipAllNullArraysV0Test` |
+
+Focused host: 890 passed, zero failures/errors/skips; 849 six-output cases and 41 syntax controls.
