@@ -101,6 +101,38 @@ Their detailed backlogs remain below for a later release. This reduction does
 not remove Entry 4's array-specific matrix requirements, the approved Entry 11
 Tier 2 work, or final corpus/documentation/release validation.
 
+### Wrap-up sequence — local candidate first; Archiva publication on hold
+
+**Owner direction (2026-11-19):** generate the parser and companion
+documentation JARs locally for manual integration and testing in the RMCP
+extension project. **Do not publish to Archiva until the owner explicitly
+authorizes that separate step.** A successful local build or RMCP test result
+does not itself authorize publication.
+
+1. [ ] **Prepare and verify the local candidate.** Finish consumer/release
+   documentation and the remaining frozen-corpus comparison using the existing
+   accepted dispositions. Build the parser and docs together from the repository
+   root with `mvn -Pisolated-build,release-tests clean verify`; inspect the
+   packaged artifacts and documentation manifest. This is local packaging and
+   verification, not publication. Principal handoff artifacts:
+   - `parse/target-maven/pss-parse-5.1.4-1-fat.jar`
+   - `pss-parse-docs/target-maven/pss-parse-docs-5.1.4-1.jar`
+   Record the source revision and artifact SHA-256 checksums for the candidate.
+2. [ ] **Owner-managed RMCP integration and acceptance.** The owner manually
+   integrates the local JARs into the RMCP extension project, runs additional
+   tests and reports the results. Await that feedback before final sign-off.
+3. [ ] **Resolve any RMCP findings locally.** If changes are needed, fix and
+   validate them, regenerate the local parser/docs candidate and repeat RMCP
+   acceptance. Keep the existing unpublished `5.1.4-1` Maven coordinates
+   (API/docs version `5.1.4`) during these iterations; do not increment the
+   artifact version merely because another local candidate was built.
+   Record new checksums after every rebuild.
+4. [ ] **Separate publication gate — BLOCKED pending explicit authorization.**
+   After RMCP acceptance, obtain the owner's explicit instruction to publish
+   to Archiva. Until then, do not run Maven `deploy`, direct repository uploads
+   or any publishing automation. Publish the exact approved candidate; if
+   publication requires a rebuild, revalidate that candidate before upload.
+
 ---
 
 ## Completed baselines (no open entry — do not reopen)
