@@ -21,6 +21,9 @@ JUnit/Gson dependencies and Surefire classpath; no npm install. Capture uses
 If a case proves a production defect, declare `production_changes: true` and
 list its actual paths in `production_files`. Reports cite the verified Surefire
 XML; they do not invent a Maven exit code or claim a log file was saved.
+For directly dependent regression suites, set `test_selection` to the actual
+Maven `-Dtest` selection. Reported counts remain scoped to the named matrix host;
+record additional suite results separately.
 
 Example function configuration (illustrative; fill the complete legacy inventory):
 

@@ -187,10 +187,12 @@ function finish() {
       counts.functions.find(c => c.function === f.function));
   });
   assert.equal(typeof config.next_task, 'string', 'Declare the next task');
-  const command = 'mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests '
+  const command = 'mvn -f parse/pom.xml -Pisolated-build -Dtest='
+    + (config.test_selection || 'SqlEventWalkerSnowflakeArrayTransformTests') + ' '
     + '-Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test';
   const files = f => [host, planPath, reconciliationPath, ...(f.production_files || [])];
-  const tests = { command, passed: number('tests'), failed: 0, errors: 0, skipped: 0, evidence: xmlPath };
+  const tests = { command, suite: 'sql.walker.SqlEventWalkerSnowflakeArrayTransformTests',
+    passed: number('tests'), failed: 0, errors: 0, skipped: 0, evidence: xmlPath };
   const traces = functions.map(f => ({ plan_item: f.plan, task: f.task, requirements: ['REQ-001', 'REQ-002', 'REQ-003'] }));
   const report = { batch_id: functions.map(f => f.plan + '-' + f.function).join('+'),
     completed_tasks: functions.map(f => f.task), blocked_tasks: [],

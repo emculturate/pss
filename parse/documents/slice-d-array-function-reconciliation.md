@@ -13,8 +13,10 @@ committed in `641ded6`, with all 36 affected classes validated. D1.1 completes
 the ARRAY_REPEAT matrix with 48 cases. D1.2.1 completes ARRAY_TO_STRING with 45
 cases; D1.2.2 completes ARRAY_SLICE with 55 cases. D2.6 completes ARRAY_DISTINCT,
 ARRAY_COMPACT and ARRAY_SIZE with 31 cases each. D3.8.1-D3.8.3 complete TO_ARRAY,
-AS_ARRAY and IS_ARRAY with 35, 32 and 37 cases respectively. The focused host
-passes 556/556. Five older matrix remediations and D3.8.4 SPLIT remain pending.
+AS_ARRAY and IS_ARRAY with 35, 32 and 37 cases respectively. D3.8.4/D3.9.1-D3.9.2
+complete SPLIT, SPLIT_TO_ARRAY and STRTOK_TO_ARRAY with 48, 53 and 53 cases.
+The focused host passes 694/694; 102 directly dependent composition tests also
+pass. Three older matrix remediations remain pending.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
@@ -28,27 +30,31 @@ verification and reusable tooling added since the manual token-ID repair commit.
    There is no further absent lexer token within that fixed list.
 2. `ARRAY_REPEAT` now has its required strict matrix: 48 independent cases,
    including 45 six-output goldens and three parser-only syntax controls.
-3. **Five other assigned functions have incomplete per-function matrices.**
+3. **Three other assigned functions have incomplete per-function matrices:**
+   `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, and `ARRAYS_ZIP`.
    `ARRAY_TO_STRING` and `ARRAY_SLICE` are complete under D1.2.1/D1.2.2, with
    exact diagnostics and their original extractor goldens retained.
    `ARRAY_DISTINCT`, `ARRAY_COMPACT` and `ARRAY_SIZE` are complete under D2.6,
    each with 29 six-output cases and two parser-only syntax controls.
+   `SPLIT_TO_ARRAY` and `STRTOK_TO_ARRAY` are complete under D3.9.1/D3.9.2,
+   each with 50 six-output cases and three parser-only syntax controls.
    The remaining functions'
    earlier green tests did not establish the workplan's full closure contract.
 4. **Four documented Snowflake functions were omitted from the conversion /
    predicate / split target list:** `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`.
    All four are explicitly approved for D3.8. `TO_ARRAY`, `AS_ARRAY` and
-   `IS_ARRAY` now have dedicated conversion-family routing, Snowflake affinity
-   and independent strict matrices. Only `SPLIT` implementation/matrix remains
-   pending. `SPLIT` was the only new lexer keyword needed in this D batch and
+   `IS_ARRAY`, together with `SPLIT`, now have dedicated conversion-family
+   routing, Snowflake affinity and independent strict matrices.
+   `SPLIT` was the only new lexer keyword needed in this D batch and
    is already present; the other three existing tokens are unchanged.
 5. `ARRAY_CONSTRUCT_STRUCTURED` remains a separate, already planned constructor
    gap under Slice A / GC1. Its planned lexer addition must be settled before
    another supposedly final token-ID repair pass.
 
 The initial source audit did not establish runtime certification. Subsequent
-manual token-ID repairs are committed, and the D3.8.1-D3.8.3 focused run passed 556/556
-with zero failures/errors/skips. This does not close the remaining per-function
+manual token-ID repairs are committed, and the string-to-array batch passed
+694 focused-host tests plus 24 subscript and 78 table-function tests, all with
+zero failures/errors/skips. This does not close the remaining per-function
 gaps or the final Slice D sign-off ladder.
 
 The bounded comparison is: the workplan's 4.9/4.10/4.11 assignments, Snowflake's
@@ -74,7 +80,7 @@ higher-order functions are not silently moved into D.
   Pause for developer manual golden repairs. Complete matrix work and the final
   accuracy sign-off ladder afterward.
 
-## Approved 21-function ledger (20 explicit routes plus one pending addition)
+## Approved 21-function ledger (all 21 explicit routes present)
 
 Shared sources:
 
@@ -116,8 +122,8 @@ diagnostic assertions and complete output goldens.
 | `ARRAY_MIN` | D2.3 | 372 | U | Yes | 25 | 25 | 25 | Expanded placement/resolution matrix present |
 | `ARRAY_REVERSE` | D2.4 | 452 | U | Yes | 27 | 27 | 27 | Expanded placement/resolution matrix present |
 | `ARRAY_SUM` | D2.4 | 453 | U | Yes | 27 | 27 | 27 | Expanded placement/resolution matrix present |
-| `SPLIT_TO_ARRAY` | D3.5; remediation D3.9 | 374 | C | Yes | 8 | 8 | 0 | Matrix gaps; Snowflake attribution also needs resolution |
-| `STRTOK_TO_ARRAY` | D3.5; remediation D3.9 | 375 | C | Yes | 8 | 8 | 0 | Matrix gaps |
+| `SPLIT_TO_ARRAY` | D3.9.1 / T016 complete | 374 | C | Yes, retained compatibility | 53 | 50 | 53 | Optional delimiter; Redshift provenance; legacy affinity/goldens preserved; evidence below |
+| `STRTOK_TO_ARRAY` | D3.9.2 / T017 complete | 375 | C | Yes | 53 | 50 | 53 | Optional delimiter-set form and independent operand controls; evidence below |
 | `ARRAY_GENERATE_RANGE` | D3.5; remediation D3.9 | 366 | R | Yes | 7 | 7 | 0 | Literal-argument placements; no column-argument matrix |
 | `ARRAY_POSITION` | D3.5; remediation D3.9 | 367 | P | Yes | 8 | 8 | 0 | Matrix gaps |
 | `ARRAYS_ZIP` | D3.5; remediation D3.9 | 373 | Z | Yes | 8 | 8 | 0 | Matrix gaps |
@@ -125,10 +131,10 @@ diagnostic assertions and complete output goldens.
 | `TO_ARRAY` | D3.8.1 / T012 complete | 376 | C | Yes | 35 | 33 | 35 | Dedicated conversion route; scalar/VARIANT/NULL controls; evidence below |
 | `AS_ARRAY` | D3.8.2 / T013 complete | 377 | C | Yes | 32 | 30 | 32 | Dedicated conversion route; VARIANT/NULL controls; evidence below |
 | `IS_ARRAY` | D3.8.3 / T014 complete | 378 | C | Yes | 37 | 35 | 37 | Dedicated conversion route; bare predicates and projection/CASE; evidence below |
-| `SPLIT` | D0 complete; D3.8.4 pending | 456 | Generic; explicit family pending | No | 0 | 0 | 0 | Dedicated D matrix pending; composition coverage exists elsewhere |
+| `SPLIT` | D3.8.4 / T015 complete | 456 | C | Yes | 48 | 45 | 48 | Dedicated route; legacy AST serialization and subscript/FLATTEN composition preserved; evidence below |
 
-Total: **556 methods**, of which 533 assert all six extractor outputs and 23
-are parser-only syntax controls. The focused run passes all 556. This is not a
+Total: **694 methods**, of which 662 assert all six extractor outputs and 32
+are parser-only syntax controls. The focused run passes all 694. This is not a
 claim that every signature-negative case across all 21 functions is established;
 D-SIG and the remaining per-function batches remain open.
 
@@ -254,20 +260,20 @@ established consumer contracts. Index-bound cases assert parsing/lineage, not
 evaluated slices. Signature policy remains for D-SIG. One full focused run
 passed **377/377**, zero failures/errors/skips, exit 0.
 
-## Older-matrix gap ledger (eight functions remain)
+## Older-matrix gap ledger (three functions remain)
 
 The required placement list is SELECT, WHERE, JOIN ON, HAVING, QUALIFY, ORDER BY,
 VALUES, INSERT, UPDATE, DELETE, DDL, SCRIPT. A JOIN elsewhere in a query does not
 count as placing the function in its ON condition. The original audit found ten
-incomplete matrices; ARRAY_TO_STRING and ARRAY_SLICE are retained as closed rows.
+incomplete matrices; completed rows below retain their closure evidence.
 
 | Function(s) | Missing independent placements | Other verified omissions |
 |---|---|---|
 | `ARRAY_TO_STRING` | Closed by D1.2.1 | All original gaps are covered by the 45-method evidence ledger above; existing extractor goldens retained. |
 | `ARRAY_SLICE` | Closed by D1.2.2 | All original gaps are covered by the 55-method evidence ledger above; existing extractor goldens retained. |
-| `ARRAY_DISTINCT` | Every required placement except SELECT | Only the SELECT and missing-alias seed methods exist; resolution, substitution and deep controls remain incomplete. |
-| `ARRAY_COMPACT`, `ARRAY_SIZE` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | No independent unresolved, ambiguous, hidden-alias, variable-typing, nested/derived/set-op controls. |
-| `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_POSITION`, `ARRAYS_ZIP` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | No independent unresolved, ambiguous, hidden-alias, variable-typing or nested/derived/set-op controls; missing-alias coverage is argument 1 only. |
+| `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE` | Closed by D2.6 | Independent 31-case matrices and exact legacy diagnostics; evidence below. |
+| `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY` | Closed by D3.9.1/D3.9.2 | Independent 53-case matrices, optional delimiter forms and both operands' resolution/variable controls; evidence below. |
+| `ARRAY_POSITION`, `ARRAYS_ZIP` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | No independent unresolved, ambiguous, hidden-alias, variable-typing or nested/derived/set-op controls; missing-alias coverage is argument 1 only. |
 | `ARRAY_GENERATE_RANGE` | JOIN ON, HAVING, QUALIFY, DDL, SCRIPT | All seven tests use `(1, 5)`. Column-resolution, variable typing, eligible-argument missing aliases, three-argument step, and deep controls are not independently covered. |
 
 The remaining rows are actual source gaps, not just missing method-name labels.
@@ -276,12 +282,12 @@ adding coverage. Preserve the one-query-per-method and exact diagnostic contract
 
 ## Four formerly omitted names now approved for D3.8
 
-| Function | Documented role/signature | Current code recognition | Missing Slice D evidence |
+| Function | Documented role/signature | Current code recognition | Completion evidence |
 |---|---|---|---|
-| `TO_ARRAY(expr)` | Convert an expression to ARRAY | Token 376; nonreserved name; generic invocation path | No dedicated D family membership, Snowflake registry entry, or SQL-call tests found in parser Java tests |
-| `AS_ARRAY(variant_expr)` | Cast a VARIANT to ARRAY | Token 377; nonreserved name; generic invocation path | Same omissions |
-| `IS_ARRAY(variant_expr)` | ARRAY type predicate | Token 378; nonreserved name; generic invocation path | Same omissions |
-| `SPLIT(string, separator)` | Split a string into ARRAY | Token 456; nonreserved name; generic invocation path | Existing subscript and FLATTEN composition tests, but no dedicated D split matrix or registry entry |
+| `TO_ARRAY(expr)` | Convert an expression to ARRAY | Token 376; dedicated C route and registry entry | D3.8.1: 35 independent cases |
+| `AS_ARRAY(variant_expr)` | Cast a VARIANT to ARRAY | Token 377; dedicated C route and registry entry | D3.8.2: 32 independent cases |
+| `IS_ARRAY(variant_expr)` | ARRAY type predicate | Token 378; dedicated C route and registry entry | D3.8.3: 37 independent cases |
+| `SPLIT(string, separator)` | Split a string into ARRAY | Token 456; dedicated C route and registry entry | D3.8.4: 48 independent cases; existing subscript/FLATTEN goldens preserved |
 
 These names are **not necessarily unparseable**. Generic routine support is
 different from explicit family handling, dialect policy, and strict completion
@@ -290,15 +296,24 @@ evidence. The three existing tokens do not need another lexer addition.
 Snowflake documents `SPLIT`, not the inventory's `SPLIT_TO_ARRAY` spelling:
 the official `split_to_array` documentation URL returned HTTP 404, and that name
 is absent from the retrieved semi-structured function list. This does not prove
-every dialect/version lacks that spelling. Preserve existing compatibility
-until its provenance and dialect policy are resolved; do not silently rename
-the parser function or delete tests.
+every dialect/version lacks that spelling. Amazon Redshift documents
+`SPLIT_TO_ARRAY(string [, delimiter])`, with an optional delimiter defaulting to
+comma and a SUPER return type. PSS retains its existing public route and
+Snowflake-affinity diagnostic for compatibility, not native Snowflake
+certification; do not silently rename the function or delete tests.
+
+Snowflake `SPLIT(string, separator)` uses a required substring separator;
+`STRTOK_TO_ARRAY(string [, delimiter])` instead uses a delimiter character set
+defaulting to a single space. The matrices cover delimiter omission for both
+optional signatures, empty/repeated delimiters and NULL inputs. Omitted
+delimiters remain omitted in the AST; database defaults/results are not evaluated.
 
 Decision: D3.8 will explicitly cover all four names, in separate bounded
 per-function steps. Preserve the existing `SPLIT_TO_ARRAY` behavior/diagnostics
 for compatibility; do not treat it as a replacement for documented `SPLIT`.
 The D0 lexer step added `SPLIT` before `Identifier` while reusing the three
-existing conversion/predicate tokens. Its manual golden-repair gate remains open.
+existing conversion/predicate tokens. Its manual golden-repair gate is complete
+in `641ded6`; this batch makes no further lexer or token-ID changes.
 
 ## Signature-policy gap, separate from runtime evaluation
 
@@ -355,12 +370,14 @@ No other name in that bounded comparison remains unassigned in this report.
   missing parser nonreserved-name alternative without changing lexer IDs.
 - [x] **D1.2.2:** complete `ARRAY_SLICE`: 55 independent cases, including exact
   diagnostics in all 12 retained methods; focused host 377/377. No production changes.
-- [ ] **D2.6.1..D2.6.3:** complete independent matrices for `ARRAY_DISTINCT`,
+- [x] **D2.6.1..D2.6.3:** complete independent matrices for `ARRAY_DISTINCT`,
   `ARRAY_COMPACT`, and `ARRAY_SIZE`.
-- [ ] **D3.8.1..D3.8.4, approved:** implement/verify `TO_ARRAY`, `AS_ARRAY`,
+- [x] **D3.8.1..D3.8.4, approved:** implement/verify `TO_ARRAY`, `AS_ARRAY`,
   `IS_ARRAY`, and `SPLIT`, one function per step under the strict full matrix.
-- [ ] **D3.9.1..D3.9.5:** complete the older `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`,
-  `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, and `ARRAYS_ZIP` matrices.
+- [x] **D3.9.1..D3.9.2:** complete the older `SPLIT_TO_ARRAY` and
+  `STRTOK_TO_ARRAY` matrices, including their optional delimiter forms.
+- [ ] **D3.9.3..D3.9.5:** complete `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`,
+  and `ARRAYS_ZIP` matrices.
 - [ ] **D-SIG:** resolve and test the signature-validation boundary above across
   the final approved function list.
 - [ ] **D-AUDIT:** reconcile all 21 function rows to method-level evidence,
@@ -384,6 +401,8 @@ Retrieved 2026-11-18:
 - [AS_ARRAY](https://docs.snowflake.com/en/sql-reference/functions/as_array)
 - [IS_ARRAY](https://docs.snowflake.com/en/sql-reference/functions/is_array)
 - [SPLIT](https://docs.snowflake.com/en/sql-reference/functions/split)
+- [STRTOK_TO_ARRAY](https://docs.snowflake.com/en/sql-reference/functions/strtok_to_array)
+- [Redshift SPLIT_TO_ARRAY](https://docs.aws.amazon.com/redshift/latest/dg/split_to_array.html)
 - [ARRAY_REPEAT](https://docs.snowflake.com/en/sql-reference/functions/array_repeat)
 
 ## D2.6.1 ARRAY_DISTINCT method-level completion evidence
@@ -631,3 +650,184 @@ Focused host: 452 passed, zero failures/errors/skips; 435 six-output cases and 1
 | predicate:case | `arC49_isArrayBooleanCaseProjectionV0Test` |
 
 Focused host: 556 passed, zero failures/errors/skips; 533 six-output cases and 23 syntax controls.
+
+## D3.8.4 SPLIT method-level completion evidence
+
+48 methods; 45 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC50_splitSelectPlacementV0Test` |
+| placement:Where | `arC50_splitWherePlacementV0Test` |
+| placement:Join | `arC50_splitJoinPlacementV0Test` |
+| placement:Having | `arC50_splitHavingPlacementV0Test` |
+| placement:Qualify | `arC50_splitQualifyPlacementV0Test` |
+| placement:OrderBy | `arC50_splitOrderByPlacementV0Test` |
+| placement:Values | `arC50_splitValuesPlacementV0Test` |
+| placement:Insert | `arC50_splitInsertPlacementV0Test` |
+| placement:Update | `arC50_splitUpdatePlacementV0Test` |
+| placement:Delete | `arC50_splitDeletePlacementV0Test` |
+| placement:Ddl | `arC50_splitDdlPlacementV0Test` |
+| placement:Script | `arC50_splitScriptPlacementV0Test` |
+| arg1:Unqualified | `arC50_splitArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC50_splitArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC50_splitArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC50_splitArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC50_splitArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC50_splitArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC50_splitArg1ColumnVariableV0Test` |
+| arg1:Null | `arC50_splitArg1NullV0Test` |
+| arg2:Unqualified | `arC50_splitArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC50_splitArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC50_splitArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC50_splitArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC50_splitArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC50_splitArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC50_splitArg2ColumnVariableV0Test` |
+| arg2:Null | `arC50_splitArg2NullV0Test` |
+| combined:unqualified | `arC50_splitUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC50_splitAllPredicandVariablesV0Test` |
+| combined:column | `arC50_splitAllColumnVariablesV0Test` |
+| deep:nested | `arC50_splitNestedExpressionV0Test` |
+| deep:derived | `arC50_splitDerivedOutputV0Test` |
+| deep:setop | `arC50_splitSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC50_splitQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC50_splitSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC50_splitUppercaseV0Test` |
+| dialect:mixed | `arC50_splitMixedDialectV0Test` |
+| syntax:TrailingComma | `arC50_splitTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC50_splitMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC50_splitMissingCommaSyntaxV0Test` |
+| input:empty-string | `arC50_splitEmptyStringV0Test` |
+| input:empty-delimiter | `arC50_splitEmptyDelimiterV0Test` |
+| input:repeated-delimiter | `arC50_splitRepeatedDelimiterV0Test` |
+| input:delimiter-substring | `arC50_splitDelimiterSequenceV0Test` |
+| input:both-null | `arC50_splitBothNullV0Test` |
+| composition:subscript | `arC50_splitResultSubscriptV0Test` |
+| composition:flatten | `arC50_splitFlattenResultV0Test` |
+
+## D3.9.1 SPLIT_TO_ARRAY method-level completion evidence
+
+53 methods; 50 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeSplitToArraySelectSeedV0Test` |
+| arg1:Qualified | `snowflakeSplitToArraySelectSeedV0Test` |
+| arg2:Qualified | `snowflakeSplitToArraySelectSeedV0Test` |
+| arg1:MissingAlias | `snowflakeSplitToArrayMissingAliasFatalV0Test` |
+| placement:Where | `snowflakeSplitToArrayWherePlacementV0Test` |
+| placement:OrderBy | `snowflakeSplitToArrayOrderByPlacementV0Test` |
+| legacy:values-column-control | `snowflakeSplitToArrayValuesPlacementV0Test` |
+| placement:Insert | `snowflakeSplitToArrayInsertPlacementV0Test` |
+| placement:Update | `snowflakeSplitToArrayUpdatePlacementV0Test` |
+| placement:Delete | `snowflakeSplitToArrayDeletePlacementV0Test` |
+| placement:Join | `arC51_splitToArrayJoinPlacementV0Test` |
+| placement:Having | `arC51_splitToArrayHavingPlacementV0Test` |
+| placement:Qualify | `arC51_splitToArrayQualifyPlacementV0Test` |
+| placement:Values | `arC51_splitToArrayValuesPlacementV0Test` |
+| placement:Ddl | `arC51_splitToArrayDdlPlacementV0Test` |
+| placement:Script | `arC51_splitToArrayScriptPlacementV0Test` |
+| arg1:Unqualified | `arC51_splitToArrayArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC51_splitToArrayArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC51_splitToArrayArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC51_splitToArrayArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC51_splitToArrayArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC51_splitToArrayArg1ColumnVariableV0Test` |
+| arg1:Null | `arC51_splitToArrayArg1NullV0Test` |
+| arg2:Unqualified | `arC51_splitToArrayArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC51_splitToArrayArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC51_splitToArrayArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC51_splitToArrayArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC51_splitToArrayArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC51_splitToArrayArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC51_splitToArrayArg2ColumnVariableV0Test` |
+| arg2:Null | `arC51_splitToArrayArg2NullV0Test` |
+| combined:unqualified | `arC51_splitToArrayUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC51_splitToArrayAllPredicandVariablesV0Test` |
+| combined:column | `arC51_splitToArrayAllColumnVariablesV0Test` |
+| deep:nested | `arC51_splitToArrayNestedExpressionV0Test` |
+| deep:derived | `arC51_splitToArrayDerivedOutputV0Test` |
+| deep:setop | `arC51_splitToArraySetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC51_splitToArrayQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC51_splitToArraySameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC51_splitToArrayUppercaseV0Test` |
+| dialect:mixed | `arC51_splitToArrayMixedDialectV0Test` |
+| syntax:TrailingComma | `arC51_splitToArrayTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC51_splitToArrayMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC51_splitToArrayMissingCommaSyntaxV0Test` |
+| input:empty-string | `arC51_splitToArrayEmptyStringV0Test` |
+| input:empty-delimiter | `arC51_splitToArrayEmptyDelimiterV0Test` |
+| input:repeated-delimiter | `arC51_splitToArrayRepeatedDelimiterV0Test` |
+| input:delimiter-substring | `arC51_splitToArrayDelimiterSequenceV0Test` |
+| input:both-null | `arC51_splitToArrayBothNullV0Test` |
+| optional:qualified | `arC51_splitToArrayDefaultDelimiterQualifiedV0Test` |
+| optional:unqualified | `arC51_splitToArrayDefaultDelimiterUnqualifiedV0Test` |
+| optional:predicand | `arC51_splitToArrayDefaultDelimiterPredicandVariableV0Test` |
+| optional:column | `arC51_splitToArrayDefaultDelimiterColumnVariableV0Test` |
+| optional:null | `arC51_splitToArrayDefaultDelimiterNullV0Test` |
+| optional:literal | `arC51_splitToArrayDefaultDelimiterLiteralV0Test` |
+
+## D3.9.2 STRTOK_TO_ARRAY method-level completion evidence
+
+53 methods; 50 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeStrtokToArraySelectSeedV0Test` |
+| arg1:Qualified | `snowflakeStrtokToArraySelectSeedV0Test` |
+| arg2:Qualified | `snowflakeStrtokToArraySelectSeedV0Test` |
+| arg1:MissingAlias | `snowflakeStrtokToArrayMissingAliasFatalV0Test` |
+| placement:Where | `snowflakeStrtokToArrayWherePlacementV0Test` |
+| placement:OrderBy | `snowflakeStrtokToArrayOrderByPlacementV0Test` |
+| legacy:values-column-control | `snowflakeStrtokToArrayValuesPlacementV0Test` |
+| placement:Insert | `snowflakeStrtokToArrayInsertPlacementV0Test` |
+| placement:Update | `snowflakeStrtokToArrayUpdatePlacementV0Test` |
+| placement:Delete | `snowflakeStrtokToArrayDeletePlacementV0Test` |
+| placement:Join | `arC52_strtokToArrayJoinPlacementV0Test` |
+| placement:Having | `arC52_strtokToArrayHavingPlacementV0Test` |
+| placement:Qualify | `arC52_strtokToArrayQualifyPlacementV0Test` |
+| placement:Values | `arC52_strtokToArrayValuesPlacementV0Test` |
+| placement:Ddl | `arC52_strtokToArrayDdlPlacementV0Test` |
+| placement:Script | `arC52_strtokToArrayScriptPlacementV0Test` |
+| arg1:Unqualified | `arC52_strtokToArrayArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC52_strtokToArrayArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC52_strtokToArrayArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC52_strtokToArrayArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC52_strtokToArrayArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC52_strtokToArrayArg1ColumnVariableV0Test` |
+| arg1:Null | `arC52_strtokToArrayArg1NullV0Test` |
+| arg2:Unqualified | `arC52_strtokToArrayArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC52_strtokToArrayArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC52_strtokToArrayArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC52_strtokToArrayArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC52_strtokToArrayArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC52_strtokToArrayArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC52_strtokToArrayArg2ColumnVariableV0Test` |
+| arg2:Null | `arC52_strtokToArrayArg2NullV0Test` |
+| combined:unqualified | `arC52_strtokToArrayUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC52_strtokToArrayAllPredicandVariablesV0Test` |
+| combined:column | `arC52_strtokToArrayAllColumnVariablesV0Test` |
+| deep:nested | `arC52_strtokToArrayNestedExpressionV0Test` |
+| deep:derived | `arC52_strtokToArrayDerivedOutputV0Test` |
+| deep:setop | `arC52_strtokToArraySetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC52_strtokToArrayQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC52_strtokToArraySameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC52_strtokToArrayUppercaseV0Test` |
+| dialect:mixed | `arC52_strtokToArrayMixedDialectV0Test` |
+| syntax:TrailingComma | `arC52_strtokToArrayTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC52_strtokToArrayMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC52_strtokToArrayMissingCommaSyntaxV0Test` |
+| input:empty-string | `arC52_strtokToArrayEmptyStringV0Test` |
+| input:empty-delimiter | `arC52_strtokToArrayEmptyDelimiterV0Test` |
+| input:repeated-delimiter | `arC52_strtokToArrayRepeatedDelimiterV0Test` |
+| input:delimiter-set | `arC52_strtokToArrayDelimiterSequenceV0Test` |
+| input:both-null | `arC52_strtokToArrayBothNullV0Test` |
+| optional:qualified | `arC52_strtokToArrayDefaultDelimiterQualifiedV0Test` |
+| optional:unqualified | `arC52_strtokToArrayDefaultDelimiterUnqualifiedV0Test` |
+| optional:predicand | `arC52_strtokToArrayDefaultDelimiterPredicandVariableV0Test` |
+| optional:column | `arC52_strtokToArrayDefaultDelimiterColumnVariableV0Test` |
+| optional:null | `arC52_strtokToArrayDefaultDelimiterNullV0Test` |
+| optional:literal | `arC52_strtokToArrayDefaultDelimiterLiteralV0Test` |
+
+Focused host: 694 passed, zero failures/errors/skips; 662 six-output cases and 32 syntax controls.

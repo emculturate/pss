@@ -37,6 +37,7 @@ public final class SnowflakeRoutineDialectRegistry {
 			"to_array",
 			"as_array",
 			"is_array",
+			"split",
 			"split_to_array",
 			"strtok_to_array",
 			"array_generate_range",

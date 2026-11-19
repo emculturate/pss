@@ -1020,17 +1020,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArraySelectSeedV0Test() {
 		final String query = "SELECT split_to_array(a.payload, a.sep) AS split_vals FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				7);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+						1, 7, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}, alias=split_vals}}, from={table={alias=a, table=tab1}}}}",
@@ -1044,17 +1040,16 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayMissingAliasFatalV0Test() {
 		final String query = "SELECT split_to_array(z.payload, a.sep) AS split_vals FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				7);
-		assertSingleMissingAliasFatal(extractor);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+						1, 7, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:43). No alias or table called 'z'.",
+						1, 43, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=z}}, 2={column={name=sep, table_ref=a}}}}, alias=split_vals}}, from={table={alias=a, table=tab1}}}}",
@@ -1332,17 +1327,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayWherePlacementV0Test() {
 		final String query = "SELECT a.id FROM tab1 a WHERE split_to_array(a.tags, a.sep) IS NOT NULL";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				30);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+						1, 30, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, operator=IS NOT NULL}}}}",
@@ -1356,17 +1347,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayOrderByPlacementV0Test() {
 		final String query = "SELECT a.id FROM tab1 a ORDER BY split_to_array(a.tags, a.sep)";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				33);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
@@ -1380,17 +1367,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayValuesPlacementV0Test() {
 		final String query = "VALUES (split_to_array(a.tags, a.sep))";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				8);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+						1, 8, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={values={matrix={1={row={1={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}}}}}",
@@ -1404,17 +1387,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayInsertPlacementV0Test() {
 		final String query = "INSERT INTO tab_out(split_vals) SELECT split_to_array(a.tags, a.sep) FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				39);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
+						1, 39, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=split_vals, table_ref=null}}}}}}",
@@ -1428,17 +1407,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayUpdatePlacementV0Test() {
 		final String query = "UPDATE tab1 SET split_vals = split_to_array(tags, sep)";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:29) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				29);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:29) is recognized as Snowflake-specific grammar.",
+						1, 29, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=split_vals, table_ref=null}}, to={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}}}}}}",
@@ -1452,17 +1427,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeSplitToArrayDeletePlacementV0Test() {
 		final String query = "DELETE FROM tab1 WHERE split_to_array(tags, sep) IS NOT NULL";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'split_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				23);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+						1, 23, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=split_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}, operator=IS NOT NULL}}}}}",
@@ -1748,17 +1719,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArraySelectSeedV0Test() {
 		final String query = "SELECT strtok_to_array(a.payload, a.sep) AS strtok_vals FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				7);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+						1, 7, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}, alias=strtok_vals}}, from={table={alias=a, table=tab1}}}}",
@@ -1772,17 +1739,16 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayMissingAliasFatalV0Test() {
 		final String query = "SELECT strtok_to_array(z.payload, a.sep) AS strtok_vals FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				7);
-		assertSingleMissingAliasFatal(extractor);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+						1, 7, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:44). No alias or table called 'z'.",
+						1, 44, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=z}}, 2={column={name=sep, table_ref=a}}}}, alias=strtok_vals}}, from={table={alias=a, table=tab1}}}}",
@@ -1796,17 +1762,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayWherePlacementV0Test() {
 		final String query = "SELECT a.id FROM tab1 a WHERE strtok_to_array(a.tags, a.sep) IS NOT NULL";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				30);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+						1, 30, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, operator=IS NOT NULL}}}}",
@@ -1820,17 +1782,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayOrderByPlacementV0Test() {
 		final String query = "SELECT a.id FROM tab1 a ORDER BY strtok_to_array(a.tags, a.sep)";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				33);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}, sort_order=ASC}}, from={table={alias=a, table=tab1}}}}",
@@ -1844,17 +1802,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayValuesPlacementV0Test() {
 		final String query = "VALUES (strtok_to_array(a.tags, a.sep))";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				8);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:8) is recognized as Snowflake-specific grammar.",
+						1, 8, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={values={matrix={1={row={1={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}}}}}",
@@ -1868,17 +1822,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayInsertPlacementV0Test() {
 		final String query = "INSERT INTO tab_out(tok_vals) SELECT strtok_to_array(a.tags, a.sep) FROM tab1 a";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:37) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				37);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:37) is recognized as Snowflake-specific grammar.",
+						1, 37, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=tab1}}, select={1={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sep, table_ref=a}}}}}}}, target_table={table={alias=null, table=tab_out}}, columns={1={column={name=tok_vals, table_ref=null}}}}}}",
@@ -1892,9 +1842,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayUpdatePlacementV0Test() {
 		final String query = "UPDATE tab1 SET tok_vals = strtok_to_array(tags, sep)";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:27) is recognized as Snowflake-specific grammar.",
+						1, 27, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={update={table={alias=null, table=tab1}, assignments={1={set={column={name=tok_vals, table_ref=null}}, to={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}}}}}}",
@@ -1908,17 +1862,13 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 	@Test
 	public void snowflakeStrtokToArrayDeletePlacementV0Test() {
 		final String query = "DELETE FROM tab1 WHERE strtok_to_array(tags, sep) IS NOT NULL";
-		final SqlParseEventWalker extractor = runQuery(query);
-		final Snippet snippet = extractor.getSnippet();
-		assertDiagnosticAtPosition(
-				snippet,
-				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
-				ParseDiagnostic.Severity.WARNING,
-				"routine 'strtok_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
-				null,
-				1,
-				23);
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
 		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+						1, 23, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
 		assertOutputs(
 				extractor,
 				"{SQL={delete={table={alias=null, table=tab1}, where={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=sep, table_ref=null}}}}}, operator=IS NOT NULL}}}}}",
@@ -11872,5 +11822,2810 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 				"{events={payload=[[@9,32:32='a',<457>,1:32]], fallback_id=[[@18,58:58='a',<457>,1:58]], active=[[@28,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7], [@14,48:48='a',<457>,1:48]]}}",
 				"{query0={classified_id=[[@23,79:91='classified_id',<457>,1:79]], id=[[@3,9:10='id',<457>,1:9]]}}",
 				"{def_query0={query_dictionary={classified_id=[[@23,79:91='classified_id',<457>,1:79]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,32:32='a',<457>,1:32]], fallback_id=[[@18,58:58='a',<457>,1:58]], active=[[@28,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7], [@14,48:48='a',<457>,1:48]]}}, filters=[{name=active, table_ref=a}], interface={classified_id=[{name=id, table_ref=a}, {name=payload, table_ref=a}, {name=fallback_id, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitSelectPlacementV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitWherePlacementV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE split(a.payload, a.delimiter) IS NOT NULL AND a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={condition={left={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@14,47:47='a',<457>,1:47]], delimiter=[[@18,58:58='a',<457>,1:58]], active=[[@26,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@14,47:47='a',<457>,1:47]], delimiter=[[@18,58:58='a',<457>,1:58]], active=[[@26,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON split(a.payload, a.delimiter) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,58:58='a',<457>,1:58]], delimiter=[[@21,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7], [@30,100:100='a',<457>,1:100]]}, labels={ref_value=[[@26,84:84='b',<457>,1:84]], event_id=[[@34,107:107='b',<457>,1:107]], active=[[@38,124:124='b',<457>,1:124]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,58:58='a',<457>,1:58]], delimiter=[[@21,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7], [@30,100:100='a',<457>,1:100]]}, labels={ref_value=[[@26,84:84='b',<457>,1:84]], event_id=[[@34,107:107='b',<457>,1:107]], active=[[@38,124:124='b',<457>,1:124]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC50_splitHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload, a.delimiter HAVING split(a.payload, a.delimiter) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:90) is recognized as Snowflake-specific grammar.",
+						1, 90, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@30,96:96='a',<457>,1:96]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,107:107='a',<457>,1:107]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@30,96:96='a',<457>,1:96]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,107:107='a',<457>,1:107]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}, {name=delimiter, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY split(a.payload, a.delimiter) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,105:105='a',<457>,1:105]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@41,145:146='rn',<457>,1:145]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@41,145:146='rn',<457>,1:145]]}, table_dictionary={events={payload=[[@29,105:105='a',<457>,1:105]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE a.active = 1 ORDER BY split(a.payload, a.delimiter), a.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:54) is recognized as Snowflake-specific grammar.",
+						1, 54, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id]",
+				"{}",
+				"{events={payload=[[@17,60:60='a',<457>,1:60]], delimiter=[[@21,71:71='a',<457>,1:71]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@26,85:85='a',<457>,1:85]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@17,60:60='a',<457>,1:60]], delimiter=[[@21,71:71='a',<457>,1:71]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@26,85:85='a',<457>,1:85]]}}, ordered_by=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=id, table_ref=a}], filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitValuesPlacementV0Test() {
+		final String query = "VALUES (7, split('a,b,c', ','))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={parameters={1={literal='a,b,c'}, 2={literal=','}}, function_name=split}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC50_splitInsertPlacementV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, events={payload=[[@15,58:58='a',<457>,1:58]], delimiter=[[@19,69:69='a',<457>,1:69]], active=[[@29,118:118='a',<457>,1:118]], id=[[@9,46:46='a',<457>,1:46]]}}",
+				"{query0={result_value=[[@24,85:96='result_value',<457>,1:85]], id=[[@11,48:49='id',<457>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}, def_query0={query_dictionary={result_value=[[@24,85:96='result_value',<457>,1:85]], id=[[@11,48:49='id',<457>,1:48]]}, table_dictionary={events={payload=[[@15,58:58='a',<457>,1:58]], delimiter=[[@19,69:69='a',<457>,1:69]], active=[[@29,118:118='a',<457>,1:118]], id=[[@9,46:46='a',<457>,1:46]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void arC50_splitUpdatePlacementV0Test() {
+		final String query = "UPDATE events SET result_value = split(payload, delimiter) WHERE active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={payload=[[@7,39:45='payload',<457>,1:39], [@10,57:57=')',<288>,1:57]], delimiter=[[@9,48:56='delimiter',<457>,1:48], [@10,57:57=')',<288>,1:57]], active=[[@12,65:70='active',<457>,1:65]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<457>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=events}]}, table_dictionary={events={payload=[[@7,39:45='payload',<457>,1:39], [@10,57:57=')',<288>,1:57]], delimiter=[[@9,48:56='delimiter',<457>,1:48], [@10,57:57=')',<288>,1:57]], active=[[@12,65:70='active',<457>,1:65]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<457>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<457>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<457>,1:18]]}}}}");
+	}
+
+	@Test
+	public void arC50_splitDeletePlacementV0Test() {
+		final String query = "DELETE FROM events WHERE split(payload, delimiter) IS NULL AND active = 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={delete={table={alias=null, table=events}, where={and={1={condition={left={function={parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@6,31:37='payload',<457>,1:31]], delimiter=[[@8,40:48='delimiter',<457>,1:40]], active=[[@13,63:68='active',<457>,1:63]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={payload=[[@6,31:37='payload',<457>,1:31]], delimiter=[[@8,40:48='delimiter',<457>,1:40]], active=[[@13,63:68='active',<457>,1:63]]}}, filters=[{name=payload, table_ref=events}, {name=delimiter, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+	}
+
+	@Test
+	public void arC50_splitDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_split AS SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:36) is recognized as Snowflake-specific grammar.",
+						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_split}, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,42:42='a',<457>,1:42]], delimiter=[[@15,53:53='a',<457>,1:53]], active=[[@25,102:102='a',<457>,1:102]], id=[[@5,30:30='a',<457>,1:30]]}}",
+				"{query0={result_value=[[@20,69:80='result_value',<457>,1:69]], id=[[@7,32:33='id',<457>,1:32]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@20,69:80='result_value',<457>,1:69]], id=[[@7,32:33='id',<457>,1:32]]}, table_dictionary={events={payload=[[@11,42:42='a',<457>,1:42]], delimiter=[[@15,53:53='a',<457>,1:53]], active=[[@25,102:102='a',<457>,1:102]], id=[[@5,30:30='a',<457>,1:30]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC50_splitScriptPlacementV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, split(c.payload, c.delimiter) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={parameters={1={column={name=payload, table_ref=c}}, 2={column={name=delimiter, table_ref=c}}}, function_name=split}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@35,125:125='b',<457>,2:32]], id=[[@28,100:100='b',<457>,2:7]]}}, 3={archive_events={payload=[[@48,158:158='c',<457>,3:19]], delimiter=[[@52,169:169='c',<457>,3:30]], active=[[@62,225:225='c',<457>,3:86]], id=[[@42,146:146='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@30,102:103='id',<457>,2:9]]}}, 3={query0={other_value=[[@57,185:195='other_value',<457>,3:46]], id=[[@44,148:149='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,102:103='id',<457>,2:9]]}, table_dictionary={orders={active=[[@35,125:125='b',<457>,2:32]], id=[[@28,100:100='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@57,185:195='other_value',<457>,3:46]], id=[[@44,148:149='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@48,158:158='c',<457>,3:19]], delimiter=[[@52,169:169='c',<457>,3:30]], active=[[@62,225:225='c',<457>,3:86]], id=[[@42,146:146='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}, {name=delimiter, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, split(payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:25='payload',<457>,1:19]], delimiter=[[@9,28:28='a',<457>,1:28]], active=[[@19,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:25='payload',<457>,1:19]], delimiter=[[@9,28:28='a',<457>,1:28]], active=[[@19,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, split(payload, ',') AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:26)]]",
+						1, 26, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={column={name=payload, table_ref=null}}, 2={literal=','}}, function_name=split}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,43:54='result_value',<457>,1:43]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,43:54='result_value',<457>,1:43]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, split(payload, a.delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:19). Possible sources: [events, labels]",
+						1, 19, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:19)]]",
+						1, 19, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,28:28='a',<457>,1:28]], id=[[@1,7:7='a',<457>,1:7], [@22,88:88='a',<457>,1:88]]}, labels={event_id=[[@26,95:95='b',<457>,1:95]], active=[[@30,112:112='b',<457>,1:112]]}}",
+				"{query0={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,28:28='a',<457>,1:28]], id=[[@1,7:7='a',<457>,1:7], [@22,88:88='a',<457>,1:88]]}, labels={event_id=[[@26,95:95='b',<457>,1:95]], active=[[@30,112:112='b',<457>,1:112]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1MissingAliasV0Test() {
+		final String query = "SELECT a.id, split(z.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:46). No alias or table called 'z'.",
+						1, 46, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=z}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=z}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, split(a.payload, q.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:46). No alias or table called 'a'.",
+						1, 46, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=q}}}, function_name=split}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,78:78='a',<457>,1:78]], delimiter=[[@28,89:89='a',<457>,1:89]], active=[[@35,121:121='a',<457>,1:121]], id=[[@20,72:72='a',<457>,1:72]]}}",
+				"{query0={payload=[[@26,80:86='payload',<457>,1:80]], delimiter=[[@30,91:99='delimiter',<457>,1:91], [@11,30:30='q',<457>,1:30]], id=[[@22,74:75='id',<457>,1:74], [@1,7:7='q',<457>,1:7], [@43,143:143='q',<457>,1:143]]}, query1={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,80:86='payload',<457>,1:80]], delimiter=[[@30,91:99='delimiter',<457>,1:91], [@11,30:30='q',<457>,1:30]], id=[[@22,74:75='id',<457>,1:74], [@1,7:7='q',<457>,1:7], [@43,143:143='q',<457>,1:143]]}, table_dictionary={events={payload=[[@24,78:78='a',<457>,1:78]], delimiter=[[@28,89:89='a',<457>,1:89]], active=[[@35,121:121='a',<457>,1:121]], id=[[@20,72:72='a',<457>,1:72]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, split(<payload_expr>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={substitution={name=<payload_expr>, type=predicand}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={delimiter=[[@9,35:35='a',<457>,1:35]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,35:35='a',<457>,1:35]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, split(a.<payload_col>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={delimiter=[[@11,36:36='a',<457>,1:36]], active=[[@21,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,19:19='a',<457>,1:19]]}}",
+				"{query0={result_value=[[@16,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@11,36:36='a',<457>,1:36]], active=[[@21,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,19:19='a',<457>,1:19]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg1NullV0Test() {
+		final String query = "SELECT a.id, split(NULL, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={null_literal=null}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,25:25='a',<457>,1:25]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,25:25='a',<457>,1:25]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, split(a.payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:38='delimiter',<457>,1:30]], active=[[@19,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:38='delimiter',<457>,1:30]], active=[[@19,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, split('a,b,c', delimiter) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:35)]]",
+						1, 35, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={literal='a,b,c'}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,49:60='result_value',<457>,1:49]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,49:60='result_value',<457>,1:49]]}, interface={marker=[], result_value=[{name=delimiter, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2AmbiguousV0Test() {
+		final String query = "SELECT a.id, split(a.payload, delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'delimiter' at (l:1 c:30). Possible sources: [events, labels]",
+						1, 30, "SqlASTWalkerHelper", null, "delimiter", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:30)]]",
+						1, 30, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@22,88:88='a',<457>,1:88]]}, labels={event_id=[[@26,95:95='b',<457>,1:95]], active=[[@30,112:112='b',<457>,1:112]]}}",
+				"{query0={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@22,88:88='a',<457>,1:88]]}, labels={event_id=[[@26,95:95='b',<457>,1:95]], active=[[@30,112:112='b',<457>,1:112]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2MissingAliasV0Test() {
+		final String query = "SELECT a.id, split(a.payload, z.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:46). No alias or table called 'z'.",
+						1, 46, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=z}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2HiddenAliasV0Test() {
+		final String query = "SELECT q.id, split(q.payload, a.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:46). No alias or table called 'a'.",
+						1, 46, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=payload, table_ref=q}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,78:78='a',<457>,1:78]], delimiter=[[@28,89:89='a',<457>,1:89]], active=[[@35,121:121='a',<457>,1:121]], id=[[@20,72:72='a',<457>,1:72]]}}",
+				"{query0={payload=[[@26,80:86='payload',<457>,1:80], [@7,19:19='q',<457>,1:19]], delimiter=[[@30,91:99='delimiter',<457>,1:91]], id=[[@22,74:75='id',<457>,1:74], [@1,7:7='q',<457>,1:7], [@43,143:143='q',<457>,1:143]]}, query1={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,80:86='payload',<457>,1:80], [@7,19:19='q',<457>,1:19]], delimiter=[[@30,91:99='delimiter',<457>,1:91]], id=[[@22,74:75='id',<457>,1:74], [@1,7:7='q',<457>,1:7], [@43,143:143='q',<457>,1:143]]}, table_dictionary={events={payload=[[@24,78:78='a',<457>,1:78]], delimiter=[[@28,89:89='a',<457>,1:89]], active=[[@35,121:121='a',<457>,1:121]], id=[[@20,72:72='a',<457>,1:72]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=q}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2PredicandVariableV0Test() {
+		final String query = "SELECT a.id, split(a.payload, <delimiter_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={substitution={name=<delimiter_expr>, type=predicand}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_expr>=predicand}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=<delimiter_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2ColumnVariableV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.<delimiter_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={substitution={name=<delimiter_col>, type=column}, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_col>=column}",
+				"{events={<delimiter_col>=[[@11,30:30='a',<457>,1:30]], payload=[[@7,19:19='a',<457>,1:19]], active=[[@21,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<delimiter_col>=[[@11,30:30='a',<457>,1:30]], payload=[[@7,19:19='a',<457>,1:19]], active=[[@21,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {substitution={name=<delimiter_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitArg2NullV0Test() {
+		final String query = "SELECT a.id, split(a.payload, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={null_literal=null}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@19,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@19,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitUnqualifiedOperandsV0Test() {
+		final String query = "SELECT a.id, split(payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=null}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:25='payload',<457>,1:19]], delimiter=[[@9,28:36='delimiter',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:25='payload',<457>,1:19]], delimiter=[[@9,28:36='delimiter',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitAllPredicandVariablesV0Test() {
+		final String query = "SELECT a.id, split(<payload_predicand>, <delimiter_predicand>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={substitution={name=<payload_predicand>, type=predicand}}, 2={substitution={name=<delimiter_predicand>, type=predicand}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_predicand>=predicand, <payload_predicand>=predicand}",
+				"{events={active=[[@17,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_predicand>, type=predicand}, {name=<delimiter_predicand>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitAllColumnVariablesV0Test() {
+		final String query = "SELECT a.id, split(a.<payload_column>, a.<delimiter_column>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={substitution={name=<payload_column>, type=column}, table_ref=a}}, 2={column={substitution={name=<delimiter_column>, type=column}, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_column>=column, <delimiter_column>=column}",
+				"{events={<payload_column>=[[@7,19:19='a',<457>,1:19]], <delimiter_column>=[[@11,39:39='a',<457>,1:39]], active=[[@21,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<payload_column>=[[@7,19:19='a',<457>,1:19]], <delimiter_column>=[[@11,39:39='a',<457>,1:39]], active=[[@21,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_column>, type=column}, table_ref=a}, {substitution={name=<delimiter_column>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(split(a.payload, a.delimiter), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@18,53:53='a',<457>,1:53]], payload=[[@9,28:28='a',<457>,1:28]], delimiter=[[@13,39:39='a',<457>,1:39]], active=[[@28,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@23,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@23,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@18,53:53='a',<457>,1:53]], payload=[[@9,28:28='a',<457>,1:28]], delimiter=[[@13,39:39='a',<457>,1:39]], active=[[@28,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,53:53='a',<457>,1:53]], delimiter=[[@21,64:64='a',<457>,1:64]], active=[[@31,113:113='a',<457>,1:113]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@26,80:91='result_value',<457>,1:80], [@5,13:13='q',<457>,1:13], [@39,135:135='q',<457>,1:135]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,171:171='q',<457>,1:171]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@26,80:91='result_value',<457>,1:80], [@5,13:13='q',<457>,1:13], [@39,135:135='q',<457>,1:135]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,171:171='q',<457>,1:171]]}, table_dictionary={events={payload=[[@17,53:53='a',<457>,1:53]], delimiter=[[@21,64:64='a',<457>,1:64]], active=[[@31,113:113='a',<457>,1:113]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC50_splitSetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, split(a.payload, a.delimiter) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@46,193:193='b',<457>,1:193]], other_value=[[@37,136:136='b',<457>,1:136]], id=[[@31,118:118='b',<457>,1:118]]}, events={payload=[[@9,30:30='a',<457>,1:30]], delimiter=[[@13,41:41='a',<457>,1:41]], active=[[@23,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@18,57:66='left_value',<457>,1:57]]}, query1={right_id=[[@35,126:133='right_id',<457>,1:126]], right_value=[[@41,153:163='right_value',<457>,1:153]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@35,126:133='right_id',<457>,1:126]], right_value=[[@41,153:163='right_value',<457>,1:153]]}, table_dictionary={archive_events={archived=[[@46,193:193='b',<457>,1:193]], other_value=[[@37,136:136='b',<457>,1:136]], id=[[@31,118:118='b',<457>,1:118]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@18,57:66='left_value',<457>,1:57]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,30:30='a',<457>,1:30]], delimiter=[[@13,41:41='a',<457>,1:41]], active=[[@23,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC50_splitQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,24:24='a',<457>,1:24]], delimiter=[[@13,35:35='a',<457>,1:35]], active=[[@23,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@18,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,24:24='a',<457>,1:24]], delimiter=[[@13,35:35='a',<457>,1:35]], active=[[@23,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitSameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.split AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=split, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={split=[[@5,13:13='a',<457>,1:13]], active=[[@14,57:57='a',<457>,1:57]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,24:35='stored_value',<457>,1:24]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,24:35='stored_value',<457>,1:24]]}, table_dictionary={events={split=[[@5,13:13='a',<457>,1:13]], active=[[@14,57:57='a',<457>,1:57]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=split, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitUppercaseV0Test() {
+		final String query = "SELECT a.id, SPLIT(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=SPLIT}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitMixedDialectV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:60); unlikely to run on either engine.",
+						1, 60, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@32,125:125='a',<457>,1:125]], created_at=[[@22,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@27,97:103='weekday',<457>,1:97]], result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@27,97:103='weekday',<457>,1:97]], result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@32,125:125='a',<457>,1:125]], created_at=[[@22,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT split(a.payload, a.delimiter,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:36 - unexpected input: ')' in rule value_expression: SELECT split(a.payload, a.delimiter,) AS result_value FROM events a",
+						1, 36, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split(a.payload, a.delimiter,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:36 - Syntax error, attempting recovery",
+						1, 36, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:12 - Invalid syntax near '('",
+						1, 12, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC50_splitMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT split(a.payload, a.delimiter AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:36 - unexpected input: 'AS' in rule value_expression: SELECT split(a.payload, a.delimiter AS result_value FROM events a",
+						1, 36, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split(a.payload, a.delimiter AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:36 - Syntax error, attempting recovery",
+						1, 36, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:12 - Invalid syntax near '('",
+						1, 12, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC50_splitMissingCommaSyntaxV0Test() {
+		final String query = "SELECT split(a.payload a.delimiter) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:23 - unexpected input: 'a' in rule value_expression: SELECT split(a.payload a.delimiter) AS result_value FROM events a",
+						1, 23, "ParseErrorCollector", "value_expression", "a", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split(a.payload a.delimiter) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:23 - Syntax error, attempting recovery",
+						1, 23, "ParseErrorCollector", null, "a", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:12 - Invalid syntax near '('",
+						1, 12, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC50_splitEmptyStringV0Test() {
+		final String query = "SELECT a.id, split('', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=''}, 2={literal=','}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitEmptyDelimiterV0Test() {
+		final String query = "SELECT a.id, split('a,b', '') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal='a,b'}, 2={literal=''}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitRepeatedDelimiterV0Test() {
+		final String query = "SELECT a.id, split(',a,,b,', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=',a,,b,'}, 2={literal=','}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,37:48='result_value',<457>,1:37]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,37:48='result_value',<457>,1:37]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitDelimiterSequenceV0Test() {
+		final String query = "SELECT a.id, split('a--b@@c', '--') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal='a--b@@c'}, 2={literal='--'}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitBothNullV0Test() {
+		final String query = "SELECT a.id, split(NULL, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={null_literal=null}, 2={null_literal=null}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitResultSubscriptV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter)[0] AS first_piece FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={subscript={array={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}}, index={literal=0}}, alias=first_piece}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[first_piece, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@24,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={first_piece=[[@19,49:59='first_piece',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={first_piece=[[@19,49:59='first_piece',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@24,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={first_piece=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC50_splitFlattenResultV0Test() {
+		final String query = "SELECT f.index AS position, f.value AS piece FROM TABLE(FLATTEN(input => split('a,b,c', ','))) f WHERE f.index >= 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:73) is recognized as Snowflake-specific grammar.",
+						1, 73, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=index, table_ref=f}, alias=position}, 2={column={name=value, table_ref=f}, alias=piece}}, from={table={alias=f, table_function={function_name=FLATTEN, parameters={input={function={parameters={1={literal='a,b,c'}, 2={literal=','}}, function_name=split}}}}}}, where={condition={left={column={name=index, table_ref=f}}, right={literal=0}, operator=>=}}}}",
+				"[piece, position]",
+				"{}",
+				"{flatten0={index=[[@1,7:7='f',<457>,1:7], [@29,103:103='f',<457>,1:103]], value=[[@7,28:28='f',<457>,1:28]]}}",
+				"{query0={piece=[[@11,39:43='piece',<457>,1:39]], position=[[@5,18:25='position',<331>,1:18]]}}",
+				"{def_query0={query_dictionary={piece=[[@11,39:43='piece',<457>,1:39]], position=[[@5,18:25='position',<331>,1:18]]}, table_dictionary={flatten0={index=[[@1,7:7='f',<457>,1:7], [@29,103:103='f',<457>,1:103]], value=[[@7,28:28='f',<457>,1:28]]}}, filters=[{name=index, table_ref=f}], interface={piece=[{name=value, table_ref=f}], position=[{name=index, table_ref=f}]}, table_alias={f=flatten0}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON split_to_array(a.payload, a.delimiter) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,67:67='a',<457>,1:67]], delimiter=[[@21,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7], [@30,109:109='a',<457>,1:109]]}, labels={ref_value=[[@26,93:93='b',<457>,1:93]], event_id=[[@34,116:116='b',<457>,1:116]], active=[[@38,133:133='b',<457>,1:133]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,67:67='a',<457>,1:67]], delimiter=[[@21,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7], [@30,109:109='a',<457>,1:109]]}, labels={ref_value=[[@26,93:93='b',<457>,1:93]], event_id=[[@34,116:116='b',<457>,1:116]], active=[[@38,133:133='b',<457>,1:133]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload, a.delimiter HAVING split_to_array(a.payload, a.delimiter) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:90) is recognized as Snowflake-specific grammar.",
+						1, 90, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@30,105:105='a',<457>,1:105]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,116:116='a',<457>,1:116]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@30,105:105='a',<457>,1:105]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,116:116='a',<457>,1:116]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}, {name=delimiter, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY split_to_array(a.payload, a.delimiter) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,114:114='a',<457>,1:114]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,125:125='a',<457>,1:125]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@41,154:155='rn',<457>,1:154]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@41,154:155='rn',<457>,1:154]]}, table_dictionary={events={payload=[[@29,114:114='a',<457>,1:114]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,125:125='a',<457>,1:125]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayValuesPlacementV0Test() {
+		final String query = "VALUES (7, split_to_array('a,b,c', ','))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={function_name=split_to_array, parameters={1={literal='a,b,c'}, 2={literal=','}}}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_split_to_array AS SELECT a.id, split_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:45) is recognized as Snowflake-specific grammar.",
+						1, 45, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_split_to_array}, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,60:60='a',<457>,1:60]], delimiter=[[@15,71:71='a',<457>,1:71]], active=[[@25,120:120='a',<457>,1:120]], id=[[@5,39:39='a',<457>,1:39]]}}",
+				"{query0={result_value=[[@20,87:98='result_value',<457>,1:87]], id=[[@7,41:42='id',<457>,1:41]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@20,87:98='result_value',<457>,1:87]], id=[[@7,41:42='id',<457>,1:41]]}, table_dictionary={events={payload=[[@11,60:60='a',<457>,1:60]], delimiter=[[@15,71:71='a',<457>,1:71]], active=[[@25,120:120='a',<457>,1:120]], id=[[@5,39:39='a',<457>,1:39]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayScriptPlacementV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, split_to_array(c.payload, c.delimiter) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=c}}, 2={column={name=delimiter, table_ref=c}}}}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@35,134:134='b',<457>,2:32]], id=[[@28,109:109='b',<457>,2:7]]}}, 3={archive_events={payload=[[@48,176:176='c',<457>,3:28]], delimiter=[[@52,187:187='c',<457>,3:39]], active=[[@62,243:243='c',<457>,3:95]], id=[[@42,155:155='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@30,111:112='id',<457>,2:9]]}}, 3={query0={other_value=[[@57,203:213='other_value',<457>,3:55]], id=[[@44,157:158='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,111:112='id',<457>,2:9]]}, table_dictionary={orders={active=[[@35,134:134='b',<457>,2:32]], id=[[@28,109:109='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@57,203:213='other_value',<457>,3:55]], id=[[@44,157:158='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@48,176:176='c',<457>,3:28]], delimiter=[[@52,187:187='c',<457>,3:39]], active=[[@62,243:243='c',<457>,3:95]], id=[[@42,155:155='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}, {name=delimiter, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, split_to_array(payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:34='payload',<457>,1:28]], delimiter=[[@9,37:37='a',<457>,1:37]], active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:34='payload',<457>,1:28]], delimiter=[[@9,37:37='a',<457>,1:37]], active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, split_to_array(payload, ',') AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:35)]]",
+						1, 35, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={literal=','}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,52:63='result_value',<457>,1:52]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,52:63='result_value',<457>,1:52]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, split_to_array(payload, a.delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:28). Possible sources: [events, labels]",
+						1, 28, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:28)]]",
+						1, 28, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,37:37='a',<457>,1:37]], id=[[@1,7:7='a',<457>,1:7], [@22,97:97='a',<457>,1:97]]}, labels={event_id=[[@26,104:104='b',<457>,1:104]], active=[[@30,121:121='b',<457>,1:121]]}}",
+				"{query0={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,37:37='a',<457>,1:37]], id=[[@1,7:7='a',<457>,1:7], [@22,97:97='a',<457>,1:97]]}, labels={event_id=[[@26,104:104='b',<457>,1:104]], active=[[@30,121:121='b',<457>,1:121]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, split_to_array(a.payload, q.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:55). No alias or table called 'a'.",
+						1, 55, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=q}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,87:87='a',<457>,1:87]], delimiter=[[@28,98:98='a',<457>,1:98]], active=[[@35,130:130='a',<457>,1:130]], id=[[@20,81:81='a',<457>,1:81]]}}",
+				"{query0={payload=[[@26,89:95='payload',<457>,1:89]], delimiter=[[@30,100:108='delimiter',<457>,1:100], [@11,39:39='q',<457>,1:39]], id=[[@22,83:84='id',<457>,1:83], [@1,7:7='q',<457>,1:7], [@43,152:152='q',<457>,1:152]]}, query1={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,89:95='payload',<457>,1:89]], delimiter=[[@30,100:108='delimiter',<457>,1:100], [@11,39:39='q',<457>,1:39]], id=[[@22,83:84='id',<457>,1:83], [@1,7:7='q',<457>,1:7], [@43,152:152='q',<457>,1:152]]}, table_dictionary={events={payload=[[@24,87:87='a',<457>,1:87]], delimiter=[[@28,98:98='a',<457>,1:98]], active=[[@35,130:130='a',<457>,1:130]], id=[[@20,81:81='a',<457>,1:81]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(<payload_expr>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={delimiter=[[@9,44:44='a',<457>,1:44]], active=[[@19,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,44:44='a',<457>,1:44]], active=[[@19,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.<payload_col>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={delimiter=[[@11,45:45='a',<457>,1:45]], active=[[@21,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,28:28='a',<457>,1:28]]}}",
+				"{query0={result_value=[[@16,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@11,45:45='a',<457>,1:45]], active=[[@21,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,28:28='a',<457>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg1NullV0Test() {
+		final String query = "SELECT a.id, split_to_array(NULL, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={null_literal=null}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,34:34='a',<457>,1:34]], active=[[@19,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,34:34='a',<457>,1:34]], active=[[@19,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:47='delimiter',<457>,1:39]], active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:47='delimiter',<457>,1:39]], active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, split_to_array('a,b,c', delimiter) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:44)]]",
+						1, 44, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=split_to_array, parameters={1={literal='a,b,c'}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,58:69='result_value',<457>,1:58]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,58:69='result_value',<457>,1:58]]}, interface={marker=[], result_value=[{name=delimiter, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2AmbiguousV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'delimiter' at (l:1 c:39). Possible sources: [events, labels]",
+						1, 39, "SqlASTWalkerHelper", null, "delimiter", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:39)]]",
+						1, 39, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], id=[[@1,7:7='a',<457>,1:7], [@22,97:97='a',<457>,1:97]]}, labels={event_id=[[@26,104:104='b',<457>,1:104]], active=[[@30,121:121='b',<457>,1:121]]}}",
+				"{query0={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], id=[[@1,7:7='a',<457>,1:7], [@22,97:97='a',<457>,1:97]]}, labels={event_id=[[@26,104:104='b',<457>,1:104]], active=[[@30,121:121='b',<457>,1:121]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2MissingAliasV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, z.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:55). No alias or table called 'z'.",
+						1, 55, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=z}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2HiddenAliasV0Test() {
+		final String query = "SELECT q.id, split_to_array(q.payload, a.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:55). No alias or table called 'a'.",
+						1, 55, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=q}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,87:87='a',<457>,1:87]], delimiter=[[@28,98:98='a',<457>,1:98]], active=[[@35,130:130='a',<457>,1:130]], id=[[@20,81:81='a',<457>,1:81]]}}",
+				"{query0={payload=[[@26,89:95='payload',<457>,1:89], [@7,28:28='q',<457>,1:28]], delimiter=[[@30,100:108='delimiter',<457>,1:100]], id=[[@22,83:84='id',<457>,1:83], [@1,7:7='q',<457>,1:7], [@43,152:152='q',<457>,1:152]]}, query1={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,89:95='payload',<457>,1:89], [@7,28:28='q',<457>,1:28]], delimiter=[[@30,100:108='delimiter',<457>,1:100]], id=[[@22,83:84='id',<457>,1:83], [@1,7:7='q',<457>,1:7], [@43,152:152='q',<457>,1:152]]}, table_dictionary={events={payload=[[@24,87:87='a',<457>,1:87]], delimiter=[[@28,98:98='a',<457>,1:98]], active=[[@35,130:130='a',<457>,1:130]], id=[[@20,81:81='a',<457>,1:81]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=q}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2PredicandVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, <delimiter_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={substitution={name=<delimiter_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_expr>=predicand}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@19,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@19,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=<delimiter_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2ColumnVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, a.<delimiter_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={substitution={name=<delimiter_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_col>=column}",
+				"{events={<delimiter_col>=[[@11,39:39='a',<457>,1:39]], payload=[[@7,28:28='a',<457>,1:28]], active=[[@21,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<delimiter_col>=[[@11,39:39='a',<457>,1:39]], payload=[[@7,28:28='a',<457>,1:28]], active=[[@21,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {substitution={name=<delimiter_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayArg2NullV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@19,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@19,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayUnqualifiedOperandsV0Test() {
+		final String query = "SELECT a.id, split_to_array(payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:34='payload',<457>,1:28]], delimiter=[[@9,37:45='delimiter',<457>,1:37]], active=[[@17,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:34='payload',<457>,1:28]], delimiter=[[@9,37:45='delimiter',<457>,1:37]], active=[[@17,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayAllPredicandVariablesV0Test() {
+		final String query = "SELECT a.id, split_to_array(<payload_predicand>, <delimiter_predicand>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={substitution={name=<payload_predicand>, type=predicand}}, 2={substitution={name=<delimiter_predicand>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_predicand>=predicand, <payload_predicand>=predicand}",
+				"{events={active=[[@17,108:108='a',<457>,1:108]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,75:86='result_value',<457>,1:75]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,75:86='result_value',<457>,1:75]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,108:108='a',<457>,1:108]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_predicand>, type=predicand}, {name=<delimiter_predicand>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayAllColumnVariablesV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.<payload_column>, a.<delimiter_column>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={substitution={name=<payload_column>, type=column}, table_ref=a}}, 2={column={substitution={name=<delimiter_column>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_column>=column, <delimiter_column>=column}",
+				"{events={<payload_column>=[[@7,28:28='a',<457>,1:28]], <delimiter_column>=[[@11,48:48='a',<457>,1:48]], active=[[@21,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<payload_column>=[[@7,28:28='a',<457>,1:28]], <delimiter_column>=[[@11,48:48='a',<457>,1:48]], active=[[@21,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_column>, type=column}, table_ref=a}, {substitution={name=<delimiter_column>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(split_to_array(a.payload, a.delimiter), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@18,62:62='a',<457>,1:62]], payload=[[@9,37:37='a',<457>,1:37]], delimiter=[[@13,48:48='a',<457>,1:48]], active=[[@28,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@23,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@23,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@18,62:62='a',<457>,1:62]], payload=[[@9,37:37='a',<457>,1:37]], delimiter=[[@13,48:48='a',<457>,1:48]], active=[[@28,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, split_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,62:62='a',<457>,1:62]], delimiter=[[@21,73:73='a',<457>,1:73]], active=[[@31,122:122='a',<457>,1:122]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@26,89:100='result_value',<457>,1:89], [@5,13:13='q',<457>,1:13], [@39,144:144='q',<457>,1:144]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,180:180='q',<457>,1:180]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@26,89:100='result_value',<457>,1:89], [@5,13:13='q',<457>,1:13], [@39,144:144='q',<457>,1:144]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,180:180='q',<457>,1:180]]}, table_dictionary={events={payload=[[@17,62:62='a',<457>,1:62]], delimiter=[[@21,73:73='a',<457>,1:73]], active=[[@31,122:122='a',<457>,1:122]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC51_splitToArraySetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, split_to_array(a.payload, a.delimiter) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@46,202:202='b',<457>,1:202]], other_value=[[@37,145:145='b',<457>,1:145]], id=[[@31,127:127='b',<457>,1:127]]}, events={payload=[[@9,39:39='a',<457>,1:39]], delimiter=[[@13,50:50='a',<457>,1:50]], active=[[@23,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@18,66:75='left_value',<457>,1:66]]}, query1={right_id=[[@35,135:142='right_id',<457>,1:135]], right_value=[[@41,162:172='right_value',<457>,1:162]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@35,135:142='right_id',<457>,1:135]], right_value=[[@41,162:172='right_value',<457>,1:162]]}, table_dictionary={archive_events={archived=[[@46,202:202='b',<457>,1:202]], other_value=[[@37,145:145='b',<457>,1:145]], id=[[@31,127:127='b',<457>,1:127]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@18,66:75='left_value',<457>,1:66]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,39:39='a',<457>,1:39]], delimiter=[[@13,50:50='a',<457>,1:50]], active=[[@23,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.split_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split_to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,33:33='a',<457>,1:33]], delimiter=[[@13,44:44='a',<457>,1:44]], active=[[@23,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@18,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,33:33='a',<457>,1:33]], delimiter=[[@13,44:44='a',<457>,1:44]], active=[[@23,93:93='a',<457>,1:93]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArraySameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.split_to_array AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=split_to_array, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]], split_to_array=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,33:44='stored_value',<457>,1:33]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,33:44='stored_value',<457>,1:33]]}, table_dictionary={events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]], split_to_array=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=split_to_array, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayUppercaseV0Test() {
+		final String query = "SELECT a.id, SPLIT_TO_ARRAY(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=SPLIT_TO_ARRAY, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayMixedDialectV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, a.delimiter) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:69); unlikely to run on either engine.",
+						1, 69, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@32,134:134='a',<457>,1:134]], created_at=[[@22,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@27,106:112='weekday',<457>,1:106]], result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@27,106:112='weekday',<457>,1:106]], result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@32,134:134='a',<457>,1:134]], created_at=[[@22,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT split_to_array(a.payload, a.delimiter,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:45 - unexpected input: ')' in rule value_expression: SELECT split_to_array(a.payload, a.delimiter,) AS result_value FROM events a",
+						1, 45, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split_to_array(a.payload, a.delimiter,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:45 - Syntax error, attempting recovery",
+						1, 45, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC51_splitToArrayMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT split_to_array(a.payload, a.delimiter AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:45 - unexpected input: 'AS' in rule value_expression: SELECT split_to_array(a.payload, a.delimiter AS result_value FROM events a",
+						1, 45, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split_to_array(a.payload, a.delimiter AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:45 - Syntax error, attempting recovery",
+						1, 45, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC51_splitToArrayMissingCommaSyntaxV0Test() {
+		final String query = "SELECT split_to_array(a.payload a.delimiter) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:32 - unexpected input: 'a' in rule value_expression: SELECT split_to_array(a.payload a.delimiter) AS result_value FROM events a",
+						1, 32, "ParseErrorCollector", "value_expression", "a", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT split_to_array(a.payload a.delimiter) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:32 - Syntax error, attempting recovery",
+						1, 32, "ParseErrorCollector", null, "a", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC51_splitToArrayEmptyStringV0Test() {
+		final String query = "SELECT a.id, split_to_array('', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal=''}, 2={literal=','}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayEmptyDelimiterV0Test() {
+		final String query = "SELECT a.id, split_to_array('a,b', '') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal='a,b'}, 2={literal=''}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayRepeatedDelimiterV0Test() {
+		final String query = "SELECT a.id, split_to_array(',a,,b,', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal=',a,,b,'}, 2={literal=','}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDelimiterSequenceV0Test() {
+		final String query = "SELECT a.id, split_to_array('a--b@@c', '--') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal='a--b@@c'}, 2={literal='--'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayBothNullV0Test() {
+		final String query = "SELECT a.id, split_to_array(NULL, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={null_literal=null}, 2={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterQualifiedV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterUnqualifiedV0Test() {
+		final String query = "SELECT a.id, split_to_array(payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:34='payload',<457>,1:28]], active=[[@15,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:34='payload',<457>,1:28]], active=[[@15,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterPredicandVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(<payload_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={active=[[@15,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,47:58='result_value',<457>,1:47]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,47:58='result_value',<457>,1:47]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterColumnVariableV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.<payload_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={active=[[@17,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,28:28='a',<457>,1:28]]}}",
+				"{query0={result_value=[[@12,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,28:28='a',<457>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterNullV0Test() {
+		final String query = "SELECT a.id, split_to_array(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,37:48='result_value',<457>,1:37]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,37:48='result_value',<457>,1:37]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC51_splitToArrayDefaultDelimiterLiteralV0Test() {
+		final String query = "SELECT a.id, split_to_array('a,b,c') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal='a,b,c'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON strtok_to_array(a.payload, a.delimiter) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,68:68='a',<457>,1:68]], delimiter=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7], [@30,110:110='a',<457>,1:110]]}, labels={ref_value=[[@26,94:94='b',<457>,1:94]], event_id=[[@34,117:117='b',<457>,1:117]], active=[[@38,134:134='b',<457>,1:134]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,68:68='a',<457>,1:68]], delimiter=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7], [@30,110:110='a',<457>,1:110]]}, labels={ref_value=[[@26,94:94='b',<457>,1:94]], event_id=[[@34,117:117='b',<457>,1:117]], active=[[@38,134:134='b',<457>,1:134]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload, a.delimiter HAVING strtok_to_array(a.payload, a.delimiter) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:90) is recognized as Snowflake-specific grammar.",
+						1, 90, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@30,106:106='a',<457>,1:106]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,117:117='a',<457>,1:117]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@30,106:106='a',<457>,1:106]], delimiter=[[@24,71:71='a',<457>,1:71], [@34,117:117='a',<457>,1:117]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}, {name=delimiter, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY strtok_to_array(a.payload, a.delimiter) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,115:115='a',<457>,1:115]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,126:126='a',<457>,1:126]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@41,155:156='rn',<457>,1:155]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@41,155:156='rn',<457>,1:155]]}, table_dictionary={events={payload=[[@29,115:115='a',<457>,1:115]], group_id=[[@12,45:45='a',<457>,1:45]], delimiter=[[@33,126:126='a',<457>,1:126]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayValuesPlacementV0Test() {
+		final String query = "VALUES (7, strtok_to_array('a,b,c', ','))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={function_name=strtok_to_array, parameters={1={literal='a,b,c'}, 2={literal=','}}}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_strtok_to_array AS SELECT a.id, strtok_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:46) is recognized as Snowflake-specific grammar.",
+						1, 46, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_strtok_to_array}, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,62:62='a',<457>,1:62]], delimiter=[[@15,73:73='a',<457>,1:73]], active=[[@25,122:122='a',<457>,1:122]], id=[[@5,40:40='a',<457>,1:40]]}}",
+				"{query0={result_value=[[@20,89:100='result_value',<457>,1:89]], id=[[@7,42:43='id',<457>,1:42]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@20,89:100='result_value',<457>,1:89]], id=[[@7,42:43='id',<457>,1:42]]}, table_dictionary={events={payload=[[@11,62:62='a',<457>,1:62]], delimiter=[[@15,73:73='a',<457>,1:73]], active=[[@25,122:122='a',<457>,1:122]], id=[[@5,40:40='a',<457>,1:40]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayScriptPlacementV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, strtok_to_array(c.payload, c.delimiter) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=c}}, 2={column={name=delimiter, table_ref=c}}}}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@35,135:135='b',<457>,2:32]], id=[[@28,110:110='b',<457>,2:7]]}}, 3={archive_events={payload=[[@48,178:178='c',<457>,3:29]], delimiter=[[@52,189:189='c',<457>,3:40]], active=[[@62,245:245='c',<457>,3:96]], id=[[@42,156:156='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@30,112:113='id',<457>,2:9]]}}, 3={query0={other_value=[[@57,205:215='other_value',<457>,3:56]], id=[[@44,158:159='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,112:113='id',<457>,2:9]]}, table_dictionary={orders={active=[[@35,135:135='b',<457>,2:32]], id=[[@28,110:110='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@57,205:215='other_value',<457>,3:56]], id=[[@44,158:159='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@48,178:178='c',<457>,3:29]], delimiter=[[@52,189:189='c',<457>,3:40]], active=[[@62,245:245='c',<457>,3:96]], id=[[@42,156:156='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}, {name=delimiter, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:35='payload',<457>,1:29]], delimiter=[[@9,38:38='a',<457>,1:38]], active=[[@19,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:35='payload',<457>,1:29]], delimiter=[[@9,38:38='a',<457>,1:38]], active=[[@19,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, strtok_to_array(payload, ',') AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:36)]]",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={literal=','}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,53:64='result_value',<457>,1:53]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,53:64='result_value',<457>,1:53]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(payload, a.delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:29). Possible sources: [events, labels]",
+						1, 29, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:29)]]",
+						1, 29, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,38:38='a',<457>,1:38]], id=[[@1,7:7='a',<457>,1:7], [@22,98:98='a',<457>,1:98]]}, labels={event_id=[[@26,105:105='b',<457>,1:105]], active=[[@30,122:122='b',<457>,1:122]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,38:38='a',<457>,1:38]], id=[[@1,7:7='a',<457>,1:7], [@22,98:98='a',<457>,1:98]]}, labels={event_id=[[@26,105:105='b',<457>,1:105]], active=[[@30,122:122='b',<457>,1:122]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, strtok_to_array(a.payload, q.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:56). No alias or table called 'a'.",
+						1, 56, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=q}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,88:88='a',<457>,1:88]], delimiter=[[@28,99:99='a',<457>,1:99]], active=[[@35,131:131='a',<457>,1:131]], id=[[@20,82:82='a',<457>,1:82]]}}",
+				"{query0={payload=[[@26,90:96='payload',<457>,1:90]], delimiter=[[@30,101:109='delimiter',<457>,1:101], [@11,40:40='q',<457>,1:40]], id=[[@22,84:85='id',<457>,1:84], [@1,7:7='q',<457>,1:7], [@43,153:153='q',<457>,1:153]]}, query1={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,90:96='payload',<457>,1:90]], delimiter=[[@30,101:109='delimiter',<457>,1:101], [@11,40:40='q',<457>,1:40]], id=[[@22,84:85='id',<457>,1:84], [@1,7:7='q',<457>,1:7], [@43,153:153='q',<457>,1:153]]}, table_dictionary={events={payload=[[@24,88:88='a',<457>,1:88]], delimiter=[[@28,99:99='a',<457>,1:99]], active=[[@35,131:131='a',<457>,1:131]], id=[[@20,82:82='a',<457>,1:82]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(<payload_expr>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={delimiter=[[@9,45:45='a',<457>,1:45]], active=[[@19,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,45:45='a',<457>,1:45]], active=[[@19,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.<payload_col>, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={delimiter=[[@11,46:46='a',<457>,1:46]], active=[[@21,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,29:29='a',<457>,1:29]]}}",
+				"{query0={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@11,46:46='a',<457>,1:46]], active=[[@21,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,29:29='a',<457>,1:29]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg1NullV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(NULL, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={null_literal=null}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={delimiter=[[@9,35:35='a',<457>,1:35]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={delimiter=[[@9,35:35='a',<457>,1:35]], active=[[@19,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:48='delimiter',<457>,1:40]], active=[[@19,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:48='delimiter',<457>,1:40]], active=[[@19,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, strtok_to_array('a,b,c', delimiter) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:45)]]",
+						1, 45, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=strtok_to_array, parameters={1={literal='a,b,c'}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,59:70='result_value',<457>,1:59]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@12,59:70='result_value',<457>,1:59]]}, interface={marker=[], result_value=[{name=delimiter, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2AmbiguousV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, delimiter) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'delimiter' at (l:1 c:40). Possible sources: [events, labels]",
+						1, 40, "SqlASTWalkerHelper", null, "delimiter", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [delimiter [(l:1 c:40)]]",
+						1, 40, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], id=[[@1,7:7='a',<457>,1:7], [@22,98:98='a',<457>,1:98]]}, labels={event_id=[[@26,105:105='b',<457>,1:105]], active=[[@30,122:122='b',<457>,1:122]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], id=[[@1,7:7='a',<457>,1:7], [@22,98:98='a',<457>,1:98]]}, labels={event_id=[[@26,105:105='b',<457>,1:105]], active=[[@30,122:122='b',<457>,1:122]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2MissingAliasV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, z.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:56). No alias or table called 'z'.",
+						1, 56, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=z}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2HiddenAliasV0Test() {
+		final String query = "SELECT q.id, strtok_to_array(q.payload, a.delimiter) AS result_value FROM (SELECT a.id, a.payload, a.delimiter FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'delimiter' at (l:1 c:56). No alias or table called 'a'.",
+						1, 56, "SqlASTWalkerHelper", null, "delimiter", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=q}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}, 3={column={name=delimiter, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@24,88:88='a',<457>,1:88]], delimiter=[[@28,99:99='a',<457>,1:99]], active=[[@35,131:131='a',<457>,1:131]], id=[[@20,82:82='a',<457>,1:82]]}}",
+				"{query0={payload=[[@26,90:96='payload',<457>,1:90], [@7,29:29='q',<457>,1:29]], delimiter=[[@30,101:109='delimiter',<457>,1:101]], id=[[@22,84:85='id',<457>,1:84], [@1,7:7='q',<457>,1:7], [@43,153:153='q',<457>,1:153]]}, query1={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@26,90:96='payload',<457>,1:90], [@7,29:29='q',<457>,1:29]], delimiter=[[@30,101:109='delimiter',<457>,1:101]], id=[[@22,84:85='id',<457>,1:84], [@1,7:7='q',<457>,1:7], [@43,153:153='q',<457>,1:153]]}, table_dictionary={events={payload=[[@24,88:88='a',<457>,1:88]], delimiter=[[@28,99:99='a',<457>,1:99]], active=[[@35,131:131='a',<457>,1:131]], id=[[@20,82:82='a',<457>,1:82]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], delimiter=[{name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=q}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2PredicandVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, <delimiter_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={substitution={name=<delimiter_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_expr>=predicand}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@19,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@19,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=<delimiter_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2ColumnVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, a.<delimiter_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={substitution={name=<delimiter_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_col>=column}",
+				"{events={<delimiter_col>=[[@11,40:40='a',<457>,1:40]], payload=[[@7,29:29='a',<457>,1:29]], active=[[@21,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<delimiter_col>=[[@11,40:40='a',<457>,1:40]], payload=[[@7,29:29='a',<457>,1:29]], active=[[@21,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {substitution={name=<delimiter_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayArg2NullV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@19,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@19,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayUnqualifiedOperandsV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(payload, delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=null}}, 2={column={name=delimiter, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:35='payload',<457>,1:29]], delimiter=[[@9,38:46='delimiter',<457>,1:38]], active=[[@17,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:35='payload',<457>,1:29]], delimiter=[[@9,38:46='delimiter',<457>,1:38]], active=[[@17,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}, {name=delimiter, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayAllPredicandVariablesV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(<payload_predicand>, <delimiter_predicand>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={substitution={name=<payload_predicand>, type=predicand}}, 2={substitution={name=<delimiter_predicand>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<delimiter_predicand>=predicand, <payload_predicand>=predicand}",
+				"{events={active=[[@17,109:109='a',<457>,1:109]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,76:87='result_value',<457>,1:76]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,76:87='result_value',<457>,1:76]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,109:109='a',<457>,1:109]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_predicand>, type=predicand}, {name=<delimiter_predicand>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayAllColumnVariablesV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.<payload_column>, a.<delimiter_column>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={substitution={name=<payload_column>, type=column}, table_ref=a}}, 2={column={substitution={name=<delimiter_column>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_column>=column, <delimiter_column>=column}",
+				"{events={<payload_column>=[[@7,29:29='a',<457>,1:29]], <delimiter_column>=[[@11,49:49='a',<457>,1:49]], active=[[@21,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={<payload_column>=[[@7,29:29='a',<457>,1:29]], <delimiter_column>=[[@11,49:49='a',<457>,1:49]], active=[[@21,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_column>, type=column}, table_ref=a}, {substitution={name=<delimiter_column>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(strtok_to_array(a.payload, a.delimiter), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@18,63:63='a',<457>,1:63]], payload=[[@9,38:38='a',<457>,1:38]], delimiter=[[@13,49:49='a',<457>,1:49]], active=[[@28,117:117='a',<457>,1:117]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@23,84:95='result_value',<457>,1:84]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@23,84:95='result_value',<457>,1:84]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@18,63:63='a',<457>,1:63]], payload=[[@9,38:38='a',<457>,1:38]], delimiter=[[@13,49:49='a',<457>,1:49]], active=[[@28,117:117='a',<457>,1:117]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, strtok_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,63:63='a',<457>,1:63]], delimiter=[[@21,74:74='a',<457>,1:74]], active=[[@31,123:123='a',<457>,1:123]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@26,90:101='result_value',<457>,1:90], [@5,13:13='q',<457>,1:13], [@39,145:145='q',<457>,1:145]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,181:181='q',<457>,1:181]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@26,90:101='result_value',<457>,1:90], [@5,13:13='q',<457>,1:13], [@39,145:145='q',<457>,1:145]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@47,181:181='q',<457>,1:181]]}, table_dictionary={events={payload=[[@17,63:63='a',<457>,1:63]], delimiter=[[@21,74:74='a',<457>,1:74]], active=[[@31,123:123='a',<457>,1:123]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArraySetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, strtok_to_array(a.payload, a.delimiter) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@46,203:203='b',<457>,1:203]], other_value=[[@37,146:146='b',<457>,1:146]], id=[[@31,128:128='b',<457>,1:128]]}, events={payload=[[@9,40:40='a',<457>,1:40]], delimiter=[[@13,51:51='a',<457>,1:51]], active=[[@23,98:98='a',<457>,1:98]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@18,67:76='left_value',<457>,1:67]]}, query1={right_id=[[@35,136:143='right_id',<457>,1:136]], right_value=[[@41,163:173='right_value',<457>,1:163]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@35,136:143='right_id',<457>,1:136]], right_value=[[@41,163:173='right_value',<457>,1:163]]}, table_dictionary={archive_events={archived=[[@46,203:203='b',<457>,1:203]], other_value=[[@37,146:146='b',<457>,1:146]], id=[[@31,128:128='b',<457>,1:128]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@18,67:76='left_value',<457>,1:67]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,40:40='a',<457>,1:40]], delimiter=[[@13,51:51='a',<457>,1:51]], active=[[@23,98:98='a',<457>,1:98]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.strtok_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=strtok_to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,34:34='a',<457>,1:34]], delimiter=[[@13,45:45='a',<457>,1:45]], active=[[@23,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@18,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,34:34='a',<457>,1:34]], delimiter=[[@13,45:45='a',<457>,1:45]], active=[[@23,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArraySameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.strtok_to_array AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=strtok_to_array, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={strtok_to_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,34:45='stored_value',<457>,1:34]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,34:45='stored_value',<457>,1:34]]}, table_dictionary={events={strtok_to_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=strtok_to_array, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayUppercaseV0Test() {
+		final String query = "SELECT a.id, STRTOK_TO_ARRAY(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=STRTOK_TO_ARRAY, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayMixedDialectV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, a.delimiter) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:70); unlikely to run on either engine.",
+						1, 70, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@32,135:135='a',<457>,1:135]], created_at=[[@22,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@27,107:113='weekday',<457>,1:107]], result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@27,107:113='weekday',<457>,1:107]], result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@32,135:135='a',<457>,1:135]], created_at=[[@22,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT strtok_to_array(a.payload, a.delimiter,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:46 - unexpected input: ')' in rule value_expression: SELECT strtok_to_array(a.payload, a.delimiter,) AS result_value FROM events a",
+						1, 46, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT strtok_to_array(a.payload, a.delimiter,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:46 - Syntax error, attempting recovery",
+						1, 46, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:22 - Invalid syntax near '('",
+						1, 22, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC52_strtokToArrayMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT strtok_to_array(a.payload, a.delimiter AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:46 - unexpected input: 'AS' in rule value_expression: SELECT strtok_to_array(a.payload, a.delimiter AS result_value FROM events a",
+						1, 46, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT strtok_to_array(a.payload, a.delimiter AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:46 - Syntax error, attempting recovery",
+						1, 46, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:22 - Invalid syntax near '('",
+						1, 22, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC52_strtokToArrayMissingCommaSyntaxV0Test() {
+		final String query = "SELECT strtok_to_array(a.payload a.delimiter) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:33 - unexpected input: 'a' in rule value_expression: SELECT strtok_to_array(a.payload a.delimiter) AS result_value FROM events a",
+						1, 33, "ParseErrorCollector", "value_expression", "a", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT strtok_to_array(a.payload a.delimiter) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:33 - Syntax error, attempting recovery",
+						1, 33, "ParseErrorCollector", null, "a", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:22 - Invalid syntax near '('",
+						1, 22, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC52_strtokToArrayEmptyStringV0Test() {
+		final String query = "SELECT a.id, strtok_to_array('', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal=''}, 2={literal=','}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayEmptyDelimiterV0Test() {
+		final String query = "SELECT a.id, strtok_to_array('a,b', '') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal='a,b'}, 2={literal=''}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayRepeatedDelimiterV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(',a,,b,', ',') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal=',a,,b,'}, 2={literal=','}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,47:58='result_value',<457>,1:47]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,47:58='result_value',<457>,1:47]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,80:80='a',<457>,1:80]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDelimiterSequenceV0Test() {
+		final String query = "SELECT a.id, strtok_to_array('a--b@@c', '-@') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal='a--b@@c'}, 2={literal='-@'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayBothNullV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(NULL, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={null_literal=null}, 2={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterQualifiedV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterUnqualifiedV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:35='payload',<457>,1:29]], active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:35='payload',<457>,1:29]], active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterPredicandVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(<payload_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={active=[[@15,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterColumnVariableV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.<payload_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,29:29='a',<457>,1:29]]}}",
+				"{query0={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,29:29='a',<457>,1:29]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterNullV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC52_strtokToArrayDefaultDelimiterLiteralV0Test() {
+		final String query = "SELECT a.id, strtok_to_array('a b c') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal='a b c'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
 	}
 }

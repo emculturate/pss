@@ -65,7 +65,9 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   const old = 'class Fixture {\n' + ['oldA', 'oldB', 'unrelated'].map(method).join('\n') + '\n}\n';
   fs.writeFileSync(host, old);
   fs.writeFileSync(path.join(batch, 'before.java'), old);
-  fs.writeFileSync(path.join(batch, 'batch.cjs'), 'module.exports = ' + JSON.stringify({ next_task: 'T003 / P3', functions: [
+  fs.writeFileSync(path.join(batch, 'batch.cjs'), 'module.exports = ' + JSON.stringify({
+    test_selection: 'SqlEventWalkerSnowflakeArrayTransformTests,RelatedCompositionTests',
+    next_task: 'T003 / P3', functions: [
     { function: 'A', prefix: 'newA', legacyPrefix: 'oldA', legacyCount: 1, task: 'T001', plan: 'P1', production_changes: false,
       rule: 'array_transform_function', cases: [{ suffix: 'Case', query: 'SELECT 1', cells: ['new'], codes: [] }] },
     { function: 'B', prefix: 'newB', legacyPrefix: 'oldB', legacyCount: 1, task: 'T002', plan: 'P2', production_changes: false,
@@ -104,6 +106,8 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   assert.ok(accounting.includes('## P1 A'));
   assert.ok(accounting.includes('## P2 B'));
   assert.ok(fs.readFileSync(path.join(batch, 'batch-report.yaml'), 'utf8').includes('completed_tasks: ["T001","T002"]'));
+  assert.ok(fs.readFileSync(path.join(batch, 'batch-report.yaml'), 'utf8')
+    .includes('-Dtest=SqlEventWalkerSnowflakeArrayTransformTests,RelatedCompositionTests'));
   const checkpoint = fs.readFileSync(path.join(batch, 'checkpoints/tasks-to-impl.yaml'), 'utf8');
   const chain = JSON.parse(checkpoint.match(/^traceability_chain: (.*)$/m)[1]);
   assert.ok(chain.every(trace => Array.isArray(trace.files) && trace.files.length === 3));

@@ -12079,7 +12079,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() == 2) {
-			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			Object functionName = subMap.remove("1");
+			if (ctx.function.getStart().getType() == SQLSelectParserParser.SPLIT) {
+				// Preserve SPLIT's published AST ordering from the generic routine path.
+				item.putAll(Map.of(MUMBLE_FUNCTION_NAME_KEY, functionName));
+			} else {
+				item.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+			}
 			Object argumentNode = subMap.remove("2");
 			if (argumentNode instanceof Map<?, ?> argumentMap) {
 				Map<String, Object> argsMap = (Map<String, Object>) argumentMap;

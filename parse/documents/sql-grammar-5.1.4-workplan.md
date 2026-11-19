@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. D0 lexer/manual-repair work, D1/D2.6 matrices and D3.8.1-D3.8.3 conversion/type-inspection work are complete; the focused host passes 556/556. Next is D3.8.4 `SPLIT`; five older matrix remediations and that final approved implementation remain. Prior green runs do not establish full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
+  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. D0 lexer/manual-repair work, D1/D2.6 matrices, all D3.8 additions and D3.9.1-D3.9.2 split-family matrices are complete; the focused host passes 694/694, plus 102 dependent composition tests. Next is T018 / D3.9.3 `ARRAY_GENERATE_RANGE`; three older matrices remain before D-SIG/D-AUDIT and final gates. Prior green runs do not establish full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
   - **Slice E:** complete `4.5` advanced `FLATTEN` parity and `4.12` higher-order (`FILTER`/`TRANSFORM`/`REDUCE`) closure.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2290,7 +2290,7 @@ historical completion records into current sign-off claims.
 |---|---|---|
 | 4.9 transforms (3) | `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT` | D1.1/D1.2 |
 | 4.10 unary (8) | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` | D2.6 complete for the first three; preserve and reverify all eight at final D-AUDIT/sign-off |
-| 4.11 conversion/predicate/split/range/position/zip (10) | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT` | D3.8.1-D3.8.3 complete; D3.8.4 `SPLIT` and D3.9's five older gaps remain; preserve and reverify D3.6 for `ARRAYS_TO_OBJECT` |
+| 4.11 conversion/predicate/split/range/position/zip (10) | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT` | All D3.8 and D3.9.1-D3.9.2 complete; three older gaps remain under D3.9.3-D3.9.5; preserve and reverify D3.6 for `ARRAYS_TO_OBJECT` |
 
 **Implementation conventions and source anchors:**
 - Module: `parse`; ANTLR grammar: `parse/src/main/antlr4/sql/SQLSelectParser.g4`;
@@ -2353,12 +2353,12 @@ only for a proved defect. Do not commit unless requested.
 7. [x] **D3.8.1 / T012:** `Complete D3.8.1: TO_ARRAY routing, diagnostics and strict matrix.`
 8. [x] **D3.8.2 / T013:** `Complete D3.8.2: AS_ARRAY routing, diagnostics and strict matrix.`
 9. [x] **D3.8.3 / T014:** `Complete D3.8.3: IS_ARRAY routing, diagnostics and strict matrix.`
-10. [ ] **D3.8.4 / T015:** `Complete D3.8.4: SPLIT routing, diagnostics and strict matrix.`
+10. [x] **D3.8.4 / T015:** `Complete D3.8.4: SPLIT routing, diagnostics and strict matrix.`
 
 **Complete the remaining five older matrices**
 
-11. [ ] **D3.9.1 / T016:** `Complete D3.9.1: SPLIT_TO_ARRAY.`
-12. [ ] **D3.9.2 / T017:** `Complete D3.9.2: STRTOK_TO_ARRAY.`
+11. [x] **D3.9.1 / T016:** `Complete D3.9.1: SPLIT_TO_ARRAY.`
+12. [x] **D3.9.2 / T017:** `Complete D3.9.2: STRTOK_TO_ARRAY.`
 13. [ ] **D3.9.3 / T018:** `Complete D3.9.3: ARRAY_GENERATE_RANGE.`
 14. [ ] **D3.9.4 / T019:** `Complete D3.9.4: ARRAY_POSITION.`
 15. [ ] **D3.9.5 / T020:** `Complete D3.9.5: ARRAYS_ZIP.`
@@ -2506,12 +2506,22 @@ without the intended route and diagnostics does not close the function.
     entries, reusing the existing compatible walker. All 452 prior methods
     preserved byte-for-byte; one shared focused run passed 556/556 with zero
     failures/errors/skips. Official generated lexer unchanged.
-- [ ] T015 [Plan:D3.8.4] Implement `SPLIT` using the D0 keyword, explicit two-operand split handling, Snowflake affinity and a complete independent matrix; preserve existing subscript/FLATTEN composition parsing and `SPLIT_TO_ARRAY` compatibility.
+- [x] T015 [Plan:D3.8.4] Implement `SPLIT` using the D0 keyword, explicit two-operand split handling, Snowflake affinity and a complete independent matrix; preserve existing subscript/FLATTEN composition parsing and `SPLIT_TO_ARRAY` compatibility.
+  - Completed 2026-11-18: 48 independent cases, including 45 six-output
+    goldens and three parser-only controls. Added the explicit C route and
+    affinity; preserved legacy generic-routine AST map construction for SPLIT.
+    Existing subscript and FLATTEN goldens are unchanged.
 
 ##### D3.9 — older conversion/range/position/zip matrix completion
 
-- [ ] T016 [Plan:D3.9.1] Complete `SPLIT_TO_ARRAY` in the focused host: missing JOIN ON/HAVING/QUALIFY/DDL/SCRIPT, independent controls for both arguments, variable typing and deep cases; preserve its existing public behavior/diagnostics and document compatibility provenance separately from Snowflake `SPLIT`.
-- [ ] T017 [Plan:D3.9.2] Complete `STRTOK_TO_ARRAY` in the focused host: missing placements, resolution/variables/deep cases and documented optional-delimiter forms; test each eligible argument position independently.
+- [x] T016 [Plan:D3.9.1] Complete `SPLIT_TO_ARRAY` in the focused host: missing JOIN ON/HAVING/QUALIFY/DDL/SCRIPT, independent controls for both arguments, variable typing and deep cases; preserve its existing public behavior/diagnostics and document compatibility provenance separately from Snowflake `SPLIT`.
+- [x] T017 [Plan:D3.9.2] Complete `STRTOK_TO_ARRAY` in the focused host: missing placements, resolution/variables/deep cases and documented optional-delimiter forms; test each eligible argument position independently.
+  - Completed 2026-11-18 in the approved T015-T017 batch: 53 cases per
+    older function (50 six-output, three syntax), including both optional
+    delimiter forms. Added 138 methods across the batch and strengthened 16
+    legacy diagnostic lists; all old extractor goldens and 540 unrelated
+    host methods preserved. Final shared run: host 694/694, subscript 24/24,
+    table-function 78/78; total 796, zero failures/errors/skips. Lexer unchanged.
 - [ ] T018 [Plan:D3.9.3] Complete `ARRAY_GENERATE_RANGE` in the focused host: replace literal-only evidence with additional column/variable cases for start/stop/optional step, independent resolution failures, both two-/three-argument forms, missing placements and deep cases; preserve existing literal controls.
 - [ ] T019 [Plan:D3.9.4] Complete `ARRAY_POSITION` in the focused host: missing placements, independent needle/array controls, variable typing, nested/derived/set-op cases and exact diagnostics.
 - [ ] T020 [Plan:D3.9.5] Complete `ARRAYS_ZIP` in the focused host: missing placements, one/multiple-array forms, independently isolated eligible argument controls, variable typing and deep cases, without executing zip results.
@@ -2792,7 +2802,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | D1 matrices complete; D-SIG/final gates pending | All three names have routing/registry entries and independent matrices: 45 `ARRAY_TO_STRING`, 55 `ARRAY_SLICE`, 48 `ARRAY_REPEAT` cases. Existing extractor goldens retained; focused host 377/377. This is not final Slice D or release sign-off. |
 | **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | D2.6 matrices complete; final audit/gates pending | D2.3/D2.4 expanded matrices are retained. `ARRAY_DISTINCT`, `ARRAY_COMPACT`, and `ARRAY_SIZE` now have 31 independent cases each, with full outputs/exact diagnostics; the current focused host passes 452/452. Final D-SIG/D-AUDIT/sign-off remain open. |
-| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | D3.8.1-D3.8.3 complete; D3.8.4/D3.9 pending | `ARRAYS_TO_OBJECT` retains its expanded D3.6 matrix. `TO_ARRAY`, `AS_ARRAY` and `IS_ARRAY` have explicit conversion routes, Snowflake affinity and 35/32/37 strict cases. Current focused host: 556/556. `SPLIT` plus five older matrices remain; preserve `SPLIT_TO_ARRAY` compatibility. |
+| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | All D3.8 and D3.9.1-D3.9.2 complete; D3.9.3-D3.9.5 pending | `ARRAYS_TO_OBJECT` retains its expanded D3.6 matrix. `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY` have 35/32/37 strict cases; `SPLIT`, `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY` have 48/53/53. All explicit routes present; legacy compatibility preserved. Current focused host: 694/694, plus 102 composition tests. Three older matrices and final gates remain. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
 **Slice C closeout record (2026-11-17):**
@@ -2905,7 +2915,8 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 **Slice D SPLIT lexer checkpoint (2026-11-18; D0.1..D0.4 complete):**
 - Added only `SPLIT`, after `ARRAY_REPEAT` and immediately before `Identifier`,
   plus nonreserved-name handling to retain generic routine/identifier use.
-  Dedicated D3.8 split routing, diagnostics and matrix work remain pending.
+  Dedicated routing, diagnostics and matrix work were pending at this checkpoint
+  and are now complete under D3.8.4 / T015.
 - Captured official generated Java constants before/after this addition.
   The before constants exactly match the retained ARRAY_REPEAT after image.
   Reused the retained official pre-ARRAY_REPEAT image for the last repaired
@@ -3068,8 +3079,43 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 - Official generated Java lexer verified byte-for-byte unchanged: no lexer
   additions, token-ID migration or existing-golden refresh.
 - Generated independent per-function evidence and task/checkpoint reports from
-  the catalog and fresh Surefire results. Next: T015 / D3.8.4 `SPLIT`; five
+  the catalog and fresh Surefire results. Next at that checkpoint: T015 / D3.8.4 `SPLIT`; five
   older matrices, D-SIG/D-AUDIT and final gates remain open.
+
+**Slice D T015-T017 string-to-array completion (2026-11-18):**
+- `SPLIT`: 48 cases (45 six-output, three syntax); `SPLIT_TO_ARRAY` and
+  `STRTOK_TO_ARRAY`: 53 each (50/three). Added 138 methods, strengthened all
+  16 legacy diagnostic lists, and preserved old extractor goldens plus all
+  540 unrelated host methods. Current host: 694 methods, 662 six-output,
+  32 parser-only controls. Generated per-function evidence is in the reconciliation.
+- Red route regression established that SPLIT lacked dedicated C routing.
+  Added its existing token to the conversion family and its name to the
+  Snowflake registry. The first composition run then exposed 11 AST
+  serialization regressions: the generic route's bulk map insertion and the
+  dedicated route's individual insertion yield different HashMap iteration
+  order. Retained the generic construction for SPLIT only; other conversion
+  functions and every existing composition golden are unchanged.
+- Reviewed the corrected new SPLIT ASTs before emission; all other captured
+  fields stayed identical. Final shared Maven selection passed the focused
+  host **694/694**, array-subscript suite **24/24**, and table-function suite
+  **78/78**: **796 total**, zero failures/errors/skips, exit 0.
+- Documented signatures: Snowflake SPLIT has a required substring separator;
+  STRTOK_TO_ARRAY has an optional delimiter character set, default single
+  space. Amazon Redshift SPLIT_TO_ARRAY has an optional substring delimiter,
+  default comma, and returns SUPER. Its existing Snowflake-affinity diagnostic
+  remains compatibility behavior, not native Snowflake certification.
+  Omitted delimiters stay absent from AST parameter lists; input controls
+  do not execute SQL or evaluate runtime defaults/types/results.
+- Both operand positions have independent resolution and variable controls;
+  all twelve placements, nested/derived/set-op/SCRIPT reset, neutral UDF/name,
+  NULL/empty/repeated delimiter and exact malformed-syntax controls are recorded.
+  Added explicit SPLIT subscript and aliased FLATTEN cases.
+- Official generated lexer is byte-for-byte unchanged. No token-ID edits or
+  existing-golden refresh. Toolkit records the actual related-suite selection
+  while keeping host counts separate; all three Node regression tests pass.
+- Next: T018 / D3.9.3 `ARRAY_GENERATE_RANGE`, then `ARRAY_POSITION` and
+  `ARRAYS_ZIP`. D-SIG/D-AUDIT and final accuracy gates remain open; this
+  checkpoint is not final Slice D or release sign-off.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 
