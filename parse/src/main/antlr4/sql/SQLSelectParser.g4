@@ -2780,6 +2780,7 @@ nonreserved_keywords
   | ARRAY_REPEAT
   | ARRAYS_ZIP
   | ARRAYS_TO_OBJECT
+  | SPLIT
   | SPLIT_TO_ARRAY
   | STRTOK_TO_ARRAY
   | TO_ARRAY
@@ -3744,6 +3745,7 @@ ARRAY_REVERSE : A R R A Y UNDERLINE R E V E R S E;
 ARRAY_SUM : A R R A Y UNDERLINE S U M;
 ARRAYS_TO_OBJECT : A R R A Y S UNDERLINE T O UNDERLINE O B J E C T;
 ARRAY_REPEAT : A R R A Y UNDERLINE R E P E A T;
+SPLIT : S P L I T;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
