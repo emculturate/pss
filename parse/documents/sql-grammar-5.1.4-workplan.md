@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. Execute D0 lexer expansion/manual-repair gate first, then `ARRAY_REPEAT`, the ten older matrix remediations, and the four new per-function implementations under the expanded sequence below. Prior D2.5/D3.7 green runs are historical evidence, not full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
+  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. D0 lexer/manual-repair work and the D1 matrices (`ARRAY_REPEAT`, `ARRAY_TO_STRING`, `ARRAY_SLICE`) are complete; the focused host passes 377/377. Next is D2.6.1 `ARRAY_DISTINCT`, followed by the remaining older matrix remediations and four approved per-function implementations in the sequence below. Prior green runs do not establish full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
   - **Slice E:** complete `4.5` advanced `FLATTEN` parity and `4.12` higher-order (`FILTER`/`TRANSFORM`/`REDUCE`) closure.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2206,15 +2206,15 @@ implementation sequence** below them governs all next steps.
 **Current completeness correction (2026-11-18):** use the
 [function reconciliation and explicit remaining-task checklist](slice-d-array-function-reconciliation.md).
 The historical D2.5/D3.7 green class runs did not establish complete independent
-matrices for all earlier functions. Tasks D1.1/D1.2/D2.6/D3.9 are required
-remediation. The user approved D3.8's four additions on 2026-11-18 and requested
+matrices for all earlier functions. D1.1 is now complete; D1.2/D2.6/D3.9 remain
+required remediation. The user approved D3.8's four additions on 2026-11-18 and requested
 another lexer expansion first. The approved D0 batch adds `SPLIT`; `TO_ARRAY`,
 `AS_ARRAY`, and `IS_ARRAY` already have tokens and must not be duplicated.
 
 1. **D1 (4.9 transforms, first):**
    - Multi-arg transform set for 4.9 is explicitly: `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`.
-   - **D1.1 / GC2 (`ARRAY_REPEAT`) — incomplete:** lexer, routing and registry are present; complete the strict per-function matrix.
-   - **D1.2 (`ARRAY_TO_STRING`, `ARRAY_SLICE`) — matrix remediation:** complete missing placements, resolution/substitution and deep controls from the reconciliation.
+   - **D1.1 / GC2 (`ARRAY_REPEAT`) — complete (2026-11-18):** 48 strict cases, including 45 six-output goldens and three parser-only syntax controls; exact diagnostics in every case. Focused host: 304/304, zero failures/errors/skips. No production or lexer changes were needed.
+   - **D1.2 — complete:** `ARRAY_TO_STRING` has 45 independent cases; `ARRAY_SLICE` has 55. All retained methods now compare complete exact diagnostics without changing their extractor goldens. Focused host: 377/377. Only `ARRAY_TO_STRING` needed a parser nonreserved-name fix; neither batch changed lexer IDs.
    - Add dedicated grammar + walker routing using existing value-expression argument resolution.
    - Add strict full-golden tests with positional diagnostics, unresolved/missing-alias by eligible argument position, and substitution-variable typing checks (including qualified column-variable typing).
 2. **D2 (4.10 unary transforms):**
@@ -2318,6 +2318,61 @@ moving to the next. All rows edit the same focused host; do not parallel-edit it
 D-SIG depends on every function row; D-AUDIT depends on D-SIG; D4.1 depends on
 D-AUDIT; D4.2 depends on D4.1.
 
+##### Sequential prompt checklist for completing Slice D
+
+This is the prompt-friendly index of T006..T024 below, not additional scope.
+Keep each checkbox aligned with its corresponding detailed task and completion
+ledger. Complete and validate one function before proceeding to the next.
+
+**Completed setup:** the SPLIT lexer addition and replacement maps were committed
+and pushed in `d99e214`. The developer's manual token-ID repairs were committed
+and pushed in `641ded6`. Validation covered all 36 affected test classes,
+including the focused array-transform host: 2,778 tests run, zero failures/errors,
+three skipped. This clears the D0.5 repair/baseline gate, not Slice D sign-off.
+
+**Standing instruction for every function:** follow the strict per-function
+matrix below; preserve existing extractor goldens; generate only new expectations;
+assert all six complete outputs and exact positioned diagnostics; run the entire
+focused host; and update the function's completion ledger. Change production code
+only for a proved defect. Do not commit unless requested.
+
+**Finish the remaining transform**
+
+1. [x] **D1.1 / T006:** `Complete D1.1: ARRAY_REPEAT.`
+
+**Complete the first five older matrices**
+
+2. [x] **D1.2.1 / T007:** `Complete D1.2.1: ARRAY_TO_STRING.`
+3. [x] **D1.2.2 / T008:** `Complete D1.2.2: ARRAY_SLICE.`
+4. [ ] **D2.6.1 / T009:** `Complete D2.6.1: ARRAY_DISTINCT.`
+5. [ ] **D2.6.2 / T010:** `Complete D2.6.2: ARRAY_COMPACT.`
+6. [ ] **D2.6.3 / T011:** `Complete D2.6.3: ARRAY_SIZE.`
+
+**Implement the four approved additions**
+
+7. [ ] **D3.8.1 / T012:** `Complete D3.8.1: TO_ARRAY routing, diagnostics and strict matrix.`
+8. [ ] **D3.8.2 / T013:** `Complete D3.8.2: AS_ARRAY routing, diagnostics and strict matrix.`
+9. [ ] **D3.8.3 / T014:** `Complete D3.8.3: IS_ARRAY routing, diagnostics and strict matrix.`
+10. [ ] **D3.8.4 / T015:** `Complete D3.8.4: SPLIT routing, diagnostics and strict matrix.`
+
+**Complete the remaining five older matrices**
+
+11. [ ] **D3.9.1 / T016:** `Complete D3.9.1: SPLIT_TO_ARRAY.`
+12. [ ] **D3.9.2 / T017:** `Complete D3.9.2: STRTOK_TO_ARRAY.`
+13. [ ] **D3.9.3 / T018:** `Complete D3.9.3: ARRAY_GENERATE_RANGE.`
+14. [ ] **D3.9.4 / T019:** `Complete D3.9.4: ARRAY_POSITION.`
+15. [ ] **D3.9.5 / T020:** `Complete D3.9.5: ARRAYS_ZIP.`
+
+**Close Slice D**
+
+16. [ ] **D-SIG / T021:** `Complete D-SIG: verify signatures, optional arguments and parser-versus-runtime validation boundaries across all 21 functions.`
+17. [ ] **D-AUDIT / T022:** `Complete D-AUDIT: reconcile all 21 functions against every required matrix cell; report any remaining gaps.`
+18. [ ] **D4.1 / T023:** `Complete D4.1: run the focused suite, Phase15 gate, Smoketest gate and full default parser accuracy suite.`
+19. [ ] **D4.2 / T024:** `Complete D4.2: record actual results and update Slice D completion accounting. Do not claim whole-release readiness.`
+
+At any suitable checkpoint, separately prompt:
+`Commit and push the completed work with a clear summary.`
+
 ##### D0 — lexer expansion and developer repair gate FIRST
 
 1. **D0.1 — freeze the approved lexer inventory [REQ-001, REQ-004].**
@@ -2357,7 +2412,11 @@ D-AUDIT; D4.2 depends on D4.1.
    verify the existing focused host on the repaired baseline before adding new
    matrices. If that run fails, diagnose rather than changing golden content
    automatically. Do not run the broad sign-off ladder here.
-   - [ ] T005 [Plan:D0.5] Obtain manual-repair confirmation for existing parser goldens, then run `SqlEventWalkerSnowflakeArrayTransformTests` using the focused command below; retain actual results.
+   - [x] T005 [Plan:D0.5] Obtain manual-repair confirmation for existing parser goldens, then run `SqlEventWalkerSnowflakeArrayTransformTests` using the focused command below; retain actual results.
+   - Completed in checkpoint `641ded6`: user-confirmed manual repairs were
+     validated across all 36 affected classes, including the focused host.
+     Isolated Maven test result: 2,778 run, zero failures/errors, three skipped,
+     exit code 0; full default accuracy and Slice D sign-off remain pending.
 
 ##### Per-function completion contract [REQ-002, REQ-003]
 
@@ -2391,15 +2450,33 @@ accounting sequence:
    error counts. Do not walk rejected syntax trees just to obtain extractor
    outputs. Keep parser responsibilities separate from database execution:
    runtime ARRAY types, element values, lengths and output values are not evaluated.
-8. Run the entire focused host after each function, not the broad gates.
+8. Use `tools/array-matrix/` for signature-driven missing cases, preservation
+   checks and generated evidence/accounting. Reuse unchanged contracts and the
+   known gap inventory rather than repeating discovery. Related functions may
+   share an approved batch while retaining independent matrices and task IDs.
+   Run the entire focused host once per batch, not the broad gates.
    Record function name, matrix cells, exact command, pass/fail/skip counts and
    exit code. A family green count alone cannot mark the function complete.
 
 ##### D1 — multi-argument transform completion
 
-- [ ] T006 [Plan:D1.1] Complete `ARRAY_REPEAT` in `parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java` under the per-function contract, reusing current transform handling; include element/count resolution and variable typing, scalar/array/NULL elements, NULL/zero/negative counts as parse inputs, not executed results. Keep grammar/registry/walker call sites consistent if a proved defect requires a change.
-- [ ] T007 [Plan:D1.2.1] Complete `ARRAY_TO_STRING` in the focused host: JOIN ON/HAVING, independent resolution/hidden-alias and both-argument variable controls, nested/derived/set-op coverage and three-statement reset; strengthen exact diagnostics and retain existing goldens.
-- [ ] T008 [Plan:D1.2.2] Complete `ARRAY_SLICE` in the focused host: WHERE/JOIN ON/QUALIFY/DDL/SCRIPT, independently isolated controls for all three arguments, raw-variable and deep coverage, and exact diagnostics; retain existing goldens.
+- [x] T006 [Plan:D1.1] Complete `ARRAY_REPEAT` in `parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java` under the per-function contract, reusing current transform handling; include element/count resolution and variable typing, scalar/array/NULL elements, NULL/zero/negative counts as parse inputs, not executed results. Keep grammar/registry/walker call sites consistent if a proved defect requires a change.
+  - Completed 2026-11-18: the route-only seed was strengthened into a 48-case
+    matrix, with 47 net new methods. All 256 pre-existing strict methods and
+    extractor goldens remain unchanged. See the method-level ARRAY_REPEAT
+    evidence ledger in the reconciliation and the D1.1 completion record below.
+- [x] T007 [Plan:D1.2.1] Complete `ARRAY_TO_STRING` in the focused host: JOIN ON/HAVING, independent resolution/hidden-alias and both-argument variable controls, nested/derived/set-op coverage and three-statement reset; strengthen exact diagnostics and retain existing goldens.
+  - Completed 2026-11-18: 30 new methods plus exact diagnostic lists in all 15
+    older methods; all existing extractor goldens and the other 289 methods are
+    unchanged. Fixed the missing parser nonreserved-name alternative exposed by
+    the neutrality controls; no lexer declaration or token ID changed. Focused
+    host: 334 passed, zero failures/errors/skips. See the D1.2.1 completion record
+    and method-level reconciliation ledger.
+- [x] T008 [Plan:D1.2.2] Complete `ARRAY_SLICE` in the focused host: WHERE/JOIN ON/QUALIFY/DDL/SCRIPT, independently isolated controls for all three arguments, raw-variable and deep coverage, and exact diagnostics; retain existing goldens.
+  - Completed 2026-11-18: 43 new cases and 12 strengthened diagnostic lists;
+    55 independent cases total. Existing extractor goldens and all 322 other
+    methods preserved. Focused host: 377 passed, zero failures/errors/skips.
+    No production change was needed.
 
 ##### D2.6 — older unary matrix completion
 
@@ -2540,7 +2617,7 @@ All five gap functions are in-scope for Entry 4 closure. Sequence them in bounde
      - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
      - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (unary transforms/scalar)
    - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
-   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` have dedicated unary routing and 27 strict tests each; focused transform suite passes 216/216. `ARRAY_REPEAT` (4.9) and the Slice D sign-off ladder remain open.
+   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` have dedicated unary routing and 27 strict tests each; that historical focused run passed 216/216. D1 matrices are complete with 48 `ARRAY_REPEAT`, 45 `ARRAY_TO_STRING` and 55 `ARRAY_SLICE` cases; the latest focused host passes 377/377. Older unary remediations, D-SIG and the Slice D sign-off ladder remain open.
 
 3. **GC3 — Slice D conversion extension**
    - Function: `ARRAYS_TO_OBJECT`
@@ -2702,7 +2779,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | In progress; D1.1/D1.2 required | All three names have routing/registry entries. `ARRAY_REPEAT` has only a routing seed; `ARRAY_TO_STRING` and `ARRAY_SLICE` also have independent matrix gaps. See the reconciliation before token repairs or sign-off. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | D1 matrices complete; D-SIG/final gates pending | All three names have routing/registry entries and independent matrices: 45 `ARRAY_TO_STRING`, 55 `ARRAY_SLICE`, 48 `ARRAY_REPEAT` cases. Existing extractor goldens retained; focused host 377/377. This is not final Slice D or release sign-off. |
 | **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | Focused runs recorded; D2.6 matrix remediation required | D2.3/D2.4 expanded matrices are present. `ARRAY_DISTINCT`, `ARRAY_COMPACT`, and `ARRAY_SIZE` do not yet meet the full independent matrix contract. D2.5's historical 216/216 pass does not close those gaps. |
 | **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | D3.8 approved implementation / D3.9 remediation required after D0 | `ARRAYS_TO_OBJECT` has its expanded D3.6 matrix. The other five original names have matrix gaps despite D3.7's historical 256/256 pass. Implement the four approved additions independently; preserve existing `SPLIT_TO_ARRAY` behavior rather than silently renaming/reclassifying it. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
@@ -2862,6 +2939,78 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
   -DskipTests compile` passed; the editor reports no grammar errors.
   No existing tests/goldens were edited and no parser test suite was run.
   Stop at D0.5 for developer manual repairs; compilation is not accuracy sign-off.
+
+**Slice D D1.1 ARRAY_REPEAT completion record (2026-11-18):**
+- Replaced the route-only seed with 48 independent cases: 45 assert all six
+  complete extractor outputs and exact walker diagnostics; three assert exact
+  parser error counts and full parser diagnostic lists without walking rejected
+  syntax trees. Net addition: 47 methods; focused host total: 304.
+- Covered all twelve placements, both arguments' isolated unqualified-success,
+  unresolved/ambiguous/missing-alias/hidden-alias and variable-typing controls,
+  combined variables, nested expressions, derived exports, set-op sibling
+  isolation, Snowflake/ANSI/Snowflake SCRIPT reset, qualified-UDF/column
+  neutrality, uppercase and mixed-dialect controls.
+- Included scalar/array/NULL element forms and NULL/zero/negative count inputs.
+  These assert parsing/lineage, not evaluated array values or runtime types.
+  The shared transform rule and generic-call signature boundary are unchanged;
+  D-SIG remains pending.
+- Generated only new expectations against the repaired token baseline, audited
+  them using the consumer bucket/dictionary contracts, and preserved all 256
+  other test methods/goldens exactly. No grammar, lexer, registry or walker edit
+  was required: this was coverage-only work, passing on existing production code.
+- Validation command: `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home PATH=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin:$PATH mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test`.
+  Result: **304 passed**, zero failures/errors/skips, exit code 0.
+  The editor reports only the three previously known unused `snippet` locals;
+  no new compilation problem was introduced.
+- Next: D1.2.1 `ARRAY_TO_STRING`. The ten older remediations, four D3.8
+  implementations, D-SIG/D-AUDIT and broad final gates remain open.
+
+**Slice D D1.2.1 ARRAY_TO_STRING completion record (2026-11-18):**
+- Added 30 independent cases and strengthened the 15 existing methods to compare
+  their complete diagnostic lists. The function now has 45 cases: 42 six-output
+  goldens and three parser-only syntax controls. Preserved all 15 original
+  extractor golden blocks and all 289 unrelated methods, including the complete
+  D1.1 `ARRAY_REPEAT` matrix, byte-for-byte.
+- Filled JOIN ON/HAVING, isolated argument resolution and variable typing,
+  nested/derived/set-op lineage, and Snowflake/ANSI/Snowflake SCRIPT reset.
+  Added uppercase/mixed-dialect, qualified-UDF/column neutrality, NULL operands,
+  array-with-NULL/empty-array and empty-separator inputs. All twelve placements
+  have named independent evidence in the reconciliation.
+- The new qualified-UDF control initially failed with three parser errors:
+  `ARRAY_TO_STRING` was missing from `nonreserved_keywords`. Added only that
+  parser alternative, consistent with the other array names. Both the
+  schema-qualified UDF and same-named column now parse without Snowflake
+  diagnostics. The generated Java lexer is byte-for-byte unchanged; no token
+  replacement or existing golden refresh was needed.
+- Generated only new extractor expectations and exact diagnostic literals,
+  audited derived exports, physical/query dictionaries, sibling isolation and
+  predicand/column typing against the consumer contracts, then froze them.
+  The documented signature is `ARRAY_TO_STRING(array, separator_string)`;
+  runtime input types/results and shared-rule/generic-call arity policy remain
+  outside this batch under D-SIG.
+- Validation command: `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home PATH=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin:$PATH mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test`.
+  Result: **334 passed**, zero failures/errors/skips, exit code 0. The host now
+  has 326 six-output cases and eight parser-only syntax controls. The editor
+  reports only the same three pre-existing unused `snippet` locals.
+- Next: D1.2.2 `ARRAY_SLICE`. Nine older matrices, four D3.8 implementations,
+  D-SIG/D-AUDIT and the broad final Slice D gates remain open.
+
+**Slice D D1.2.2 ARRAY_SLICE completion record (2026-11-18):**
+- Added 43 cases and strengthened all 12 older diagnostic lists: 55 independent
+  cases, comprising 52 six-output goldens and three parser-only syntax controls.
+  Existing golden blocks and all 322 unrelated methods, including both prior
+  completed transform matrices, are unchanged.
+- Closed all twelve placements and isolated all three arguments' resolution,
+  raw/column-variable and NULL controls; included nested/derived/set-op/SCRIPT
+  reset, neutrality, dialect/case, empty-array and index-bound inputs.
+  The reconciliation maps every method. Bounds/results are not evaluated;
+  shared-rule/generic-call arity policy remains under D-SIG.
+- No production or lexer changes. Generated expectations passed on the current
+  implementation; no artificial red phase. One full focused run:
+  `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home PATH=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin:$PATH mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test`
+  passed **377/377**, zero failures/errors/skips, exit 0.
+- Next: D2.6.1 `ARRAY_DISTINCT`; eight older matrices, four D3.8 implementations,
+  D-SIG/D-AUDIT and broad final gates remain open.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

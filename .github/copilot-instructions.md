@@ -17,6 +17,26 @@
 
 See [test suite selection](../README.md#test-suite-selection).
 
+## Efficient Slice D Matrix Completion
+
+- Use the existing master workplan and reconciliation as the gap inventory.
+  Reuse parser contracts already read for the unchanged baseline; reopen docs
+  only for changed contracts, new semantics or a concrete failure.
+- Use [the reusable matrix tooling](../tools/array-matrix/README.md), not a new
+  capture program per function. Describe the signature and actual legacy
+  coverage; generate missing argument-isolation/placement cases from templates.
+- Related functions may share an approved batch, one capture and one full
+  focused-host run. Preserve independent matrices, task status and evidence;
+  do not expand beyond the user's requested scope or bypass task prerequisites.
+- Review new goldens and unexpected results. Keep full extractor goldens,
+  exact diagnostics and one query per method. Never refresh existing goldens.
+- Generate method ledgers and required reports from the case catalog. Update
+  only relevant checkmarks, counts and genuine findings in existing documents;
+  do not write repeated completion essays or competing plans.
+- Investigate beyond the known gaps only when a new case exposes a defect.
+  Defer broad gates until final Slice D sign-off. Report total elapsed time
+  when asked about duration, not merely test-command runtime.
+
 ## Lexer Additions - Automatic Token-ID Worklist
 
 Whenever a task adds lexer items, automatically follow the
