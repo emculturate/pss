@@ -603,6 +603,40 @@ public class SqlEventWalkerSnowflakeArrayConstructTests extends AbstractSqlParse
 	}
 
 	@Test
+	public void snowflakeArrayConstructCompactEmptyArgumentsGenericCompatibilityV0Test() {
+		final String query = "SELECT e.id, array_construct_compact() AS arr FROM events e WHERE e.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=e}}, 2={1={function_name=array_construct_compact}, alias=arr}}, from={table={alias=e, table=events}}, where={condition={left={column={name=active, table_ref=e}}, right={literal=1}, operator==}}}}",
+				"[arr, id]",
+				"{}",
+				"{events={active=[[@14,66:66='e',<459>,1:66]], id=[[@1,7:7='e',<459>,1:7]]}}",
+				"{query0={arr=[[@9,42:44='arr',<459>,1:42]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={arr=[[@9,42:44='arr',<459>,1:42]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@14,66:66='e',<459>,1:66]], id=[[@1,7:7='e',<459>,1:7]]}}, filters=[{name=active, table_ref=e}], interface={arr=[], id=[{name=id, table_ref=e}]}, table_alias={e=events}}}");
+	}
+
+	@Test
+	public void snowflakeArrayConstructCompactMixedNullArgumentsV0Test() {
+		final String query = "SELECT e.id, array_construct_compact(NULL, e.email, 'fallback') AS arr FROM events e WHERE e.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_construct_compact' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=e}}, 2={function={parameters={1={null_literal=null}, 2={column={name=email, table_ref=e}}, 3={literal='fallback'}}, function_name=array_construct_compact}, alias=arr}}, from={table={alias=e, table=events}}, where={condition={left={column={name=active, table_ref=e}}, right={literal=1}, operator==}}}}",
+				"[arr, id]",
+				"{}",
+				"{events={active=[[@21,91:91='e',<459>,1:91]], id=[[@1,7:7='e',<459>,1:7]], email=[[@9,43:43='e',<459>,1:43]]}}",
+				"{query0={arr=[[@16,67:69='arr',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={arr=[[@16,67:69='arr',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,91:91='e',<459>,1:91]], id=[[@1,7:7='e',<459>,1:7]], email=[[@9,43:43='e',<459>,1:43]]}}, filters=[{name=active, table_ref=e}], interface={arr=[{name=email, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}}");
+	}
+
+	@Test
 	public void snowflakeArrayContainsSelectPlacementV0Test() {
 		final String query = "SELECT array_contains('a', tags) AS has_a FROM events e";
 		final SqlParseEventWalker extractor = runQuery(query);

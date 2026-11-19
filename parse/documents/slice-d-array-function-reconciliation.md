@@ -5,7 +5,11 @@ Original planning update: the user approved four omitted functions and
 requested lexer expansion first, establishing the **21-function audit baseline**.
 **Post-T022 scope amendment:** all remaining planned array functions must now
 close in Slice D, with the structured constructor required first. **T025–T031
-scalar, table and higher-order closure is complete; T032 is next.**
+scalar, table and higher-order implementation and the shared T032–T034
+evidence consolidation are complete. T023/T024 final default accuracy and
+Slice D accounting are also complete (2026-11-19): 4,306 reported, 4,244
+passed, 62 skipped, zero failures/errors, exit 0.** Carried-forward names use the user-approved family-coverage
+policy recorded below; no duplicate per-name matrices are required.
 The [expanded inventory](#expanded-all-array-closure-inventory) accounts for
 **42 canonical names**, including previously completed A/B/C work and all
 former E function work. Execute T025..T034 before the existing T023/T024 gates.
@@ -26,8 +30,9 @@ with 79, 50 and 90 cases. T021 / D-SIG added 134 signature-policy controls.
 T022 / D-AUDIT is complete (2026-11-19): all 21 functions cover all 854 required
 matrix cells, with nine genuine gaps repaired. Maven and VS Code each pass all
 1,033 focused tests. The original 21-name individual batches, D-SIG and D-AUDIT
-are complete; they do not certify the expanded 42-name scope. T025..T034 and
-T023's sequential accuracy ladder / T024's final accounting remain open.
+are complete; they do not certify the expanded 42-name scope. T025–T031 are
+now complete. T032/T033/T034 consolidate that evidence with the carried-forward
+families below. T023/T024 closeout is recorded in the final sign-off below.
 
 **Previous checkpoint — lexer step complete (2026-11-19):** T025 adds
 `ARRAY_CONSTRUCT_STRUCTURED=457` and shared `LAMBDA_ARROW=458` immediately
@@ -84,15 +89,74 @@ passing methods respectively; directly affected adjacent suites contribute the
 remaining 235. The VS Code selected-host run also passes (reported summary
 1,727 passed, zero failed across registered controllers, not a unique-method
 count to combine with Maven). Generator checks pass 4/4.
-The earlier 854-cell audit remains historical; expanded T033/T034 and final
-T023/T024 sign-off are still open.
+The earlier 854-cell audit remains historical; T033/T034 now consolidate it
+with the expanded evidence below. Final T023/T024 default-accuracy sign-off
+is complete; opt-in release/diagnostic certification remains separate.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
 
+## T023/T024 final Slice D sign-off (2026-11-19)
+
+**Slice D is complete for the approved 42-name scope**, including Entry 4.1–4.12,
+GC1/GC2/GC3/GC4 and the former Slice E scalar/table/higher-order work.
+`LATERAL_FLATTEN` compatibility remains deferred beyond 5.1.4.
+
+Exactly one full default accuracy invocation was executed after consolidation,
+using JDK 21:
+
+```bash
+mvn -f parse/pom.xml -Pisolated-build \
+  -Dpss.walker.test.verbose=false -Dpss.test.slow=false \
+  -Dpss.test.diagnostics=false test
+```
+
+| Result | Actual value |
+|---|---|
+| Completed | 2026-11-19 09:18:53 -05:00 |
+| Maven elapsed time | 1 min 29 sec |
+| Exit code / build | 0 / BUILD SUCCESS |
+| Reported tests / source-class reports | 4,306 / 70 |
+| Passed / failures / errors / skipped | 4,244 / 0 / 0 / 62 |
+
+Results were read from this invocation's log and
+[Surefire reports](../target-maven/surefire-reports/), not summed with historical
+focused runs. The persistent session log is `slice-d-final-accuracy.log`.
+
+All affected array-family source hosts passed without skips: constructor 114,
+transform 1,087, higher-order 224, table-function 134, binary/set 14, mutator 22
+and set-aggregate 7. Existing source controls also passed: literal/subscript 24,
+aggregate/windowing 207, non-SQL endpoints 143, column variables 21 and array
+lexer baseline 6. The pivot/unpivot source class passed 203 tests, supplying
+Phase15 coverage. Smoketest coverage comes from its original source classes;
+the wrapper suites were not rerun or counted as additional tests.
+
+The **62 existing/configured skips** are retained, not hidden or newly waived:
+
+| Skip reason from Surefire | Count |
+|---|---:|
+| Opt-in slow release regressions, including bound-query release cases | 22 |
+| Opt-in manual diagnostics | 26 |
+| Manual hotspot/timing/calibration probes | 11 |
+| Previously parked live sample queries | 3 |
+
+The unchanged Surefire exclusions are `PUML3ParserTest.java` and
+`DumpNestedCteSymbolGoldensTest.java`; exclusions are not part of the 62 skips.
+No new exclusions, flag changes, golden rewrites, repair loop or second
+validation invocation were introduced.
+
+T024 records final accounting once: the original 21 audited names, seven
+added names and fourteen accepted carried-forward names total **42**, as
+explicitly listed in the [inventory](#expanded-all-array-closure-inventory).
+The original 854-cell audit retains its original scope; shared family evidence
+is not recast as new independent matrices. Consumer bundle contents did not
+change, so no vendor/JAR docs regeneration was needed. Slice F, Entry 11 Tier-2,
+the opt-in release suite and packaging/publishing remain outside this sign-off.
+
 ## Result and scope
 
-**Slice D is not ready for final sign-off.**
+**Slice D default-accuracy sign-off is complete.** This does not certify the
+entire 5.1.4 release or database runtime semantics.
 
 The following implementation findings describe the **original 21-name baseline**:
 
@@ -112,7 +176,7 @@ The following implementation findings describe the **original 21-name baseline**
    D3.9.3-D3.9.5, with 79, 50 and 90 independently identified cases respectively.
    T022 subsequently audited all 21 matrices and closed nine remaining cells,
    including gaps in four of the six older expanded matrices. The final
-   accuracy sign-off ladder remains open.
+   final default-accuracy run is now complete under T023/T024 above.
 4. **Four documented Snowflake functions were omitted from the conversion /
    predicate / split target list:** `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`.
    All four are explicitly approved for D3.8. `TO_ARRAY`, `AS_ARRAY` and
@@ -129,8 +193,9 @@ manual token-ID repairs are committed, and the original T022 focused run passed
 1,033 tests with zero failures/errors/skips. The earlier string-to-array batch
 also passed 24 subscript and 78 table-function tests; no production code changed
 in the final three-function batch, T021 or T022. The matrix audit and
-signature-policy boundary are complete for the original 21 names only;
-expanded implementation/audits and the final Slice D sign-off ladder remain open.
+signature-policy boundary retain their original 21-name scope. The shared
+T032–T034 consolidation below completes expanded evidence accounting, not
+the separate final Slice D accuracy run/sign-off, now completed above.
 
 The new comparison covers **every Entry 4 subsection and all array-related
 mentions throughout the master workplan and companion planning/consumer
@@ -152,6 +217,13 @@ not a claim to have surveyed every function in Snowflake's evolving catalog.
   extractor goldens, and exact positioned diagnostics. Table/lambda/aggregate
   cells must respect their actual grammar role; justify each inapplicable
   scalar cell explicitly. Verify the old constructor snippet checklist too.
+  **Superseding user-approved carry-forward policy (2026-11-19):** for
+  T032–T034, accept a function's named tests plus sibling-family coverage
+  when the parser/walker mechanism is shared. Do not require a duplicate
+  full suite for each carried-forward name. Identify the shared witnesses
+  and preserve actual assertion strength; family coverage is not a claim
+  that every name has twelve placements, six goldens or exact diagnostics.
+  Existing completed independent matrices remain unchanged.
 - **REQ-003:** Reconcile documented signatures and parser validation policy
   explicitly; do not confuse parse coverage with SQL execution or runtime
   type/value validation.
@@ -163,62 +235,69 @@ not a claim to have surveyed every function in Snowflake's evolving catalog.
 
 ## Expanded all-array closure inventory
 
-**Completed scalar/table/higher-order batches:** T025–T031. **Remaining execution order:**
-T032 -> T033 -> T034 -> T023 -> T024. Task details and exact source
+**Completed:** scalar/table/higher-order batches T025–T031, shared evidence
+consolidation T032/T033/T034 and final accuracy/accounting T023/T024.
+**No Slice D execution remains.** Task IDs are accounting labels,
+not separate passes. Reuse existing ledgers and passing batch evidence; inspect
+only missing or contradictory entries. Do not repeat completed audits, focused
+family runs, wrapper gates or sidebar tests. The full run's original source-class
+results provide affected-family and Phase15/Smoketest coverage without rerunning
+their wrappers. This supersedes historical sequential-ladder wording below.
+Task details and exact source
 paths live in the
 [master plan](sql-grammar-5.1.4-workplan.md#d5--exhaustive-array-closure-amendment-t025t034-before-t023t024).
 Task numbers preserve history rather than numeric execution order.
 
 Inventory totals: **seven completed scalar/table/higher-order names +
-21 original audited names + 14 carried-forward names = 42**. Every row below is subject to T033's
-expanded signature reconciliation, T034's independent cell audit and the
-T023/T024 final gates; a prior completion is reusable evidence, not automatic
-expanded-scope sign-off.
+21 original audited names + 14 carried-forward names = 42**. T033/T034 evidence
+accounting is complete for every row, using completed matrices or the explicitly
+accepted family evidence below. All rows are now closed by the single
+T023 default-accuracy result and T024 accounting above.
 
 | Canonical function | Original subsection / slice | Current disposition | Slice D implementation/evidence owner |
 |---|---|---|---|
-| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | Complete: lexical/manual gate, affinity and 83-case matrix | T025 complete; T033/T034 recheck |
-| `ARRAY_CONTAINS` | 4.1 | Complete: 74-case VARIANT/operand/full matrix; cast substitution loss repaired | T026 complete; T033/T034 recheck |
-| `ARRAY_FLATTEN` | 4.5 / E | Complete: unary routing/affinity and 54-case scalar matrix | T027 complete; T033/T034 recheck |
+| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | Complete: lexical/manual gate, affinity and 83-case matrix | T025; T033/T034 consolidated |
+| `ARRAY_CONTAINS` | 4.1 | Complete: 74-case VARIANT/operand/full matrix; cast substitution loss repaired | T026; T033/T034 consolidated |
+| `ARRAY_FLATTEN` | 4.5 / E | Complete: unary routing/affinity and 54-case scalar matrix | T027; T033/T034 consolidated |
 | `FLATTEN` | 4.5 / E | Complete: 56 new independent cases, 134 passing host tests; underscored compatibility deferred | T028 |
 | `FILTER` | 4.12 / E | Complete: 71 independent higher-order cases | T029 |
 | `TRANSFORM` | 4.12 / E | Complete: 71 independent higher-order cases | T030 |
 | `REDUCE` | 4.12 / E | Complete: 82 independent array/initial-value/lambda cases | T031 |
-| `ARRAY_TO_STRING` | 4.9 / D | Original T021/T022 audit complete | T007 evidence; T033/T034 recheck |
-| `ARRAY_SLICE` | 4.9 / D | Original T021/T022 audit complete | T008 evidence; T033/T034 recheck |
-| `ARRAY_REPEAT` | 4.9 / D / GC2 | Original T021/T022 audit complete | T006 evidence; T033/T034 recheck |
-| `ARRAY_DISTINCT` | 4.10 / D | Original T021/T022 audit complete | T009 evidence; T033/T034 recheck |
-| `ARRAY_COMPACT` | 4.10 / D | Original T021/T022 audit complete | T010 evidence; T033/T034 recheck |
-| `ARRAY_SIZE` | 4.10 / D | Original T021/T022 audit complete | T011 evidence; T033/T034 recheck |
-| `ARRAY_SORT` | 4.10 / D | Original T021/T022 audit complete, including optional flags | D2.3 evidence; T033/T034 recheck |
-| `ARRAY_MAX` | 4.10 / D | Original T021/T022 audit complete | D2.3 evidence; T033/T034 recheck |
-| `ARRAY_MIN` | 4.10 / D | Original T021/T022 audit complete | D2.3 evidence; T033/T034 recheck |
-| `ARRAY_REVERSE` | 4.10 / D / GC2 | Original T021/T022 audit complete | D2.4 evidence; T033/T034 recheck |
-| `ARRAY_SUM` | 4.10 / D / GC2 | Original T021/T022 audit complete; aggregate/runtime distinction retained | D2.4 evidence; T033/T034 recheck |
-| `SPLIT_TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete; retained compatibility provenance | T016 evidence; T033/T034 recheck |
-| `STRTOK_TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T017 evidence; T033/T034 recheck |
-| `ARRAY_GENERATE_RANGE` | 4.11 / D | Original T021/T022 audit complete | T018 evidence; T033/T034 recheck |
-| `ARRAY_POSITION` | 4.11 / D | Original T021/T022 audit complete | T019 evidence; T033/T034 recheck |
-| `ARRAYS_ZIP` | 4.11 / D | Original T021/T022 audit complete, including variadic tail | T020 evidence; T033/T034 recheck |
-| `ARRAYS_TO_OBJECT` | 4.11 / D / GC3 | Original T021/T022 audit complete | D3.6 evidence; T033/T034 recheck |
-| `TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T012 evidence; T033/T034 recheck |
-| `AS_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T013 evidence; T033/T034 recheck |
-| `IS_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T014 evidence; T033/T034 recheck |
-| `SPLIT` | 4.11 / D | Original T021/T022 audit complete | T015 evidence; T033/T034 recheck |
-| `ARRAY_CONSTRUCT` | 4.2 / A | Prior completion recorded; reconcile older snippet/DDL/SCRIPT checklist | T032 carry-forward verification |
-| `ARRAY_CONSTRUCT_COMPACT` | 4.2 / A | Prior completion recorded; verify independent method witnesses | T032 carry-forward verification |
-| `ARRAY_AGG` | 4.3 / B; Entry 19.3 | Prior ordered/window aggregate and compound-array completion recorded | T032 carry-forward verification |
-| `ARRAY_UNION_AGG` | 4.6 / B | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_UNIQUE_AGG` | 4.6 / B | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_CAT` | 4.7 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_EXCEPT` | 4.7 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_INTERSECTION` | 4.7 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAYS_OVERLAP` | 4.7 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_APPEND` | 4.8 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_PREPEND` | 4.8 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_INSERT` | 4.8 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_REMOVE` | 4.8 / C | Prior completion recorded | T032 carry-forward verification |
-| `ARRAY_REMOVE_AT` | 4.8 / C | Prior completion recorded | T032 carry-forward verification |
+| `ARRAY_TO_STRING` | 4.9 / D | Original T021/T022 audit complete | T007; T033/T034 consolidated |
+| `ARRAY_SLICE` | 4.9 / D | Original T021/T022 audit complete | T008; T033/T034 consolidated |
+| `ARRAY_REPEAT` | 4.9 / D / GC2 | Original T021/T022 audit complete | T006; T033/T034 consolidated |
+| `ARRAY_DISTINCT` | 4.10 / D | Original T021/T022 audit complete | T009; T033/T034 consolidated |
+| `ARRAY_COMPACT` | 4.10 / D | Original T021/T022 audit complete | T010; T033/T034 consolidated |
+| `ARRAY_SIZE` | 4.10 / D | Original T021/T022 audit complete | T011; T033/T034 consolidated |
+| `ARRAY_SORT` | 4.10 / D | Original T021/T022 audit complete, including optional flags | D2.3; T033/T034 consolidated |
+| `ARRAY_MAX` | 4.10 / D | Original T021/T022 audit complete | D2.3; T033/T034 consolidated |
+| `ARRAY_MIN` | 4.10 / D | Original T021/T022 audit complete | D2.3; T033/T034 consolidated |
+| `ARRAY_REVERSE` | 4.10 / D / GC2 | Original T021/T022 audit complete | D2.4; T033/T034 consolidated |
+| `ARRAY_SUM` | 4.10 / D / GC2 | Original T021/T022 audit complete; aggregate/runtime distinction retained | D2.4; T033/T034 consolidated |
+| `SPLIT_TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete; retained compatibility provenance | T016; T033/T034 consolidated |
+| `STRTOK_TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T017; T033/T034 consolidated |
+| `ARRAY_GENERATE_RANGE` | 4.11 / D | Original T021/T022 audit complete | T018; T033/T034 consolidated |
+| `ARRAY_POSITION` | 4.11 / D | Original T021/T022 audit complete | T019; T033/T034 consolidated |
+| `ARRAYS_ZIP` | 4.11 / D | Original T021/T022 audit complete, including variadic tail | T020; T033/T034 consolidated |
+| `ARRAYS_TO_OBJECT` | 4.11 / D / GC3 | Original T021/T022 audit complete | D3.6; T033/T034 consolidated |
+| `TO_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T012; T033/T034 consolidated |
+| `AS_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T013; T033/T034 consolidated |
+| `IS_ARRAY` | 4.11 / D | Original T021/T022 audit complete | T014; T033/T034 consolidated |
+| `SPLIT` | 4.11 / D | Original T021/T022 audit complete | T015; T033/T034 consolidated |
+| `ARRAY_CONSTRUCT` | 4.2 / A | Covered: named constructor cases plus shared constructor/snippet evidence | T032–T034 complete |
+| `ARRAY_CONSTRUCT_COMPACT` | 4.2 / A | Covered: three name-specific six-golden cases plus constructor family | T032–T034 complete |
+| `ARRAY_AGG` | 4.3 / B; Entry 19.3 | Covered: ordered/window, resolution, set-op and compound cases | T032–T034 complete |
+| `ARRAY_UNION_AGG` | 4.6 / B | Covered: named cases plus shared set-aggregate family | T032–T034 complete |
+| `ARRAY_UNIQUE_AGG` | 4.6 / B | Covered: named cases plus shared set-aggregate family | T032–T034 complete |
+| `ARRAY_CAT` | 4.7 / C | Covered: named cases plus shared binary/set family | T032–T034 complete |
+| `ARRAY_EXCEPT` | 4.7 / C | Covered: named cases plus shared binary/set family | T032–T034 complete |
+| `ARRAY_INTERSECTION` | 4.7 / C | Covered: named cases plus shared binary/set family | T032–T034 complete |
+| `ARRAYS_OVERLAP` | 4.7 / C | Covered: named cases plus shared binary/set family | T032–T034 complete |
+| `ARRAY_APPEND` | 4.8 / C | Covered: named cases plus shared mutator family | T032–T034 complete |
+| `ARRAY_PREPEND` | 4.8 / C | Covered: named cases plus shared mutator family | T032–T034 complete |
+| `ARRAY_INSERT` | 4.8 / C | Covered: named two/three-operand family cases and INSERT-specific third operand | T032–T034 complete |
+| `ARRAY_REMOVE` | 4.8 / C | Covered: named cases plus shared mutator family | T032–T034 complete |
+| `ARRAY_REMOVE_AT` | 4.8 / C | Covered: named cases plus shared mutator family | T032–T034 complete |
 
 ### Inventory sources and non-function obligations
 
@@ -246,6 +325,145 @@ expanded-scope sign-off.
   composition helpers, not unassigned Entry 4 array-function implementations.
   Existing composition controls stay in scope; their unrelated feature work,
   SQL generation, and non-array release entries are not pulled into D.
+
+## T032–T034 consolidation finding (2026-11-19)
+
+The user approved minimum name-specific coverage for `ARRAY_CONSTRUCT_COMPACT`,
+reusing the constructor family's tests rather than duplicating its full matrix.
+The earlier compact-specific evidence blocker is resolved by this scoped
+acceptance and two added tests in
+[`SqlEventWalkerSnowflakeArrayConstructTests`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayConstructTests.java):
+
+- Existing `snowflakeArrayConstructCompactSelectPlacementV0Test`: normal
+  column arguments, six output goldens and positioned Snowflake warning.
+- New `snowflakeArrayConstructCompactEmptyArgumentsGenericCompatibilityV0Test`:
+  empty call, six output goldens and an exact empty diagnostic list; preserves
+  existing generic empty-call routing, including its lack of dialect warning.
+- New `snowflakeArrayConstructCompactMixedNullArgumentsV0Test`: NULL, qualified
+  column and literal arguments with surrounding SELECT/WHERE references,
+  six output goldens and the exact positioned diagnostic list. NULL is retained
+  in the parse AST; runtime compaction is not evaluated by the parser.
+
+**Validation:** one focused isolated Maven run of the constructor host:
+**114 passed, zero failures/errors/skips, exit 0** (2026-11-19). No production
+code or existing goldens changed. The original T021/T022 and T025–T031 evidence
+was not rerun or re-audited.
+
+### Shared consolidation complete: T032/T033/T034
+
+**2026-11-19:** the user extended family-based acceptance to the remaining
+carried-forward names: where sibling tests exercise the shared parser/walker
+path, count that coverage and continue rather than expand another matrix.
+The following ledger supplies the missing 14-name signature/routing and
+named-witness accounting. Each row is **covered** under that policy.
+
+Routes and shared witnesses:
+
+- **G / constructor:** [`routine_invocation`](../src/main/antlr4/sql/SQLSelectParser.g4#L2373)
+  and [`exitRoutine_invocation`](../src/main/java/sql/walker/SqlParseEventWalker.java#L12291)
+  build the same ordered argument payload for the constructor names.
+  [`SqlEventWalkerSnowflakeArrayConstructTests`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayConstructTests.java)
+  supplies ordinary constructor placement, resolution, substitution, DDL/SCRIPT,
+  dialect and malformed-call controls. Its completed T025 structured-constructor
+  matrix supplies all twelve shared snippet endpoints, including direct/access
+  comparisons. These are shared-mechanism witnesses, not new compact/plain
+  per-name endpoint tests.
+- **A / aggregate:** [`aggregate_function`](../src/main/antlr4/sql/SQLSelectParser.g4#L1421)
+  and [`exitGeneral_set_function`](../src/main/java/sql/walker/SqlParseEventWalker.java#L9371)
+  handle the aggregate names. The seven tests in
+  [`SqlEventWalkerSnowflakeArraySetAggregateTests`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetAggregateTests.java)
+  jointly supply SELECT goldens, warning/reset, missing-alias, ambiguity and
+  set-op controls. ARRAY_AGG additionally has its own eight named methods in
+  [`SqlEventWalkerWithinGroupOrderedAggregateTests`](../src/test/java/sql/walker/SqlEventWalkerWithinGroupOrderedAggregateTests.java#L454),
+  including JOIN/DML, resolution and compound/set-op consumers.
+  `WITHIN GROUP` is credited to ARRAY_AGG's
+  [ordered aggregate route](../src/main/antlr4/sql/SQLSelectParser.g4#L1666),
+  not assumed for UNION_AGG/UNIQUE_AGG.
+- **B / binary/set:** [`array_set_binary_function`](../src/main/antlr4/sql/SQLSelectParser.g4#L1315)
+  and [`exitArray_set_binary_function`](../src/main/java/sql/walker/SqlParseEventWalker.java#L11982)
+  share the same two ordered operands and context-based substitution stamping
+  for all four names. The 14 tests in
+  [`SqlEventWalkerSnowflakeArraySetBinaryTests`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetBinaryTests.java)
+  jointly cover SELECT/JOIN/WHERE/HAVING/ORDER BY/QUALIFY/DDL/SCRIPT,
+  both operand contexts, substitutions, missing aliases and ambiguity.
+- **M / mutator:** [`array_mutator_function`](../src/main/antlr4/sql/SQLSelectParser.g4#L1328)
+  and [`exitArray_mutator_function`](../src/main/java/sql/walker/SqlParseEventWalker.java#L12017)
+  share ordered operand construction and substitution stamping across all five
+  names. The 22 tests in
+  [`SqlEventWalkerSnowflakeArrayMutatorTests`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java)
+  jointly cover SELECT/WHERE/DDL/SCRIPT, each operand's missing-alias path,
+  ambiguity and predicand/qualified-column variables. ARRAY_INSERT specifically
+  exercises its third operand; it is not inferred from a two-argument sibling.
+
+Native forms below describe SQL argument shapes, not a new parser validator.
+Each function links to its Snowflake reference; parser compatibility is
+explicitly distinguished after the table.
+
+| Carried-forward name / native form | Route / accepted sibling family | Named source witness |
+|---|---|---|
+| [`ARRAY_CONSTRUCT([expr, ...])`](https://docs.snowflake.com/en/sql-reference/functions/array_construct) | G / constructor | [`snowflakeArrayConstructSelectFromCsvShapeV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayConstructTests.java#L36); DDL/SCRIPT and twelve shared T025 snippet cases |
+| [`ARRAY_CONSTRUCT_COMPACT([expr, ...])`](https://docs.snowflake.com/en/sql-reference/functions/array_construct_compact) | G / constructor | `snowflakeArrayConstructCompactSelectPlacementV0Test`, `snowflakeArrayConstructCompactEmptyArgumentsGenericCompatibilityV0Test`, `snowflakeArrayConstructCompactMixedNullArgumentsV0Test` in the same constructor host |
+| [`ARRAY_AGG([DISTINCT] expr)` with optional `WITHIN GROUP` / `OVER`](https://docs.snowflake.com/en/sql-reference/functions/array_agg) | A / aggregate and ordered aggregate | [`arrayAggWithinGroupAllSelectClausesSymbolTableV13Test`](../src/test/java/sql/walker/SqlEventWalkerWithinGroupOrderedAggregateTests.java#L454), resolution V19 and compound/set-op V20 |
+| [`ARRAY_UNION_AGG(column)` with optional `OVER`](https://docs.snowflake.com/en/sql-reference/functions/array_union_agg) | A / set aggregates | [`snowflakeArrayUnionAggSelectPlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetAggregateTests.java#L34), missing-alias and set-op methods; UNIQUE_AGG ambiguity/reset siblings |
+| [`ARRAY_UNIQUE_AGG(column)` with optional `OVER`](https://docs.snowflake.com/en/sql-reference/functions/array_unique_agg) | A / set aggregates | [`snowflakeArrayUniqueAggSelectPlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetAggregateTests.java#L58), ambiguity and SCRIPT methods; UNION_AGG missing-alias/set-op siblings |
+| [`ARRAY_CAT(array1, array2)`](https://docs.snowflake.com/en/sql-reference/functions/array_cat) | B / binary/set | [`snowflakeArrayCatSelectPlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetBinaryTests.java#L34), QUALIFY, substitutions and second-operand missing-alias methods |
+| [`ARRAY_EXCEPT(source_array, array_of_elements_to_remove)`](https://docs.snowflake.com/en/sql-reference/functions/array_except) | B / binary/set | [`snowflakeArrayExceptScriptStatementScopedWarningV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetBinaryTests.java#L201), qualified-missing-alias method; CAT/INTERSECTION/OVERLAP shared controls |
+| [`ARRAY_INTERSECTION(array1, array2)`](https://docs.snowflake.com/en/sql-reference/functions/array_intersection) | B / binary/set | [`snowflakeArrayIntersectionJoinArgumentsUseNormalResolutionV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetBinaryTests.java#L87), ORDER BY and CREATE VIEW methods |
+| [`ARRAYS_OVERLAP(array1, array2)`](https://docs.snowflake.com/en/sql-reference/functions/arrays_overlap) | B / binary/set | [`snowflakeArraysOverlapWherePredicateV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArraySetBinaryTests.java#L113), HAVING and ambiguous-column methods |
+| [`ARRAY_APPEND(array, new_element)`](https://docs.snowflake.com/en/sql-reference/functions/array_append) | M / mutator | [`snowflakeArrayAppendSelectPlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java#L41), both operand failures, ambiguity and substitution methods |
+| [`ARRAY_PREPEND(array, new_element)`](https://docs.snowflake.com/en/sql-reference/functions/array_prepend) | M / mutator | [`snowflakeArrayPrependWithSubstitutionArgumentV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java#L117), second-operand failure; APPEND/INSERT shared controls |
+| [`ARRAY_INSERT(array, pos, new_element)`](https://docs.snowflake.com/en/sql-reference/functions/array_insert) | M / mutator | [`snowflakeArrayInsertSelectPlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java#L67), first/second/third operand failures, DDL and substitution methods |
+| [`ARRAY_REMOVE(array, value)`](https://docs.snowflake.com/en/sql-reference/functions/array_remove) | M / mutator | [`snowflakeArrayRemoveScriptStatementScopedWarningV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java#L141), both operand failures; APPEND/INSERT shared controls |
+| [`ARRAY_REMOVE_AT(array, pos)`](https://docs.snowflake.com/en/sql-reference/functions/array_remove_at) | M / mutator | [`snowflakeArrayRemoveAtWherePlacementV0Test`](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayMutatorTests.java#L93), both operand failures and substitution method |
+
+T033 parser/runtime dispositions for these 14:
+
+- G accepts zero or more expressions. Empty constructors retain the observed
+  legacy raw-name payload and no affinity warning; the compact empty case
+  explicitly asserts this. Nonempty constructors use the normal function map.
+- A recognizes a single expression and optional set qualifier in its general
+  aggregate branch. ARRAY_AGG's ordered branch accepts an optional argument
+  list plus `WITHIN GROUP` and optional `OVER`. This grammar is not native
+  argument/window-frame certification.
+- B recognizes exactly two expressions. M recognizes two or three expressions
+  for every mutator name, including native-incompatible two-argument INSERT
+  or third arguments on normally binary mutators. Retain that compatibility;
+  other argument-list shapes may use the existing generic route.
+- The [nonreserved names and lexer entries](../src/main/antlr4/sql/SQLSelectParser.g4#L2783)
+  already cover the carried-forward names. The
+  [registry](../src/main/java/sql/grammar/SnowflakeRoutineDialectRegistry.java#L11)
+  gives thirteen of these names Snowflake affinity; ARRAY_AGG retains its
+  existing standard-aggregate policy rather than gaining a new dialect warning.
+  Schema-qualified routine compatibility and existing first-feature/statement
+  reset behavior are unchanged.
+- Element types, compact NULL elimination, aggregate ordering/deduplication,
+  set/multiset semantics, index bounds/negative-position behavior, result
+  values and database restrictions remain runtime concerns. No SQL evaluation,
+  new arity/type enforcement or AST normalization is implied.
+
+### T034 combined evidence disposition
+
+| Scope | Accepted evidence | Consolidation result |
+|---|---|---|
+| Original 21 names | Existing T021 signature table and T022's 854 required cells / 1,033-method focused result | Reused unchanged; no second audit or run |
+| Seven T025–T031 names | Existing 83/74/54/56/71/71/82-case ledgers, scalar/table/lambda routing and runtime notes | Reused unchanged; 1,641 / 304 / 1,688 focused selections remain separate, overlapping historical results |
+| Fourteen A/B/C names | Named rows and G/A/B/M sibling mechanisms above; A/B/C historical green checkpoints in the master workplan; compact's 114-test constructor run | Covered under the user's family-based acceptance, not falsely upgraded to 14 full independent matrices |
+| Literal/subscript and constructor endpoints | [`arrayLiteralSelectListShapeV0Test`, `arrayLiteralQualifiedColumnDependencyV1Test`, `arrayLiteralTrailingCommaSyntaxFatalV0Test`, `splitResultLiteralSubscriptV0Test`](../src/test/java/sql/walker/SqlEventWalkerArraySubscriptTests.java); T025's twelve named snippet methods | Existing non-function obligations carried forward |
+| Lexer/manual repair | Existing D0/D5 official snapshots, named token maps and developer-confirmed golden repairs | Reused; no lexer change or new repair gate |
+| Deferred spelling | `LATERAL_FLATTEN` compatibility | Explicitly excluded; existing modifier support unchanged |
+
+Older aggregate/failure controls include partial assertions, count checks and
+some multi-query methods. They remain accepted historical family evidence;
+this consolidation does not relabel them as six-golden/exact-diagnostic tests
+or rewrite them. Missing duplicate per-name matrices are **covered by the
+identified family**, not new context blockers. Existing completed matrix
+counts are preserved and no artificial expanded cell/test total is invented.
+
+**Disposition:** T032, T033 and T034 are complete for all **42 names** under
+the approved evidence policy. The consolidation itself added no tests,
+production changes or test runs. T023/T024 subsequently completed the single
+full default accuracy run and final accounting above. Slice D is closed;
+whole-release certification remains separate.
 
 ## Approved 21-function ledger (all 21 explicit routes present)
 
@@ -754,17 +972,19 @@ the audited planning/companion documents remains excluded from D closure.
   preserving nested shadowing/capture without inventing physical columns.
   Array, initial-value and external body references retain normal SQL lineage.
   Runtime lambda evaluation, coercion and result types remain database concerns.
-- [ ] **D5.8 / T032:** verify/reuse all 14 A/B/C completions plus literal,
-  subscript and constructor snippet controls; fill only demonstrated gaps.
-- [ ] **D5-SIG / T033:** all 42 signatures, routing and runtime boundaries.
-- [ ] **D5-AUDIT / T034:** all 42 per-function matrices with named witnesses
-  and justified family-specific inapplicability; zero unassigned required cells.
-- [ ] **D4 / T023 final sign-off AFTER T034:** all affected family hosts, Phase15 derived-column gate,
-  Smoketest quality gate, and full default parser accuracy suite, excluding
-  opt-in slow/manual modes. Record actual pass/fail/skip counts and exit codes.
-- [ ] **D4 / T024 AFTER successful T023:** update 4.1–4.12, GC1..GC4 and
-  former E accounting for every named function. Slice F and whole-release
-  certification remain separate.
+- [x] **D5.8 / T032:** carry forward the 14 A/B/C completions and existing
+  literal/subscript/snippet evidence in the single shared consolidation.
+- [x] **D5-SIG / T033:** fill only missing signature/routing/runtime-boundary
+  entries in that same pass; retain the `LATERAL_FLATTEN` exclusion.
+- [x] **D5-AUDIT / T034:** close all 42 names from the same consolidated
+  witnesses and applicable-cell dispositions; no second independent audit.
+- [x] **D4 / T023:** one full default accuracy run completed: 4,306 reported,
+  4,244 passed, zero failures/errors, 62 existing/configured skips, exit 0.
+  Original source-class results supply family and Phase15/Smoketest coverage;
+  no duplicate wrapper or focused run.
+- [x] **D4 / T024:** final 4.1–4.12, GC1..GC4, all-42-name and former E
+  accounting recorded once in this document and the master workplan.
+  Slice F and whole-release certification remain separate.
 
 Prior D2.5/D3.7 focused runs remain valid historical evidence, but are not proof
 that the missing older per-function matrices were complete. This reconciliation

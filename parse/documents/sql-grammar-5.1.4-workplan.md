@@ -66,8 +66,8 @@ does not waive the remaining coverage, audit, corpus, documentation or release
 gates listed below, and is not whole-release certification.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D — all-array closure, amended after T022:** account for **42 canonical function names**: the original 21 audited names, 14 previously completed A/B/C names, and seven added names. **T025–T031 are complete:** structured constructor, contains, scalar flatten, table FLATTEN, FILTER, TRANSFORM and REDUCE have independent 83/74/54/56/71/71/82-case matrices. **Next: T032, verify the 14 carried-forward completions.** `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4; new table-function examples use only `FLATTEN(...)`. T033/T034 extend signature and cell-level audits to all 42; only then run T023 and T024. The original T021/T022 result (854/854 cells, 1,033 focused tests) remains valid for its **21-name baseline only**, not the expanded scope. See the [complete inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory).
-  - **Former Slice E function work:** `4.5` and `4.12` are now Slice D prerequisites, owned by T027..T031, not a second deferred array-function backlog. Preserve table-function and higher-order acceptance requirements; changing ownership does not complete them.
+  - **Slice D — COMPLETE (2026-11-19):** all **42 canonical function names**, Entry 4.1–4.12, GC1..GC4 and former E work are accounted for. T025–T034 implementation/evidence consolidation and T023/T024 final accuracy/accounting are complete. The single full default run reported **4,306 tests: 4,244 passed, 62 existing/configured skips, zero failures/errors, exit 0**. The seven additions retain their 83/74/54/56/71/71/82-case matrices; the original 21 ledgers and fourteen carried-forward names' accepted sibling-family evidence remain distinct. `LATERAL_FLATTEN` compatibility stays deferred beyond 5.1.4. See the [final sign-off](slice-d-array-function-reconciliation.md#t023t024-final-slice-d-sign-off-2026-11-19). This is not whole-release certification.
+  - **Former Slice E function work — complete in D:** scalar/table FLATTEN and FILTER/TRANSFORM/REDUCE are delivered under T027..T031 and included in T023/T024. There is no second deferred array-function backlog.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
 
@@ -2189,7 +2189,7 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 | **A — constructors and literal forms** | Close `ARRAY_CONSTRUCT` parity + array literal syntax completion | **4.2**, **4.4** | Placement + endpoint parity matrix passes; malformed/syntax controls green; no regressions in subscript behavior |
 | **B — ordered/union aggregations** | Consolidate aggregate family behavior and lineage | **4.3** (complete), **4.6** | `WITHIN GROUP`/`OVER` lineage matrix complete; aggregate family diagnostics + set-op integration controls pass |
 | **C — mutation/set operations** | Binary/set operators + mutator family | **4.7**, **4.8** | Function/operator signature matrix + column resolution + dialect diagnostics complete |
-| **D — consolidated all-array function closure** | Original transforms/conversions plus every remaining array function; carry forward completed A/B/C evidence | **4.1–4.12** function accounting; T025..T034 before T023/T024 | All 42 names independently accounted for; strict family-appropriate matrices, table/lambda scopes, signatures and final accuracy gates complete |
+| **D — consolidated all-array function closure — COMPLETE** | Original transforms/conversions plus every remaining array function; completed A/B/C evidence carried forward | **4.1–4.12**, GC1..GC4, T023/T024 and T025..T034 complete | All 42 names accounted for; accepted family coverage retained; final default run: 4,244 passed, 62 skipped, zero failures/errors, exit 0 |
 | **E — former table/higher-order owner** | Function implementation and acceptance transferred into D, not deferred or duplicated | **4.5** -> T027/T028; **4.12** -> T029/T030/T031 | Satisfied by the corresponding D tasks and expanded audit, not by the ownership transfer itself |
 | **F — delivery closure** | Corpus + snippet replay, docs, and release-gate verification | Entry 4 closeout + Entry 10/consumer-doc touchpoints where needed | Focused + smoketest/full parser gates pass; workplan matrix accounting complete |
 
@@ -2296,9 +2296,9 @@ is the exhaustive planning-document ledger. T025..T034 below are inserted
 
 | Area | Exact functions | Remaining execution owner |
 |---|---|---|
-| 4.9 transforms (3) | `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT` | D1, D-SIG and D-AUDIT complete; T023/T024 final gates remain |
-| 4.10 unary (8) | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` | All eight matrices independently reverified by T022, including SORT flags; T023/T024 final gates remain |
-| 4.11 conversion/predicate/split/range/position/zip (10) | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT` | All ten matrices, D-SIG and D-AUDIT complete; T022 repairs ARRAYS_TO_OBJECT gaps and verifies ZIP's fourth operand; T023/T024 final gates remain |
+| 4.9 transforms (3) | `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT` | D1, D-SIG, D-AUDIT and T023/T024 complete |
+| 4.10 unary (8) | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` | All eight matrices, including SORT flags, and T023/T024 complete |
+| 4.11 conversion/predicate/split/range/position/zip (10) | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT` | All ten matrices, original audits and T023/T024 complete; ARRAYS_TO_OBJECT operand controls and ZIP's fourth operand retained |
 
 **Implementation conventions and source anchors:**
 - Module: `parse`; ANTLR grammar: `parse/src/main/antlr4/sql/SQLSelectParser.g4`;
@@ -2323,13 +2323,18 @@ is the exhaustive planning-document ledger. T025..T034 below are inserted
 chain. D0.5 blocks every matrix/implementation task below. After that gate,
 execute the per-function rows in the displayed order, validating each before
 moving to the next. All rows edit the same focused host; do not parallel-edit it.
-The original D-SIG and D-AUDIT are complete for their 21-name scope. Current
-remaining execution order after completed **T025–T031** is
-**T032 -> T033 -> T034 -> T023 -> T024**. T025 includes a hard developer
+The original D-SIG and D-AUDIT retain their 21-name scope. **T025–T034 are
+complete**, including the single shared consolidation and user-approved
+carry-forward family coverage. **T023/T024 are also complete:** one full default
+accuracy run passed and its final status/accounting is recorded below.
+Task IDs preserve traceability; they do not require separate passes.
+Reuse existing named-method ledgers and passing batch results; inspect only
+missing or contradictory evidence, without reopening completed matrices.
+T025 includes a hard developer
 manual-token-repair gate before new matrices can be completed; that gate is
-developer-confirmed complete as of 2026-11-19. T033 depends
-on all seven function tasks and carried-forward evidence; T034 depends on
-T033; T023 depends on T034; T024 depends on successful T023 results.
+developer-confirmed complete as of 2026-11-19. T032/T033/T034 closed together
+from the shared evidence; T023 follows that consolidation, and T024 records
+its successful result once.
 
 ##### Sequential prompt checklist for completing Slice D
 
@@ -2390,14 +2395,14 @@ only for a proved defect. Do not commit unless requested.
 22. [x] **D5.5 / T029:** FILTER complete: 71 independent lambda/binding/lineage cases.
 23. [x] **D5.6 / T030:** TRANSFORM complete: 71 independent higher-order cases.
 24. [x] **D5.7 / T031:** REDUCE complete: 82 independent array/initial-value/lambda cases.
-25. [ ] **D5.8 / T032:** `Verify and reuse all 14 previously completed A/B/C function matrices and literal/subscript controls; repair only demonstrated gaps.`
-26. [ ] **D5-SIG / T033:** `Reconcile signatures, routing and parser/runtime boundaries for all 42 names and the FLATTEN compatibility spelling.`
-27. [ ] **D5-AUDIT / T034:** `Audit every applicable required cell for all 42 names; do not reuse the original 21-name PASS as expanded sign-off.`
+25. [x] **D5.8 / T032:** `Fourteen A/B/C names covered by named tests and accepted sibling-family evidence; no duplicate matrix expansion.`
+26. [x] **D5-SIG / T033:** `All 42 signature/routing/runtime-boundary dispositions consolidated; LATERAL_FLATTEN remains excluded.`
+27. [x] **D5-AUDIT / T034:** `Coverage closed from the same evidence under the user-approved family policy; no second matrix audit.`
 
 **Close the expanded Slice D**
 
-28. [ ] **D4.1 / T023:** `Run every affected family suite, Phase15, Smoketest and the full default parser accuracy suite, after T034.`
-29. [ ] **D4.2 / T024:** `Record actual results and all 42 function dispositions. Do not claim whole-release readiness.`
+28. [x] **D4.1 / T023:** `Single full default run complete: 4,306 reported, 4,244 passed, 62 skipped, zero failures/errors, exit 0; source-class gate coverage, no wrapper reruns.`
+29. [x] **D4.2 / T024:** `Final all-42-name, Entry 4.1–4.12, GC1..GC4 and former E accounting complete; whole-release readiness remains separate.`
 
 At any suitable checkpoint, separately prompt:
 `Commit and push the completed work with a clear summary.`
@@ -2452,6 +2457,15 @@ At any suitable checkpoint, separately prompt:
 Every function row below independently follows the established regression /
 coverage case -> route / walker / registry -> strict matrix -> focused green ->
 accounting sequence:
+
+**Superseding user-approved carry-forward policy (2026-11-19):** T032–T034
+accept named tests plus sibling-family evidence where the parser/walker path
+is shared; missing duplicate full suites are not context blockers.
+`ARRAY_CONSTRUCT_COMPACT` uses three name-specific cases plus its constructor
+family. The reconciliation identifies shared mechanisms and witnesses for
+all 14 carried-forward names without claiming new full per-name matrices or
+upgrading the actual strength of older assertions. Completed matrices for
+the other 28 names remain unchanged.
 
 1. Start with a new case for the actual missing behavior or assertion coverage.
    Prove red -> green for behavior changes. Coverage-only additions may already
@@ -2651,41 +2665,41 @@ Preserve old expectations except developer-controlled token-ID repairs.
   extractor goldens changed. The transient VS Code generated-rule diagnostic
   has cleared; the higher-order test host reports no editor errors.
 
-- [ ] T032 [Plan:D5.8] Verify carried-forward A/B/C evidence for the following **14** names in `parse/documents/slice-d-array-function-reconciliation.md`: `ARRAY_CONSTRUCT`, `ARRAY_CONSTRUCT_COMPACT`, `ARRAY_AGG`, `ARRAY_UNION_AGG`, `ARRAY_UNIQUE_AGG`, `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, `ARRAYS_OVERLAP`, `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT`. Link each required cell to named existing methods in the constructor, ordered-aggregate, set-aggregate, set-binary and mutator hosts; reuse that evidence and add tests only for demonstrated gaps. Reconcile the older 4.2 snippet/DDL/SCRIPT checklist against actual tests rather than trusting either the stale "partial" prose or a green class count. Retain `SqlEventWalkerArraySubscriptTests` literal/subscript non-regression controls; syntax is not an extra function name.
+- [x] T032 [Plan:D5.8] As part of the **single shared T032/T033/T034 evidence consolidation**, carry forward the A/B/C evidence for these **14** names in `parse/documents/slice-d-array-function-reconciliation.md`: `ARRAY_CONSTRUCT`, `ARRAY_CONSTRUCT_COMPACT`, `ARRAY_AGG`, `ARRAY_UNION_AGG`, `ARRAY_UNIQUE_AGG`, `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, `ARRAYS_OVERLAP`, `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT`. Named witnesses and shared constructor/aggregate/binary/mutator mechanisms are recorded under the user-approved family policy. Existing literal/subscript controls and T025's twelve shared constructor snippet endpoints are retained. No duplicate matrices or family reruns.
 
-- [ ] T033 [Plan:D5-SIG] Extend the signature/routing ledger in `parse/documents/slice-d-array-function-reconciliation.md` to all **42** names and the FLATTEN compatibility spelling. Reconcile documented forms, dedicated versus generic routing, optional/variadic/lambda/table arguments, syntax rejection and explicit database-runtime responsibilities using grammar and named source witnesses. Preserve T021 as its original 21-name audit; add only genuinely missing signature controls in the appropriate family hosts.
+  **Compact evidence resolved (2026-11-19):** per user approval, retain its
+  existing SELECT case and add only empty-call and mixed NULL/value cases,
+  relying on constructor-family tests for shared behavior. All three have
+  six full output goldens; the new cases assert exact diagnostic lists.
+  One focused constructor-host run passed **114 tests, zero failures/errors/
+  skips, exit 0**; no production changes. This satisfies compact's approved
+  minimum, not a duplicated matrix. The same family-based acceptance now
+  closes the remaining carry-forward evidence. T032/T033/T034 are complete;
+  see the [shared consolidation](slice-d-array-function-reconciliation.md#shared-consolidation-complete-t032t033t034).
 
-- [ ] T034 [Plan:D5-AUDIT] Independently audit all 42 names against every applicable matrix cell and update `parse/documents/slice-d-array-function-reconciliation.md` plus this master plan. Require named source witnesses, actual per-family test results, explicit inapplicable-cell justifications, lexical/registry/routing dispositions and zero unassigned names or pending required cells. Include 4.1, GC1, scalar/table flattening, all three higher-order functions and A/B/C carry-forward evidence; preserve the original T022 854-cell result as historical, not expanded-scope proof. Repair demonstrated gaps before passing this gate.
+- [x] T033 [Plan:D5-SIG] Completed in the **same consolidation** for all **42** names: reuse T021 and T025–T031 signature/routing/runtime notes; add the missing 14 native forms and generic/aggregate/binary/mutator dispositions. Preserve permissive arity compatibility, standard ARRAY_AGG versus Snowflake-affinity policy, empty-call behavior and database-only runtime semantics. `LATERAL_FLATTEN` remains excluded. No new tests or unchanged-entry re-audit.
 
-- [ ] T023 [Plan:D4.1] **After T034**, rerun all affected array family hosts (constructor, literal/subscript, ordered aggregate, set aggregate, binary/set, mutator, transform, contains and higher-order/table-function hosts), then Phase15, Smoketest and the full default parser accuracy suite sequentially. Use the existing focused command pattern with the exact class selectors accumulated by T025..T034, followed by the commands below. Capture each exit code and pass/fail/error/skip counts; investigate failures without automatic golden rewriting. Do not mark sign-off complete on a nonzero exit.
-- [ ] T024 [Plan:D4.2] **After successful T023**, fill the final Slice D sign-off checklist and **4.1–4.12** accounting in `parse/documents/sql-grammar-5.1.4-workplan.md`; link all **42** functions and FLATTEN spellings to final evidence in the reconciliation. Update GC1/GC2/GC3/GC4 and former E ownership accurately and sync any changed bundled consumer docs. This can close the transferred function work, not Slice F, unrelated entries, the opt-in release suite or the whole 5.1.4 release.
+- [x] T034 [Plan:D5-AUDIT] Closed coverage from the **same consolidated evidence** for all 42 names. Preserve T022's 854-cell/1,033-method original scope and the seven later ledgers; accept the 14 carried-forward names' documented sibling-family evidence. Literal/subscript/endpoint controls, lexical/manual-repair evidence, registry/routing dispositions and deferred spelling are explicitly accounted for. No invented expanded cell count or duplicate matrix pass. T023/T024 final sign-off is recorded below.
 
-**Original transform-host focused command (use each new function's family host
-after its implementation, and all affected hosts at final sign-off):**
+- [x] T023 [Plan:D4.1] Executed the **single full default parser accuracy run** after consolidation, completed 2026-11-19 09:18:53 -05:00 in 1 min 29 sec. **4,306 reported; 4,244 passed; zero failures/errors; 62 existing/configured skips; exit 0 / BUILD SUCCESS.** Original source-class results supply affected-family and Phase15/Smoketest coverage. No focused/wrapper rerun, repair loop or golden rewrite.
+- [x] T024 [Plan:D4.2] Recorded final status/accounting once here and in the [reconciliation sign-off](slice-d-array-function-reconciliation.md#t023t024-final-slice-d-sign-off-2026-11-19): all 42 names, 4.1–4.12, GC1/GC2/GC3/GC4 and former E ownership are closed. `LATERAL_FLATTEN` compatibility stays excluded. Consumer bundle contents did not change, so no vendor/JAR docs sync was needed. Slice F, unrelated entries, the opt-in release suite, packaging/publishing and whole-release certification remain separate.
+
+**Single executed final accuracy command (T023, JDK 21):**
 
 ```bash
-mvn -f parse/pom.xml -Pisolated-build \
-  -Dtest=SqlEventWalkerSnowflakeArrayTransformTests \
-  -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test
-```
-
-**Remaining final sign-off commands (D4.1 only):**
-
-```bash
-mvn -f parse/pom.xml -Pisolated-build \
-  -Dtest=sql.walker.Phase15DerivedColumnGateTestSuite \
-  -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test
-mvn -f parse/pom.xml -Pisolated-build \
-  -Dtest=sql.walker.SmoketestQualityGateTestSuite \
-  -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test
 mvn -f parse/pom.xml -Pisolated-build \
   -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test
 ```
 
-Use the configured JDK for this module. Independently validate the focused host
-through VS Code after per-function source compilation is current. "Full suite"
-here means default accuracy tests, not the opt-in release/slow or diagnostic
-modes. Do not arbitrarily exclude bound-query/snippet accuracy classes.
+Use the configured JDK for this module. No second VS Code test run is required.
+`Phase15DerivedColumnGateTestSuite` only inherits `SqlEventWalkerPivotUnpivotTests`;
+all 263 `SmoketestQualityGateTestSuite` test methods delegate to existing source
+tests. Use the original classes' results from the full run as gate-coverage
+evidence; do not claim the wrapper classes themselves ran or add their counts.
+"Full suite" means default accuracy tests, not opt-in release/slow or diagnostic
+modes. Preserve configured exclusions and report skips; do not exclude additional
+bound-query/snippet accuracy classes. This policy supersedes earlier references
+to a sequential focused/Phase15/Smoketest/full-suite ladder for Slice D.
 
 ##### Requirement mapping for the expanded sequence
 
@@ -2694,7 +2708,7 @@ Requirements are defined in the [reconciliation](slice-d-array-function-reconcil
 | Requirement | Plan items / tasks | Required implementation evidence |
 |---|---|---|
 | REQ-001: complete named ownership and implementation paths | Original T001/T003/T006..T022; D5.1..D5.8 (T025..T032); D5-AUDIT (T034); D4.2 (T024) | All 42 canonical names plus FLATTEN spellings explicitly accounted for in the reconciliation; lexical/routing/handler/affinity dispositions and named source evidence, with no duplicate tokens or hidden omissions |
-| REQ-002: independent strict matrices, not family spot checks | Original T005..T022; D5.1..D5.8 (T025..T032); D5-AUDIT (T034); D4.1/D4.2 (T023/T024) | Per-function six-golden/diagnostic witnesses across all family hosts; justified family-specific inapplicability; actual focused and final accuracy results |
+| REQ-002: completed matrices plus user-approved carry-forward family coverage | Original T005..T022; D5.1..D5.8 (T025..T032); D5-AUDIT (T034); D4.1/D4.2 (T023/T024) | Existing strict ledgers retained; 14 carried-forward names mapped to named tests and shared family mechanisms with actual assertion strength preserved; focused results reused and final default accuracy passed |
 | REQ-003: explicit signature/parser-runtime boundary | Original T006..T021; D5.1..D5.7 (T025..T031); D5-SIG (T033) | All 42 documented/parser-compatible forms, optional/variadic/table/lambda boundaries, exact syntax diagnostics and preserved generic/runtime compatibility |
 | REQ-004: frozen lexer decisions, official worklists, manual repair and final gate | Original T001..T005; D5.1 (T025); D5-AUDIT (T034); D4.1/D4.2 (T023/T024) | Expanded lexical inventory, official before/after and last-repaired-baseline snapshots, complete descending named maps, developer repair confirmation and successful final sign-off |
 
@@ -2704,30 +2718,26 @@ Requirements are defined in the [reconciliation](slice-d-array-function-reconcil
   for subsequent lexer changes; it cannot be skipped because D0 once passed.
   The current two-token addition and manual repairs are developer-confirmed
   complete as of 2026-11-19; any later lexer addition requires a fresh gate.
-- **Single Slice D final sign-off (once, after Slice D implementation is complete):**
-  - `sql.walker.Phase15DerivedColumnGateTestSuite`
-  - `sql.walker.SmoketestQualityGateTestSuite`
-  - Full default parser accuracy suite; exclude additional accuracy classes only when explicitly requested
+- **Single Slice D final sign-off:** consolidate existing evidence once, run the
+  full default parser accuracy suite once, and record closure once. Its original
+  source-class results supply family and Phase15/Smoketest coverage without
+  duplicate wrapper execution. Stop and report a failed run.
 
-#### Slice D final sign-off checklist (fill at Slice D closure)
+#### Slice D final sign-off checklist — complete (2026-11-19)
 
-- [ ] **T025..T034 complete for all 42 functions and FLATTEN spellings**
-  - Expanded matrix/signature audit and manual lexer-repair evidence: `<fill links>`
-- [ ] **Focused Slice D family suites rerun (all green)**
-  - Command(s): `<fill commands>`
-  - Result summary: `<fill pass/fail + notes>`
-- [ ] **Phase15 derived-column gate**
-  - Command: `mvn -pl parse -Dtest=sql.walker.Phase15DerivedColumnGateTestSuite test`
-  - Result summary: `<fill pass/fail + notes>`
-- [ ] **Smoketest quality gate**
-  - Command: `mvn -pl parse -Dtest=sql.walker.SmoketestQualityGateTestSuite test`
-  - Result summary: `<fill pass/fail + notes>`
-- [ ] **Parser module full suite**
-  - Command: `mvn -pl parse test`
-  - Result summary: `<fill pass/fail + notes>`
-- [ ] **Matrix/accounting closure recorded**
-  - Updated sections: `<fill section names>`
-  - Completed IDs/functions recorded explicitly: `<fill IDs/functions>`
+- [x] **T025..T034 complete for all 42 in-scope names**
+  - [Shared evidence consolidation](slice-d-array-function-reconciliation.md#shared-consolidation-complete-t032t033t034) and [manual lexer-repair evidence](#slice-d-d5-lexer-preparation-checkpoint-complete).
+  - Deferred `LATERAL_FLATTEN` compatibility remains excluded.
+- [x] **One full default accuracy run**
+  - Command: `mvn -f parse/pom.xml -Pisolated-build -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test`
+  - Exit code **0**; **4,306 reported / 4,244 passed / 0 failures / 0 errors / 62 skipped**, across 70 source-class reports.
+  - [Same-run Surefire reports](../target-maven/surefire-reports/): constructor 114, transform 1,087, higher-order 224, table-function 134, binary/set 14, mutator 22, set-aggregate 7, pivot/unpivot 203; all zero failures/errors/skips. Wrapper classes were not rerun or double-counted.
+  - Skips: 22 slow-release, 26 diagnostic, 11 manual profiling/timing and three parked live-query tests. Existing `PUML3ParserTest.java` / `DumpNestedCteSymbolGoldensTest.java` exclusions unchanged.
+  - Persistent session log: `slice-d-final-accuracy.log`; completed 09:18:53 -05:00, elapsed 1 min 29 sec.
+- [x] **Final status/accounting update recorded once**
+  - Updated sections: current Slice D summary, task/index checkboxes, this final checklist, Entry 4 status table, GC1..GC4 and reconciliation final sign-off.
+  - T023/T024 and T025..T034 complete; all 42 canonical functions are explicitly recorded in the [closed inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory). Entry 4.1–4.12 and former E function work are closed.
+  - `LATERAL_FLATTEN` compatibility remains deferred; Slice F, Entry 11 Tier-2, opt-in release tests and packaging/publishing are not certified by this default-accuracy sign-off.
 
 ### Entry 4 array-function inventory and historical gap list (no ellipsis)
 
@@ -2756,38 +2766,39 @@ Source-of-truth inputs used for this inventory:
 - `ARRAYS_TO_OBJECT`
 
 All five are in scope. GC2/GC3 implementation and original audits are complete;
-GC1 is now the next Slice D task T025, not a release-scope exclusion.
+GC1 is complete under T025 and T023/T024, not a release-scope exclusion.
 
 ### Entry 4 gap-closure subplan (GC) — explicit sequencing for doc/lexer gaps
 
 All five gap functions are in-scope for Entry 4 closure. Sequence them in bounded GC batches:
 
-1. **GC1 — Slice D5.1 / T025 NEXT (constructor parity, originally Slice A)**
+1. **GC1 — COMPLETE: Slice D5.1 / T025 (constructor parity, originally Slice A)**
    - Function: `ARRAY_CONSTRUCT_STRUCTURED`
    - Attach to: **4.2**, owned by consolidated Slice D.
    - Deliverables: T025's expanded lexical inventory, official before/after
      snapshots and complete descending named token-ID maps; developer manual
      repair gate; grammar/walker/affinity handling and independent strict
-     constructor matrix. Complete this function before T026.
+     constructor matrix. Completed before T026; T023/T024 final sign-off passed.
 
-2. **GC2 — Slice D extensions (transform/unary parity)**
+2. **GC2 — COMPLETE: Slice D extensions (transform/unary parity)**
    - Functions: `ARRAY_REPEAT`, `ARRAY_REVERSE`, `ARRAY_SUM`
    - Attach to:
      - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
      - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (single-array-argument parser family; ARRAY_SUM is a database aggregate)
    - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
-   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` had 27 strict tests each; that historical focused run passed 216/216. Subsequent D1/D2.6/D-SIG work and T022's independent audit are complete. Current counts include 55 `ARRAY_REPEAT` and 33 each `ARRAY_REVERSE`/`ARRAY_SUM` cases; all 1,033 host tests pass in Maven and VS Code. T023/T024 broad accuracy/accounting gates remain open; GC2 final sign-off is not claimed.
+   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` had 27 strict tests each; that historical focused run passed 216/216. Subsequent D1/D2.6/D-SIG and T022 work established 55 `ARRAY_REPEAT` and 33 each `ARRAY_REVERSE`/`ARRAY_SUM` cases, with the historical 1,033-test host green in Maven and VS Code. The current expanded host passes 1,087 in T023's full default run; T024 closes GC2 accounting.
 
-3. **GC3 — Slice D conversion extension**
+3. **GC3 — COMPLETE: Slice D conversion extension**
    - Function: `ARRAYS_TO_OBJECT`
    - Attach to: **4.11**
    - Deliverables: conversion-family routing, argument-shape diagnostics, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
-   - D3.6 implementation and D3.7 focused closeout complete (2026-11-18); that historical host run passed 256/256. T022 independently rechecked the matrix and added isolated unqualified controls for both arguments plus the missing-right-parenthesis control. `ARRAYS_TO_OBJECT` now has 48 cases (45 six-output, three parser-only); all 1,033 host tests pass in Maven and VS Code. T023/T024 gates remain open; GC3 final sign-off is not claimed.
+   - D3.6 implementation and D3.7 focused closeout complete (2026-11-18); that historical host run passed 256/256. T022 added isolated unqualified controls for both arguments and a missing-right-parenthesis control. `ARRAYS_TO_OBJECT` retains 48 cases (45 six-output, three parser-only). The current expanded host passes 1,087 in T023's full default run; T024 closes GC3 accounting.
 
-4. **GC4 — matrix/accounting closeout**
-   - T034/T024 update Entry 4 matrix/accounting tables with proved completion
-     for all five gaps and all 42 names; do not close GC4 on the old 21-name audit.
-   - Record exact evidence commands/results for focused suites, gate suites, and parser suite.
+4. **GC4 — COMPLETE: matrix/accounting closeout**
+   - T034/T024 close all five gaps and all 42 names using the original 21-name
+     audit, seven added ledgers and accepted fourteen-name family evidence.
+   - Final default run: 4,244 passed, 62 skipped, zero failures/errors, exit 0.
+     Source-class results cover the gates without duplicate wrapper execution.
 
 **Gate rule for GC batches:** no “etc” placeholders in status rows, plans, or closeout notes; each function must be named explicitly.
 
@@ -2800,8 +2811,9 @@ forward through T032. No listed array function is deferred outside D closure.
 - **4.1**: `ARRAY_CONTAINS`
 - **4.2**: `ARRAY_CONSTRUCT`, `ARRAY_CONSTRUCT_COMPACT`, `ARRAY_CONSTRUCT_STRUCTURED` (GC1)
 - **4.3**: `ARRAY_AGG`
-- **4.5**: `ARRAY_FLATTEN` (T027); `FLATTEN` / `LATERAL FLATTEN`
-  and existing `LATERAL_FLATTEN` spelling (T028)
+- **4.5**: `ARRAY_FLATTEN` (T027 complete); `FLATTEN` (T028 complete).
+  Existing LATERAL modifier support is unchanged; `LATERAL_FLATTEN`
+  compatibility remains deferred beyond 5.1.4.
 - **4.6**: `ARRAY_UNION_AGG`, `ARRAY_UNIQUE_AGG`
 - **4.7**: `ARRAY_CAT`, `ARRAY_EXCEPT`, `ARRAY_INTERSECTION`, `ARRAYS_OVERLAP`
 - **4.8**: `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT`
@@ -2942,23 +2954,23 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 
 | Sub | Construction | Current status / closure owner | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
-| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | D5.2 / T026 complete; final gates pending | 74 independent cases, including both operands, VARIANT casts and substitutions, all twelve placements and twelve dual-snapshot snippet endpoints. Postfix cast typing loss repaired at suffix construction. |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | GC1 / T025 complete; prior A evidence carried forward to T032 | Structured constructor has an independent 83-case matrix and completed lexical/manual gate. T032 still verifies existing constructor/compact evidence; T033/T034 and final gates remain open. |
+| **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Complete, including T023/T024 | 74 independent cases, including both operands, VARIANT casts and substitutions, all twelve placements and twelve dual-snapshot snippet endpoints. Postfix cast typing loss repaired at suffix construction. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Complete: GC1 / T025, T032–T034 and T023/T024 | Structured constructor retains its independent 83-case matrix and lexical/manual gate. Plain/compact named cases and shared constructor/snippet coverage are accepted under the user-approved family policy. Final constructor host: 114 passed. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | Scalar `ARRAY_FLATTEN`; table `FLATTEN` | T027/T028 complete | Scalar 54-case and table 56-case matrices complete. `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4; no new explicit LATERAL examples or lexer changes. |
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
-| **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
-| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
-| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | D1, D-SIG and D-AUDIT complete; T023/T024 pending | Current audited counts: 50/60/55 cases; documented arity and permissive T/generic controls distinguished. Host: 1,033/1,033 in Maven and VS Code. Existing goldens retained; not final Slice D or release sign-off. |
-| **4.10** | Unary array argument routes (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | All matrices, D-SIG and D-AUDIT complete; T023/T024 pending | Current counts: 35/35/37/55/33/33/33/33. T022 independently rechecks all eight, closes SORT/MAX/MIN NULL and name-neutrality gaps, and verifies both optional SORT flags. ARRAY_SUM remains a structured-array aggregate; U describes parser argument shape only. Host: 1,033/1,033. |
-| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | All matrices, D-SIG and D-AUDIT complete; T023/T024 pending | Current counts: 58/58/87/57/95/48/39/36/41/55. T022 verifies every eligible operand, including ZIP's fourth, and closes three ARRAYS_TO_OBJECT gaps. Optional/variadic forms and runtime limits remain explicit. Host: 1,033/1,033. |
+| **4.7** | Binary / set array operations | Complete: Slice C, accepted family consolidation and T023/T024 | Named/sibling-family witnesses cover `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP`, shared routing, operand resolution and substitution typing. Final binary/set host: 14 passed; not four invented full matrices. |
+| **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete: Slice C, accepted family consolidation and T023/T024 | Named/sibling-family witnesses cover shared mutator routing, each eligible missing-alias operand and substitution typing, including INSERT's third operand. Final mutator host: 22 passed. |
+| **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | Complete: D1, original audits and T023/T024 | Audited counts: 50/60/55; native arity and permissive T/generic controls distinguished. Historical T022 host: 1,033; current expanded host: 1,087 passed in the full default run. |
+| **4.10** | Unary array argument routes (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | Complete: matrices, original audits and T023/T024 | Counts: 35/35/37/55/33/33/33/33. T022's operand/NULL/name-neutrality and optional SORT flag evidence retained. ARRAY_SUM remains a structured-array aggregate; U describes parser shape only. Current expanded host: 1,087 passed. |
+| **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | Complete: matrices, original audits and T023/T024 | Counts: 58/58/87/57/95/48/39/36/41/55. Eligible operand, ZIP variadic, ARRAYS_TO_OBJECT, optional/generic and runtime-boundary evidence retained. Current expanded host: 1,087 passed. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Complete; D5.5..D5.7 / T029..T031 | Independent 71/71/82-case matrices; typed/local/nested bindings, external lineage, substitutions, twelve placements and twelve snippet endpoints per function. Focused selection: 1,688 passed. Runtime evaluation/type coercion remains outside the parser contract. |
 
-All previously completed function rows remain subject to T032 carry-forward
-verification or the original 21-name evidence, followed by T033/T034's
-expanded audits. T023/T024 cannot close D while any required new function or
-matrix cell remains pending.
+T032–T034 now consolidate all function rows: retain the original 21-name
+audit and seven added matrices; accept the 14 carried-forward names' named
+tests plus identified sibling-family coverage. T023's full default accuracy
+run passed and T024 accounting is complete. No Slice D closeout work remains.
 
 **Slice C closeout record (2026-11-17):**
 - Focused family suites green: `SqlEventWalkerSnowflakeArraySetBinaryTests`, `SqlEventWalkerSnowflakeArrayMutatorTests`, and `SqlEventWalkerSnowflakeArraySetAggregateTests`.
@@ -3478,16 +3490,17 @@ lexer regressions. VS Code's selected-host run also passes (tool summary:
 1,727 passed, zero failed across registered controllers; not a disjoint count
 to add to Maven). Generator tooling checks pass **4/4**.
 
-**Updated next: T032 carry-forward verification after completed T029/T030/T031.**
-T032..T034 and T023/T024 remain open. These batches do not close Slice D or release 5.1.4.
+**Slice D complete:** T025..T034 and T023/T024 are closed. The single full
+default run passed 4,244 tests with 62 existing/configured skips and zero
+failures/errors (exit 0). Whole-release certification remains separate.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 
-**Historical checklist, reconciled by T032:** this section's earlier "partial"
-description predates the Slice A closure checkpoint below. T032 must map each
-row to actual constructor/compact source evidence and fill only demonstrated
-gaps; neither that old description nor aggregate passing counts settle each
-cell. `ARRAY_CONSTRUCT_STRUCTURED` is separately required next under T025.
+**Historical checklist, reconciled by completed T032:** plain/compact named
+tests and shared constructor-family coverage satisfy the approved carry-forward
+scope, including T025's twelve shared snippet endpoints. Per user direction,
+do not reopen this checklist as duplicate matrices for each constructor name.
+`ARRAY_CONSTRUCT_STRUCTURED` is complete under T025.
 
 **Definition of done for 4.2:** complete this checklist with one-query-per-method
 tests, exact `assertEquals` goldens for all extractor objects, and explicit
