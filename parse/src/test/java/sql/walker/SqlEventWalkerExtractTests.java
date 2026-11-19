@@ -518,14 +518,14 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	// --- DATE_PART / EXTRACT (FROM and comma forms) → datetime_function AST ---
 
 	@Test
-	public void extractCommaFormIsRoutineInvocation() {
+	public void extractCommaFormUsesDatetimeFunction() {
 		assertExtractAst(
 				"SELECT EXTRACT('year', order_date) FROM orders",
 				"{SQL={select={1={datetime_function={function_name=EXTRACT, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test
-	public void extractCommaLowercaseNameIsRoutineInvocation() {
+	public void extractCommaLowercaseNameUsesDatetimeFunction() {
 		assertExtractAst(
 				"SELECT extract('year', order_date) FROM orders",
 				"{SQL={select={1={datetime_function={function_name=extract, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
@@ -539,14 +539,14 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	}
 
 	@Test
-	public void datePartCommaStringYearFromColumnIsRoutineInvocation() {
+	public void datePartCommaStringYearFromColumnUsesDatetimeFunction() {
 		assertExtractAst(
 				"SELECT DATE_PART('year', order_date) FROM orders",
 				"{SQL={select={1={datetime_function={function_name=DATE_PART, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 	}
 
 	@Test
-	public void datePartCommaLowercaseNameIsRoutineInvocation() {
+	public void datePartCommaLowercaseNameUsesDatetimeFunction() {
 		assertExtractAst(
 				"SELECT date_part('year', order_date) FROM orders",
 				"{SQL={select={1={datetime_function={function_name=date_part, part_form=STRING, part=year, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");

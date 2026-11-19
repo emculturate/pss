@@ -17018,14 +17018,9 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
-		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_INSERT_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_UPDATE_KEY)
-				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+		return walker.isNonTableQuerySourceReference(normalizedSourceRef)
+				|| walker.isNumberedScopeReference(normalizedSourceRef, MUMBLE_INSERT_KEY)
+				|| walker.isNumberedScopeReference(normalizedSourceRef, MUMBLE_UPDATE_KEY);
 	}
 
 	public boolean isTableFunctionSourceReference(String sourceRef) {

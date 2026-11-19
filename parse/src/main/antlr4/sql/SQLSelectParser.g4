@@ -75,7 +75,14 @@ options {
   }
 
   private boolean isAllowedImplicitAlias(String name) {
-    return !isDisallowedSetOperatorAlias(name) && !isDisallowedJoinKeywordAlias(name);
+    // QUALIFY <condition> must not become an alias followed by a join-extension variable.
+    int next = _input.LA(2);
+    boolean qualifyCondition = "qualify".equalsIgnoreCase(name)
+        && (next == Variable_Identifier
+            || next == Extended_Variable_Identifier
+            || next == Mixed_Variable_Identifier);
+    return !isDisallowedSetOperatorAlias(name) && !isDisallowedJoinKeywordAlias(name)
+        && !qualifyCondition;
   }
 
   private boolean isSnowflakeTableFunctionModeLiteral(String functionName, String tokenText) {
@@ -790,7 +797,7 @@ select_all_columns
   ;
 
 wildcard_reference
-  : (tb_name=Identifier DOT)? MULTIPLY
+  : (tb_name=identifier DOT)? MULTIPLY
   ;
 
 /*
@@ -1780,6 +1787,7 @@ snowflake_time_slice_expression
 snowflake_time_slice_boundary
   : character_literal
   | identifier
+  | END
   ;
 
 snowflake_day_boundary_expression
@@ -1826,15 +1834,12 @@ sign
   ; */
 
 extract_expression
-  : EXTRACT LEFT_PAREN extract_field_string=extract_field FROM extract_source RIGHT_PAREN
+  : EXTRACT LEFT_PAREN extract_field_string=extract_field (FROM | COMMA) extract_source RIGHT_PAREN
   ;
 
-// Comma form EXTRACT(part, source) is not this rule — it parses as routine_invocation (function AST).
-// Only the FROM keyword between field and source selects extract_expression (same policy as date_part_expression).
-
-// Comma form DATE_PART(part, source) parses as routine_invocation, not this rule.
+// Both DATE_PART forms treat the field as metadata, never as a value-expression column.
 date_part_expression
-  : DATE_PART LEFT_PAREN date_part_field=extract_field FROM date_part_source=extract_source RIGHT_PAREN
+  : DATE_PART LEFT_PAREN date_part_field=extract_field (FROM | COMMA) date_part_source=extract_source RIGHT_PAREN
   ;
 
 extract_field
@@ -2588,6 +2593,7 @@ nonreserved_keywords
   | 	MILLISECONDS
   | 	MIN
   | 	MINUTE
+  | 	MODE
   | 	MONEY
   | 	MONTH
   | 	NAME	 // POSTGRES
@@ -2646,6 +2652,7 @@ nonreserved_keywords
   | 	TINYINT
   | 	TO
   | 	TRIM
+  | 	TRUNCATE
   | 	UNION    // HIVE
   | 	UNKNOWN
   | 	UPDATE
@@ -2752,6 +2759,36 @@ nonreserved_keywords
   | POSITION
   | INPUT
   | PATH
+  // Late-added words retain their syntax roles but are also valid object names.
+  | QUALIFY
+  | CHARINDEX
+  | INSTR
+  | IFF
+  | MD5
+  | REVERSE
+  | QUERY_HSTORY
+  | RECURSIVE
+  | LATERAL
+  | ROWCOUNT
+  | TIMELIMIT
+  | FILES
+  | FILE_FORMAT
+  | IGNORE_CASE
+  | MAX_FILE_COUNT
+  | MAX_RECORDS_PER_FILE
+  | KIND
+  | JOB_ID
+  | DAYOFMONTH
+  | DAYOFWEEK
+  | DAYOFWEEKISO
+  | DAYOFYEAR
+  | WEEKISO
+  | WEEKOFYEAR
+  | EPOCH_MICROSECOND
+  | EPOCH_MILLISECOND
+  | EPOCH_SECOND
+  | SETS
+  | WITHIN
   // Entry 1: retain generic calls and qualified UDFs until dedicated rules apply
   | DATEADD
   | TIMEADD
@@ -3625,8 +3662,9 @@ Population_Identifier
 
 /*
 ===============================================================================
-  Late-added reserved keywords
+  Late-added keywords
   Keep near Identifier to minimize token-number shifts in legacy tests.
+  Add word keywords to nonreserved_keywords as well, preserving object-name use.
 ===============================================================================
 */
 

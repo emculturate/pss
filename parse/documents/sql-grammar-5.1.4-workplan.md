@@ -172,6 +172,47 @@ does not itself authorize publication.
    (API/docs version `5.1.4`) during these iterations; do not increment the
    artifact version merely because another local candidate was built.
    Record new checksums after every rebuild.
+
+   **RMCP datetime findings (2026-11-19):** DATE_PART comma and EXTRACT
+   comma now use dedicated metadata rules, preventing bare date parts from
+   becoming source columns. TIME_SLICE also accepts the existing END token
+   as a bare boundary, consistent with START and quoted boundaries.
+   [SqlEventWalkerDatetimeMetadataTests](../src/test/java/sql/walker/SqlEventWalkerDatetimeMetadataTests.java)
+   adds 578 independent six-golden cases, exact diagnostics, and direct-walker/
+   production-access parity across 14 function names. The seven-suite datetime
+   selection passed **1,090 tests, zero failures/errors/skips**. Running the new
+   suite against the unchanged local release JAR produced **141 failures out
+   of 578**, confined to the extraction-comma cases and bare END. All **479**
+   official lexer constant declarations match that JAR. The release JARs above
+   have **not** been rebuilt with these fixes. Contextual-keyword findings
+   are covered by the follow-up below. The owner confirmed that the
+   malformed-SQL findings require RMCP expectation changes, not parser
+   changes; the earlier recovery edits and corresponding test edits were
+   reverted, preserving existing 5.1.4 recovery behavior.
+
+   **RMCP contextual-name follow-up (2026-11-19):** Audited all **128** late
+   word keywords. Added the **31** previously omitted words to the shared
+   name allowlist, including MODE/TRUNCATE, string-function names, table-
+   function argument names, extraction fields, QUALIFY/LATERAL, SETS/WITHIN,
+   and the legacy QUERY_HSTORY spelling. Qualified wildcards now use the same
+   identifier rule, with no change to their AST shape. Fixed internal query-
+   scope prefix collisions exposed by physical/alias names such as
+   `query_hstory` and `delete`.
+   [SqlEventWalkerContextualKeywordTests](../src/test/java/sql/walker/SqlEventWalkerContextualKeywordTests.java)
+   adds **517** independent six-golden cases, exact diagnostics, production-
+   access parity, and the four original MODE/TRUNCATE RMCP queries. The
+   ten-suite focused selection passed **1,845 tests, zero failures/errors/
+   skips**. The first full run caught an implicit-alias ambiguity in the
+   existing `QUALIFY <condition>` template form. Corrected clause precedence
+   and added guards for all three variable-token forms; the subsequent
+   keyword/predicate/QUALIFY selection passed **642 tests, zero failures/
+   errors/skips**. All **479** lexer constant declarations remain unchanged.
+   After reverting those recovery changes, the full parser release selection
+   (`mvn -f parse/pom.xml -Pisolated-build,release-tests test`) passed:
+   **5,406 reported; 5,366 passed, 40 skipped, zero failures/errors**
+   (exit 0). This includes both new regression suites.
+   No release JAR rebuild or publication was performed.
+
 4. [ ] **Separate publication gate — BLOCKED pending explicit authorization.**
    After RMCP acceptance, obtain the owner's explicit instruction to publish
    to Archiva. Until then, do not run Maven `deploy`, direct repository uploads

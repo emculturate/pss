@@ -4764,6 +4764,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.remove("1");
 
 		Map<String, Object> item = new HashMap<String, Object>();
 		String wildcardSource = null;

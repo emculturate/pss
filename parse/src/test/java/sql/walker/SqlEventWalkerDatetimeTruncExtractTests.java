@@ -467,12 +467,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR02NestedDatePartInsideTruncValueV0Test() {
 		SqlParserAccess parser = parseEndpoint("select trunc(date_part(day, a.created_at), day) as bucket from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=bucket, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
 				"[bucket]",
 				"{}",
-				"{events={created_at=[[@7,28:28='a',<459>,1:28]], day=[[@5,23:25='day',<73>,1:23]]}}",
+				"{events={created_at=[[@7,28:28='a',<459>,1:28]]}}",
 				"{query0={bucket=[[@15,51:56='bucket',<459>,1:51]]}}",
-				"{def_query0={query_dictionary={bucket=[[@15,51:56='bucket',<459>,1:51]]}, table_dictionary={events={created_at=[[@7,28:28='a',<459>,1:28]], day=[[@5,23:25='day',<73>,1:23]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={bucket=[[@15,51:56='bucket',<459>,1:51]]}, table_dictionary={events={created_at=[[@7,28:28='a',<459>,1:28]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -493,12 +493,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR04NestedTruncInsideDatePartSourceV0Test() {
 		SqlParserAccess parser = parseEndpoint("select date_part(day, trunc(a.created_at, day)) as day_part from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=day_part, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=day_part, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
 				"[day_part]",
 				"{}",
-				"{events={created_at=[[@7,28:28='a',<459>,1:28]], day=[[@3,17:19='day',<73>,1:17]]}}",
+				"{events={created_at=[[@7,28:28='a',<459>,1:28]]}}",
 				"{query0={day_part=[[@15,51:58='day_part',<459>,1:51]]}}",
-				"{def_query0={query_dictionary={day_part=[[@15,51:58='day_part',<459>,1:51]]}, table_dictionary={events={created_at=[[@7,28:28='a',<459>,1:28]], day=[[@3,17:19='day',<73>,1:17]]}}, interface={day_part=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={day_part=[[@15,51:58='day_part',<459>,1:51]]}, table_dictionary={events={created_at=[[@7,28:28='a',<459>,1:28]]}}, interface={day_part=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -519,12 +519,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR06SiblingTruncAndDatePartIndependentV0Test() {
 		SqlParserAccess parser = parseEndpoint("select trunc(a.created_at, day) as b1, date_part(day, a.created_at) as p1 from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=b1, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, 2={alias=p1, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=b1, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, 2={alias=p1, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
 				"[p1, b1]",
 				"{}",
-				"{events={created_at=[[@3,13:13='a',<459>,1:13], [@16,54:54='a',<459>,1:54]], day=[[@14,49:51='day',<73>,1:49]]}}",
+				"{events={created_at=[[@3,13:13='a',<459>,1:13], [@16,54:54='a',<459>,1:54]]}}",
 				"{query0={p1=[[@21,71:72='p1',<459>,1:71]], b1=[[@10,35:36='b1',<459>,1:35]]}}",
-				"{def_query0={query_dictionary={p1=[[@21,71:72='p1',<459>,1:71]], b1=[[@10,35:36='b1',<459>,1:35]]}, table_dictionary={events={created_at=[[@3,13:13='a',<459>,1:13], [@16,54:54='a',<459>,1:54]], day=[[@14,49:51='day',<73>,1:49]]}}, interface={p1=[{name=created_at, table_ref=a}], b1=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={p1=[[@21,71:72='p1',<459>,1:71]], b1=[[@10,35:36='b1',<459>,1:35]]}, table_dictionary={events={created_at=[[@3,13:13='a',<459>,1:13], [@16,54:54='a',<459>,1:54]]}}, interface={p1=[{name=created_at, table_ref=a}], b1=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -532,12 +532,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR07NestedDatePartArithmeticInsideDateTruncV0Test() {
 		SqlParserAccess parser = parseEndpoint("select date_trunc(day, date_part(day, a.created_at) + 1) as bucket from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=bucket, datetime_function={function_name=date_trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={calc={left={datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=created_at, table_ref=a}}}}, right={literal=1}, operator=+}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=date_trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={calc={left={datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}, right={literal=1}, operator=+}}}}}, from={table={alias=a, table=events}}}}",
 				"[bucket]",
 				"{}",
-				"{events={created_at=[[@9,38:38='a',<459>,1:38]], day=[[@7,33:35='day',<73>,1:33]]}}",
+				"{events={created_at=[[@9,38:38='a',<459>,1:38]]}}",
 				"{query0={bucket=[[@17,60:65='bucket',<459>,1:60]]}}",
-				"{def_query0={query_dictionary={bucket=[[@17,60:65='bucket',<459>,1:60]]}, table_dictionary={events={created_at=[[@9,38:38='a',<459>,1:38]], day=[[@7,33:35='day',<73>,1:33]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={bucket=[[@17,60:65='bucket',<459>,1:60]]}, table_dictionary={events={created_at=[[@9,38:38='a',<459>,1:38]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -571,12 +571,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR10NestedTruncWithinCaseFeedingDatePartV0Test() {
 		SqlParserAccess parser = parseEndpoint("select date_part(day, case when a.flag = 1 then trunc(a.created_at, day) else a.created_at end) as day_part from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=day_part, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={case={clauses={1={then={datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, when={condition={left={column={name=flag, table_ref=a}}, right={literal=1}, operator==}}}}, else={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=day_part, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={case={clauses={1={then={datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, when={condition={left={column={name=flag, table_ref=a}}, right={literal=1}, operator==}}}}, else={column={name=created_at, table_ref=a}}}}}}}, from={table={alias=a, table=events}}}}",
 				"[day_part]",
 				"{}",
-				"{events={flag=[[@7,32:32='a',<459>,1:32]], created_at=[[@15,54:54='a',<459>,1:54], [@22,78:78='a',<459>,1:78]], day=[[@3,17:19='day',<73>,1:17]]}}",
+				"{events={flag=[[@7,32:32='a',<459>,1:32]], created_at=[[@15,54:54='a',<459>,1:54], [@22,78:78='a',<459>,1:78]]}}",
 				"{query0={day_part=[[@28,99:106='day_part',<459>,1:99]]}}",
-				"{def_query0={query_dictionary={day_part=[[@28,99:106='day_part',<459>,1:99]]}, table_dictionary={events={flag=[[@7,32:32='a',<459>,1:32]], created_at=[[@15,54:54='a',<459>,1:54], [@22,78:78='a',<459>,1:78]], day=[[@3,17:19='day',<73>,1:17]]}}, interface={day_part=[{name=created_at, table_ref=a}, {name=flag, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={day_part=[[@28,99:106='day_part',<459>,1:99]]}, table_dictionary={events={flag=[[@7,32:32='a',<459>,1:32]], created_at=[[@15,54:54='a',<459>,1:54], [@22,78:78='a',<459>,1:78]]}}, interface={day_part=[{name=created_at, table_ref=a}, {name=flag, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -662,12 +662,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR17NestedMixedChainDatePartExtractTruncV0Test() {
 		SqlParserAccess parser = parseEndpoint("select trunc(date_part(day, extract(day from a.created_at)), day) as bucket from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=bucket, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}}}}}}, from={table={alias=a, table=events}}}}",
 				"[bucket]",
 				"{}",
-				"{events={created_at=[[@11,45:45='a',<459>,1:45]], day=[[@5,23:25='day',<73>,1:23]]}}",
+				"{events={created_at=[[@11,45:45='a',<459>,1:45]]}}",
 				"{query0={bucket=[[@20,69:74='bucket',<459>,1:69]]}}",
-				"{def_query0={query_dictionary={bucket=[[@20,69:74='bucket',<459>,1:69]]}, table_dictionary={events={created_at=[[@11,45:45='a',<459>,1:45]], day=[[@5,23:25='day',<73>,1:23]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={bucket=[[@20,69:74='bucket',<459>,1:69]]}, table_dictionary={events={created_at=[[@11,45:45='a',<459>,1:45]]}}, interface={bucket=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -675,12 +675,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR18SiblingMixedAllFamiliesV0Test() {
 		SqlParserAccess parser = parseEndpoint("select date_trunc(day, a.created_at) as b1, trunc(a.updated_at, day) as b2, extract(day from a.created_at) as p1, date_part(day, a.updated_at) as p2 from events a", "SQL");
 		assertOutputs(parser,
-				"{SQL={select={1={alias=b1, datetime_function={function_name=date_trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, 2={alias=b2, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=updated_at, table_ref=a}}}}, 3={alias=p1, datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}, 4={alias=p2, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=updated_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"{SQL={select={1={alias=b1, datetime_function={function_name=date_trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=created_at, table_ref=a}}}}, 2={alias=b2, datetime_function={function_name=trunc, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=updated_at, table_ref=a}}}}, 3={alias=p1, datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}, 4={alias=p2, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=updated_at, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
 				"[b2, p1, p2, b1]",
 				"{}",
-				"{events={updated_at=[[@14,50:50='a',<459>,1:50], [@38,129:129='a',<459>,1:129]], created_at=[[@5,23:23='a',<459>,1:23], [@27,93:93='a',<459>,1:93]], day=[[@36,124:126='day',<73>,1:124]]}}",
+				"{events={updated_at=[[@14,50:50='a',<459>,1:50], [@38,129:129='a',<459>,1:129]], created_at=[[@5,23:23='a',<459>,1:23], [@27,93:93='a',<459>,1:93]]}}",
 				"{query0={b2=[[@21,72:73='b2',<459>,1:72]], p1=[[@32,110:111='p1',<459>,1:110]], p2=[[@43,146:147='p2',<459>,1:146]], b1=[[@10,40:41='b1',<459>,1:40]]}}",
-				"{def_query0={query_dictionary={b2=[[@21,72:73='b2',<459>,1:72]], p1=[[@32,110:111='p1',<459>,1:110]], p2=[[@43,146:147='p2',<459>,1:146]], b1=[[@10,40:41='b1',<459>,1:40]]}, table_dictionary={events={updated_at=[[@14,50:50='a',<459>,1:50], [@38,129:129='a',<459>,1:129]], created_at=[[@5,23:23='a',<459>,1:23], [@27,93:93='a',<459>,1:93]], day=[[@36,124:126='day',<73>,1:124]]}}, interface={b2=[{name=updated_at, table_ref=a}], p1=[{name=created_at, table_ref=a}], p2=[{name=updated_at, table_ref=a}], b1=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
+				"{def_query0={query_dictionary={b2=[[@21,72:73='b2',<459>,1:72]], p1=[[@32,110:111='p1',<459>,1:110]], p2=[[@43,146:147='p2',<459>,1:146]], b1=[[@10,40:41='b1',<459>,1:40]]}, table_dictionary={events={updated_at=[[@14,50:50='a',<459>,1:50], [@38,129:129='a',<459>,1:129]], created_at=[[@5,23:23='a',<459>,1:23], [@27,93:93='a',<459>,1:93]]}}, interface={b2=[{name=updated_at, table_ref=a}], p1=[{name=created_at, table_ref=a}], p2=[{name=updated_at, table_ref=a}], b1=[{name=created_at, table_ref=a}]}, table_alias={a=events}}}",
 				"null");
 	}
 
@@ -714,12 +714,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR21SetOpExceptBranchIsolationExtractDatePartV0Test() {
 		SqlParserAccess parser = parseEndpoint("select extract(day from a.created_at) as part_value, a.id from events a except select date_part(day, b.created_at) as part_value, b.id from events_archive b", "SQL");
 		assertOutputs(parser,
-				"{SQL={union={1={select={1={alias=part_value, datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=part_value, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}}}, from={table={alias=b, table=events_archive}}}}}}",
+				"{SQL={union={1={select={1={alias=part_value, datetime_function={function_name=extract, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=a}}}}, 2={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=part_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=b}}}}, 2={column={name=id, table_ref=b}}}, from={table={alias=b, table=events_archive}}}}}}",
 				"[part_value, id]",
 				"{}",
-				"{events_archive={created_at=[[@24,101:101='b',<459>,1:101]], id=[[@31,130:130='b',<459>,1:130]], day=[[@22,96:98='day',<73>,1:96]]}, events={created_at=[[@5,24:24='a',<459>,1:24]], id=[[@12,53:53='a',<459>,1:53]]}}",
+				"{events_archive={created_at=[[@24,101:101='b',<459>,1:101]], id=[[@31,130:130='b',<459>,1:130]]}, events={created_at=[[@5,24:24='a',<459>,1:24]], id=[[@12,53:53='a',<459>,1:53]]}}",
 				"{query0={part_value=[[@10,41:50='part_value',<459>,1:41]], id=[[@14,55:56='id',<459>,1:55]]}, query1={part_value=[[@29,118:127='part_value',<459>,1:118]], id=[[@33,132:133='id',<459>,1:132]]}}",
-				"{def_union2={def_query1={query_dictionary={part_value=[[@29,118:127='part_value',<459>,1:118]], id=[[@33,132:133='id',<459>,1:132]]}, table_dictionary={events_archive={created_at=[[@24,101:101='b',<459>,1:101]], id=[[@31,130:130='b',<459>,1:130]], day=[[@22,96:98='day',<73>,1:96]]}}, setop=EXCEPT, interface={part_value=[{name=created_at, table_ref=b}], id=[{name=id, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={part_value=[[@10,41:50='part_value',<459>,1:41]], id=[[@14,55:56='id',<459>,1:55]]}, table_dictionary={events={created_at=[[@5,24:24='a',<459>,1:24]], id=[[@12,53:53='a',<459>,1:53]]}}, interface={part_value=[{name=created_at, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={part_value=query_column, id=query_column}}}",
+				"{def_union2={def_query1={query_dictionary={part_value=[[@29,118:127='part_value',<459>,1:118]], id=[[@33,132:133='id',<459>,1:132]]}, table_dictionary={events_archive={created_at=[[@24,101:101='b',<459>,1:101]], id=[[@31,130:130='b',<459>,1:130]]}}, setop=EXCEPT, interface={part_value=[{name=created_at, table_ref=b}], id=[{name=id, table_ref=b}]}, table_alias={b=events_archive}}, def_query0={query_dictionary={part_value=[[@10,41:50='part_value',<459>,1:41]], id=[[@14,55:56='id',<459>,1:55]]}, table_dictionary={events={created_at=[[@5,24:24='a',<459>,1:24]], id=[[@12,53:53='a',<459>,1:53]]}}, interface={part_value=[{name=created_at, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={part_value=query_column, id=query_column}}}",
 				"null");
 	}
 
@@ -779,12 +779,12 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	public void truncExtractR26CteDerivedSetOpDatePartPropagationV0Test() {
 		SqlParserAccess parser = parseEndpoint("with q0 as (select date_part(day, e.created_at) as p1, e.id from events e), q1 as (select p.p1 as part_value, p.id from q0 p) select d.part_value, d.id from (select q.part_value, q.id from q1 q union all select q.part_value, q.id from q1 q) d", "SQL");
 		assertOutputs(parser,
-				"{SQL={with={1={cte={select={1={alias=p1, datetime_function={function_name=date_part, part_form=KEYWORD, part={column={name=day, table_ref=null}}, source={column={name=created_at, table_ref=e}}}}, 2={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}}, alias=q0}, 2={cte={select={1={column={name=p1, table_ref=p}, alias=part_value}, 2={column={name=id, table_ref=p}}}, from={table={alias=p, table=q0}}}, alias=q1}}, query={select={1={column={name=part_value, table_ref=d}}, 2={column={name=id, table_ref=d}}}, from={table={alias=d, query={union={1={select={1={column={name=part_value, table_ref=q}}, 2={column={name=id, table_ref=q}}}, from={table={alias=q, table=q1}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={column={name=part_value, table_ref=q}}, 2={column={name=id, table_ref=q}}}, from={table={alias=q, table=q1}}}}}}}}}}",
+				"{SQL={with={1={cte={select={1={alias=p1, datetime_function={function_name=date_part, part_form=KEYWORD, part=day, source={column={name=created_at, table_ref=e}}}}, 2={column={name=id, table_ref=e}}}, from={table={alias=e, table=events}}}, alias=q0}, 2={cte={select={1={column={name=p1, table_ref=p}, alias=part_value}, 2={column={name=id, table_ref=p}}}, from={table={alias=p, table=q0}}}, alias=q1}}, query={select={1={column={name=part_value, table_ref=d}}, 2={column={name=id, table_ref=d}}}, from={table={alias=d, query={union={1={select={1={column={name=part_value, table_ref=q}}, 2={column={name=id, table_ref=q}}}, from={table={alias=q, table=q1}}}, 2={union={qualifier=all, operator=union}}, 3={select={1={column={name=part_value, table_ref=q}}, 2={column={name=id, table_ref=q}}}, from={table={alias=q, table=q1}}}}}}}}}}",
 				"[part_value, id]",
 				"{}",
-				"{events={created_at=[[@9,34:34='e',<459>,1:34]], id=[[@16,55:55='e',<459>,1:55]], day=[[@7,29:31='day',<73>,1:29]]}}",
+				"{events={created_at=[[@9,34:34='e',<459>,1:34]], id=[[@16,55:55='e',<459>,1:55]]}}",
 				"{union4={part_value=[[@42,133:133='d',<459>,1:133]], id=[[@46,147:147='d',<459>,1:147]]}, query5={part_value=[[@44,135:144='part_value',<459>,1:135]], id=[[@48,149:150='id',<459>,1:149]]}, query0={p1=[[@14,51:52='p1',<459>,1:51], [@28,90:90='p',<459>,1:90]], id=[[@18,57:58='id',<459>,1:57], [@34,110:110='p',<459>,1:110]]}, query1={part_value=[[@32,98:107='part_value',<459>,1:98], [@52,165:165='q',<459>,1:165], [@65,211:211='q',<459>,1:211]], id=[[@36,112:113='id',<459>,1:112], [@56,179:179='q',<459>,1:179], [@69,225:225='q',<459>,1:225]]}, query2={part_value=[[@54,167:176='part_value',<459>,1:167]], id=[[@58,181:182='id',<459>,1:181]]}, query3={part_value=[[@67,213:222='part_value',<459>,1:213]], id=[[@71,227:228='id',<459>,1:227]]}}",
-				"{def_query5={context_list={q0=query0, q1=query1}, def_union4={context_list={q0=query0, q1=query1}, query_dictionary={part_value=[[@42,133:133='d',<459>,1:133]], id=[[@46,147:147='d',<459>,1:147]]}, interface={part_value=query_column, id=query_column}, table_alias={q1=query1, q0=query0}, def_query3={context_list={q0=query0, q1=query1, q=query1}, query_dictionary={part_value=[[@67,213:222='part_value',<459>,1:213]], id=[[@71,227:228='id',<459>,1:227]]}, setop=UNION, interface={part_value=[{name=part_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q1=query1, q=query1, q0=query0}}, def_query2={context_list={q0=query0, q1=query1, q=query1}, query_dictionary={part_value=[[@54,167:176='part_value',<459>,1:167]], id=[[@58,181:182='id',<459>,1:181]]}, interface={part_value=[{name=part_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q1=query1, q=query1, q0=query0}}}, query_dictionary={part_value=[[@44,135:144='part_value',<459>,1:135]], id=[[@48,149:150='id',<459>,1:149]]}, def_query1={context_list={q0=query0, p=query0}, query_dictionary={part_value=[[@32,98:107='part_value',<459>,1:98], [@52,165:165='q',<459>,1:165], [@65,211:211='q',<459>,1:211]], id=[[@36,112:113='id',<459>,1:112], [@56,179:179='q',<459>,1:179], [@69,225:225='q',<459>,1:225]]}, interface={part_value=[{name=p1, table_ref=p}], id=[{name=id, table_ref=p}]}, table_alias={p=query0, q0=query0}}, def_query0={query_dictionary={p1=[[@14,51:52='p1',<459>,1:51], [@28,90:90='p',<459>,1:90]], id=[[@18,57:58='id',<459>,1:57], [@34,110:110='p',<459>,1:110]]}, table_dictionary={events={created_at=[[@9,34:34='e',<459>,1:34]], id=[[@16,55:55='e',<459>,1:55]], day=[[@7,29:31='day',<73>,1:29]]}}, interface={p1=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, interface={part_value=[{name=part_value, table_ref=d}], id=[{name=id, table_ref=d}]}, table_alias={q1=query1, d=union4, q0=query0}}}",
+				"{def_query5={context_list={q0=query0, q1=query1}, def_union4={context_list={q0=query0, q1=query1}, query_dictionary={part_value=[[@42,133:133='d',<459>,1:133]], id=[[@46,147:147='d',<459>,1:147]]}, interface={part_value=query_column, id=query_column}, table_alias={q1=query1, q0=query0}, def_query3={context_list={q0=query0, q1=query1, q=query1}, query_dictionary={part_value=[[@67,213:222='part_value',<459>,1:213]], id=[[@71,227:228='id',<459>,1:227]]}, setop=UNION, interface={part_value=[{name=part_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q1=query1, q=query1, q0=query0}}, def_query2={context_list={q0=query0, q1=query1, q=query1}, query_dictionary={part_value=[[@54,167:176='part_value',<459>,1:167]], id=[[@58,181:182='id',<459>,1:181]]}, interface={part_value=[{name=part_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q1=query1, q=query1, q0=query0}}}, query_dictionary={part_value=[[@44,135:144='part_value',<459>,1:135]], id=[[@48,149:150='id',<459>,1:149]]}, def_query1={context_list={q0=query0, p=query0}, query_dictionary={part_value=[[@32,98:107='part_value',<459>,1:98], [@52,165:165='q',<459>,1:165], [@65,211:211='q',<459>,1:211]], id=[[@36,112:113='id',<459>,1:112], [@56,179:179='q',<459>,1:179], [@69,225:225='q',<459>,1:225]]}, interface={part_value=[{name=p1, table_ref=p}], id=[{name=id, table_ref=p}]}, table_alias={p=query0, q0=query0}}, def_query0={query_dictionary={p1=[[@14,51:52='p1',<459>,1:51], [@28,90:90='p',<459>,1:90]], id=[[@18,57:58='id',<459>,1:57], [@34,110:110='p',<459>,1:110]]}, table_dictionary={events={created_at=[[@9,34:34='e',<459>,1:34]], id=[[@16,55:55='e',<459>,1:55]]}}, interface={p1=[{name=created_at, table_ref=e}], id=[{name=id, table_ref=e}]}, table_alias={e=events}}, interface={part_value=[{name=part_value, table_ref=d}], id=[{name=id, table_ref=d}]}, table_alias={q1=query1, d=union4, q0=query0}}}",
 				"null");
 	}
 

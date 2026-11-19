@@ -3096,12 +3096,25 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (normalizedSourceRef.startsWith("def_")) {
 			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
-		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY)
+		return isNumberedScopeReference(normalizedSourceRef, MUMBLE_QUERY_KEY)
+				|| isNumberedScopeReference(normalizedSourceRef, MUMBLE_UNION_KEY)
+				|| isNumberedScopeReference(normalizedSourceRef, MUMBLE_INTERSECT_KEY)
+				|| isNumberedScopeReference(normalizedSourceRef, MUMBLE_VALUES_KEY)
+				|| isNumberedScopeReference(normalizedSourceRef, MUMBLE_DELETE_KEY)
 				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+	}
+
+	public boolean isNumberedScopeReference(String sourceRef, String prefix) {
+		if (sourceRef == null || !sourceRef.startsWith(prefix) || sourceRef.length() == prefix.length()) {
+			return false;
+		}
+		for (int i = prefix.length(); i < sourceRef.length(); i++) {
+			char character = sourceRef.charAt(i);
+			if (character < '0' || character > '9') {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public boolean isNonTableQuerySourceReference(String sourceRef) {

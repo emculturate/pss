@@ -54,12 +54,12 @@ coverage. IDs U01-U27 are shared with the consumer checklist.
 | U16 | Grouping combinators and ALL/DISTINCT AST | Structured ROLLUP/CUBE/GROUPING SETS and clause-level `option` values, not just flat column lists |
 | U17 | Table-function arguments and row sources | Literal keyword arguments are scalarized; named arguments, lateral sources, and generic table functions need traversal |
 | U18 | Arithmetic, casts, search/scalar functions, predicates, bare values | Broader expression shapes; bare value expressions must not become physical columns; SQL UNIQUE predicate removed |
-| U19 | EXTRACT and DATE_PART FROM | Dedicated `extract` contract, part form, invocation discriminator, typed literal sources; distinct from the add-family datetime AST |
+| U19 | EXTRACT and DATE_PART, FROM and comma forms | Dedicated metadata slots in `datetime_function`; scalar part values, part form, and structured source expressions |
 | U20 | Per-statement Snowflake/Postgres affinity | Warnings/counters identify target dependence; mixed affinity is FATAL; state resets between script statements |
 | U21 | SELECT-list expression subquery scope fix (November Entry 13) | Restored scalar `lookup` wrapper; private subquery columns no longer leak into outer output lineage |
 | U22 | Join-extension diagnostic deferral (November Entry 14) | Specific missing-table FATALs become severe warnings plus `JOIN_EXTENSION_REQUIRED`; whole-query approximation |
 | U23 | Set-op query-variable interface fix (November Entry 16) | Real branch exports survive query-variable members; variable-only composites have an open wildcard interface |
-| U24 | Contextual `position`, `input`, `path`, and numeric `truncate()` (November Entry 18) | Ten observed bound-query regressions cleared; obsolete unused array snippet discrepancy waived, not fixed |
+| U24 | Contextual late-added keywords and numeric `truncate()` (November Entry 18 / RMCP follow-up) | Late word keywords remain valid names; qualified wildcards use the same identifier rules; syntax/function roles retained |
 | U25 | Structured syntax/walker diagnostics and production LL policy | A returned Snippet/JSON or partial AST is not parse success; error messages include more context |
 | U26 | Lexer token numbering | Token IDs are version-specific; the November batch shifts old IDs 393-413 by +26 |
 | U27 | Existing substitutions/Jinja/colon-path surface versus backlog | Grammar presence is not complete template expansion, semi-structured, or generator support |
@@ -113,10 +113,10 @@ coverage. IDs U01-U27 are shared with the consumer checklist.
 - **Other structured AST changes:** GROUP BY ALL/DISTINCT records clause-level
   `option=ALL|DISTINCT`; ROLLUP/CUBE/GROUPING SETS retain combinator structure.
   Table-function literal keyword arguments are scalarized rather than exposed
-  as nested literal wrappers. EXTRACT/DATE_PART FROM uses `extract` with
-  `part`, `part_form`, `source`, optional `source_type`, and DATE_PART's
-  `invocation` discriminator. These contracts remain separate from the current
-  add-family `datetime_function` node.
+  as nested literal wrappers. EXTRACT/DATE_PART uses `datetime_function` with
+  `function_name`, scalar `part`, `part_form`, and structured `source`.
+  Both FROM and comma forms keep the part slot as metadata, not a column
+  reference.
 - **Dialect and bare-value handling:** Existing statement-level dialect
   diagnostics were added in August. Shared constructs remain neutral;
   dialect-specific grammar/parts use the existing collector, and mixed
@@ -162,6 +162,33 @@ is implied.
   normalization. This is not a dictionary-parity assertion. Unused snippet
   s82233's array syntax/walker discrepancy was accepted as obsolete; neither
   general array literals nor walker robustness were implemented for it.
+- **RMCP contextual-name follow-up (2026-11-19):** The audit covers all 128
+  word keywords in the late-added lexer block. All are accepted through the
+  shared `nonreserved_keywords` rule in identifier/alias positions, including
+  `MODE` and `TRUNCATE`. Qualified wildcards such as `mode.*` use `identifier`
+  too, rather than only the raw `Identifier` token. The added words retain
+  their function, clause, and named-argument roles when used in those syntax
+  positions; this is not blanket unreservation of core SQL keywords.
+  Internal scope detection now requires numbered scope references rather
+  than classifying an ordinary name such as `query_hstory` by its `query`
+  prefix alone. In the ambiguous `FROM tab1 QUALIFY <condition>` form,
+  QUALIFY retains clause precedence over an implicit alias followed by a
+  join-extension variable; an explicit `AS qualify` remains an alias.
+  The 517 independent cases in
+  [SqlEventWalkerContextualKeywordTests](../src/test/java/sql/walker/SqlEventWalkerContextualKeywordTests.java)
+  compare six complete output goldens and exact diagnostics through both
+  direct-walker and production-access paths, including simple, extended,
+  and mixed QUALIFY condition substitutions. The 31 previously omitted
+  words are:
+
+  | Group | Keywords |
+  |-------|----------|
+  | Functions | `CHARINDEX`, `INSTR`, `TRUNCATE`, `IFF`, `MD5`, `REVERSE` |
+  | Clause/modifier words | `QUALIFY`, `RECURSIVE`, `LATERAL`, `SETS`, `WITHIN` |
+  | Table-function argument names | `MODE`, `ROWCOUNT`, `TIMELIMIT`, `FILES`, `FILE_FORMAT`, `IGNORE_CASE`, `MAX_FILE_COUNT`, `MAX_RECORDS_PER_FILE`, `KIND`, `JOB_ID` |
+  | Legacy lexer spelling | `QUERY_HSTORY` |
+  | Extraction fields | `DAYOFMONTH`, `DAYOFWEEK`, `DAYOFWEEKISO`, `DAYOFYEAR`, `WEEKISO`, `WEEKOFYEAR`, `EPOCH_MICROSECOND`, `EPOCH_MILLISECOND`, `EPOCH_SECOND` |
+
 - **Entry 1 lexer baseline:** 26 function tokens were added before Identifier;
   IDs 1-392 are unchanged and former IDs 393-413 become 419-439. Part aliases
   remain identifiers. The user's manual golden edits are complete; the latest
@@ -410,9 +437,12 @@ vendor/JAR mirror, which does not bundle the workplan or Panto remediation index
 
 ## EXTRACT / DATE_PART
 
-- **`extract_expression`** — Expanded `extract_field` (Postgres + **Snowflake** field tokens, case-insensitive `EXTRACT` lexer).
+- **`extract_expression`** — Expanded `extract_field` (Postgres + **Snowflake** field tokens, case-insensitive `EXTRACT` lexer). Both `EXTRACT(field FROM source)` and the existing comma extension `EXTRACT(field, source)` use the dedicated metadata rule.
 - **`extract_source`** — Column, datetime literal, **interval**, broader predicand sources; dedicated **predicand** endpoint coverage.
-- **`date_part_expression`** — Snowflake/Postgres `DATE_PART(field FROM source)` with case-insensitive `DATE_PART` lexer (new keyword placed after PIVOT block to limit token renumbering).
+- **`date_part_expression`** — `DATE_PART(field FROM source)` and `DATE_PART(field, source)` use the same dedicated metadata/source contract, with case-insensitive `DATE_PART` lexer.
+- **Metadata isolation** — A bare date part such as `year` produces scalar `part=year`, never a column map. Metadata alone must not add physical-column dependencies or ambiguous/unresolved-column diagnostics. Genuine source columns, including a real qualified `a.year`, remain dependencies. Schema-qualified calls such as `custom.date_part(a.year, a.ts)` remain generic routines whose arguments are real value expressions.
+- **Related metadata slots** — DATEADD/TIMEADD/TIMESTAMPADD, DATEDIFF/TIMEDIFF/TIMESTAMPDIFF, DATE_TRUNC, datetime TRUNC, TIME_SLICE, and LAST_DAY keep their part slots separate from value expressions. NEXT_DAY/PREVIOUS_DAY similarly isolate weekday metadata. TIME_SLICE accepts both bare and quoted START/END boundaries.
+- **Regression guard** — [SqlEventWalkerDatetimeMetadataTests](../src/test/java/sql/walker/SqlEventWalkerDatetimeMetadataTests.java) supplies 578 independent, realistic queries across these 14 function names: canonical parts, extraction-specific fields, bare/quoted forms, representative aliases/case variants, weekdays, boundaries, schema-qualified routine controls, and both original RMCP DATE_PART queries. Each checks six complete output goldens and exact structured diagnostics through both the direct walker and production access API. This is parser/lineage coverage, not execution against each database dialect.
 
 ---
 
@@ -435,6 +465,7 @@ vendor/JAR mirror, which does not bundle the workplan or Panto remediation index
 
 - **Many new keywords** — DDL objects, DML (`DELETE`, `TRUNCATE`, `RETURNING`, conflict words), PIVOT/UNPIVOT, table-function args, Snowflake extract parts, `DATE_PART`, `SETS`, etc.
 - **Keyword placement policy** — Comment in lexer: append late-keyword block before `Identifier` to avoid mass token ID churn in goldens.
+- **Contextual-name policy** — Add new word tokens to `nonreserved_keywords` as well. Test their identifier/alias uses, including qualified wildcards, alongside their syntax/function uses. Do not renumber or replace lexer tokens to repair name acceptance.
 - **Parser predicates** — Jinja recognition, disallowed join/set-op aliases, implicit alias gating, Snowflake TF mode literals, DDL not applicable here but same file.
 
 ---
