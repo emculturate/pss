@@ -58,9 +58,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={function={function_name=array_append, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=tags, table_ref=b}}}}, alias=appended_tags}}, from={join={1={table={alias=a, table=tab1}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=tab2}}}}}}",
 				"[appended_tags]",
 				"{}",
-				"{tab1={id=[[@20,80:80='a',<455>,1:80]], tags=[[@3,20:20='a',<455>,1:20]]}, tab2={id=[[@24,87:87='b',<455>,1:87]], tags=[[@7,28:28='b',<455>,1:28]]}}",
-				"{query0={appended_tags=[[@12,39:51='appended_tags',<455>,1:39]]}}",
-				"{def_query0={query_dictionary={appended_tags=[[@12,39:51='appended_tags',<455>,1:39]]}, table_dictionary={tab1={id=[[@20,80:80='a',<455>,1:80]], tags=[[@3,20:20='a',<455>,1:20]]}, tab2={id=[[@24,87:87='b',<455>,1:87]], tags=[[@7,28:28='b',<455>,1:28]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
+				"{tab1={id=[[@20,80:80='a',<457>,1:80]], tags=[[@3,20:20='a',<457>,1:20]]}, tab2={id=[[@24,87:87='b',<457>,1:87]], tags=[[@7,28:28='b',<457>,1:28]]}}",
+				"{query0={appended_tags=[[@12,39:51='appended_tags',<457>,1:39]]}}",
+				"{def_query0={query_dictionary={appended_tags=[[@12,39:51='appended_tags',<457>,1:39]]}, table_dictionary={tab1={id=[[@20,80:80='a',<457>,1:80]], tags=[[@3,20:20='a',<457>,1:20]]}, tab2={id=[[@24,87:87='b',<457>,1:87]], tags=[[@7,28:28='b',<457>,1:28]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
 	}
 
 	@Test
@@ -84,9 +84,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={function={function_name=array_insert, parameters={1={column={name=tags, table_ref=a}}, 2={literal=0}, 3={column={name=tags, table_ref=b}}}}, alias=inserted_tags}}, from={join={1={table={alias=a, table=tab1}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=tab2}}}}}}",
 				"[inserted_tags]",
 				"{}",
-				"{tab1={id=[[@22,83:83='a',<455>,1:83]], tags=[[@3,20:20='a',<455>,1:20]]}, tab2={id=[[@26,90:90='b',<455>,1:90]], tags=[[@9,31:31='b',<455>,1:31]]}}",
-				"{query0={inserted_tags=[[@14,42:54='inserted_tags',<455>,1:42]]}}",
-				"{def_query0={query_dictionary={inserted_tags=[[@14,42:54='inserted_tags',<455>,1:42]]}, table_dictionary={tab1={id=[[@22,83:83='a',<455>,1:83]], tags=[[@3,20:20='a',<455>,1:20]]}, tab2={id=[[@26,90:90='b',<455>,1:90]], tags=[[@9,31:31='b',<455>,1:31]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={inserted_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
+				"{tab1={id=[[@22,83:83='a',<457>,1:83]], tags=[[@3,20:20='a',<457>,1:20]]}, tab2={id=[[@26,90:90='b',<457>,1:90]], tags=[[@9,31:31='b',<457>,1:31]]}}",
+				"{query0={inserted_tags=[[@14,42:54='inserted_tags',<457>,1:42]]}}",
+				"{def_query0={query_dictionary={inserted_tags=[[@14,42:54='inserted_tags',<457>,1:42]]}, table_dictionary={tab1={id=[[@22,83:83='a',<457>,1:83]], tags=[[@3,20:20='a',<457>,1:20]]}, tab2={id=[[@26,90:90='b',<457>,1:90]], tags=[[@9,31:31='b',<457>,1:31]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={inserted_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
 	}
 
 	@Test
@@ -108,9 +108,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}, where={condition={left={function={function_name=array_remove_at, parameters={1={column={name=tags, table_ref=a}}, 2={literal=0}}}}, operator=IS NOT NULL}}}}",
 				"[id]",
 				"{}",
-				"{tab1={id=[[@1,7:7='a',<455>,1:7]], tags=[[@10,46:46='a',<455>,1:46]]}}",
-				"{query0={id=[[@3,9:10='id',<455>,1:9]]}}",
-				"{def_query0={query_dictionary={id=[[@3,9:10='id',<455>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<455>,1:7]], tags=[[@10,46:46='a',<455>,1:46]]}}, filters=[{name=tags, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
+				"{tab1={id=[[@1,7:7='a',<457>,1:7]], tags=[[@10,46:46='a',<457>,1:46]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={tab1={id=[[@1,7:7='a',<457>,1:7]], tags=[[@10,46:46='a',<457>,1:46]]}}, filters=[{name=tags, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}");
 	}
 
 	@Test
@@ -132,9 +132,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={function={function_name=array_prepend, parameters={1={substitution={name=<lhs_arr>, type=predicand}}, 2={column={name=tags, table_ref=a}}}}, alias=prepended_tags}}, from={table={alias=a, table=tab1}}}}",
 				"[prepended_tags]",
 				"{<lhs_arr>=predicand}",
-				"{tab1={tags=[[@5,32:32='a',<455>,1:32]]}}",
-				"{query0={prepended_tags=[[@10,43:56='prepended_tags',<455>,1:43]]}}",
-				"{def_query0={query_dictionary={prepended_tags=[[@10,43:56='prepended_tags',<455>,1:43]]}, table_dictionary={tab1={tags=[[@5,32:32='a',<455>,1:32]]}}, interface={prepended_tags=[{name=<lhs_arr>, type=predicand}, {name=tags, table_ref=a}]}, table_alias={a=tab1}}}");
+				"{tab1={tags=[[@5,32:32='a',<457>,1:32]]}}",
+				"{query0={prepended_tags=[[@10,43:56='prepended_tags',<457>,1:43]]}}",
+				"{def_query0={query_dictionary={prepended_tags=[[@10,43:56='prepended_tags',<457>,1:43]]}, table_dictionary={tab1={tags=[[@5,32:32='a',<457>,1:32]]}}, interface={prepended_tags=[{name=<lhs_arr>, type=predicand}, {name=tags, table_ref=a}]}, table_alias={a=tab1}}}");
 	}
 
 	@Test
@@ -165,9 +165,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SCRIPT={1={select={1={function={function_name=array_remove, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}, alias=removed_tags}}, from={table={alias=a, table=tab1}}}, 2={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=tab1}}}}}",
 				"[]",
 				"{SCRIPT={1={}, 2={}}}",
-				"{SCRIPT={1={tab1={tags=[[@3,20:20='a',<455>,1:20], [@7,28:28='a',<455>,1:28]]}}, 2={tab1={id=[[@18,72:72='a',<455>,1:72]]}}}}",
-				"{SCRIPT={1={query0={removed_tags=[[@12,39:50='removed_tags',<455>,1:39]]}}, 2={query0={id=[[@20,74:75='id',<455>,1:74]]}}}}",
-				"{SCRIPT={1={def_query0={query_dictionary={removed_tags=[[@12,39:50='removed_tags',<455>,1:39]]}, table_dictionary={tab1={tags=[[@3,20:20='a',<455>,1:20], [@7,28:28='a',<455>,1:28]]}}, interface={removed_tags=[{name=tags, table_ref=a}]}, table_alias={a=tab1}}}, 2={def_query0={query_dictionary={id=[[@20,74:75='id',<455>,1:74]]}, table_dictionary={tab1={id=[[@18,72:72='a',<455>,1:72]]}}, interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}}}");
+				"{SCRIPT={1={tab1={tags=[[@3,20:20='a',<457>,1:20], [@7,28:28='a',<457>,1:28]]}}, 2={tab1={id=[[@18,72:72='a',<457>,1:72]]}}}}",
+				"{SCRIPT={1={query0={removed_tags=[[@12,39:50='removed_tags',<457>,1:39]]}}, 2={query0={id=[[@20,74:75='id',<457>,1:74]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={removed_tags=[[@12,39:50='removed_tags',<457>,1:39]]}, table_dictionary={tab1={tags=[[@3,20:20='a',<457>,1:20], [@7,28:28='a',<457>,1:28]]}}, interface={removed_tags=[{name=tags, table_ref=a}]}, table_alias={a=tab1}}}, 2={def_query0={query_dictionary={id=[[@20,74:75='id',<457>,1:74]]}, table_dictionary={tab1={id=[[@18,72:72='a',<457>,1:72]]}}, interface={id=[{name=id, table_ref=a}]}, table_alias={a=tab1}}}}}");
 	}
 
 	@Test
@@ -257,9 +257,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={function={function_name=array_append, parameters={1={column={name=tags, table_ref=null}}, 2={column={name=tags, table_ref=null}}}}, alias=appended_tags}}, from={join={1={table={alias=a, table=tab1}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=tab2}}}}}}",
 				"[appended_tags]",
 				"{}",
-				"{tab1={id=[[@16,76:76='a',<455>,1:76]]}, tab2={id=[[@20,83:83='b',<455>,1:83]]}}",
-				"{query0={appended_tags=[[@8,35:47='appended_tags',<455>,1:35]]}}",
-				"{def_query0={query_dictionary={appended_tags=[[@8,35:47='appended_tags',<455>,1:35]]}, table_dictionary={tab1={id=[[@16,76:76='a',<455>,1:76]]}, tab2={id=[[@20,83:83='b',<455>,1:83]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=null}]}, table_alias={a=tab1, b=tab2}}}");
+				"{tab1={id=[[@16,76:76='a',<457>,1:76]]}, tab2={id=[[@20,83:83='b',<457>,1:83]]}}",
+				"{query0={appended_tags=[[@8,35:47='appended_tags',<457>,1:35]]}}",
+				"{def_query0={query_dictionary={appended_tags=[[@8,35:47='appended_tags',<457>,1:35]]}, table_dictionary={tab1={id=[[@16,76:76='a',<457>,1:76]]}, tab2={id=[[@20,83:83='b',<457>,1:83]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=null}]}, table_alias={a=tab1, b=tab2}}}");
 	}
 
 	@Test
@@ -282,9 +282,9 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{DDL={create={type=VIEW, name={table=v_arr}, query={select={1={function={function_name=array_insert, parameters={1={column={name=tags, table_ref=a}}, 2={literal=0}, 3={column={name=tags, table_ref=a}}}}, alias=inserted_tags}}, from={table={alias=a, table=tab1}}}}}}",
 				"[]",
 				"{}",
-				"{tab1={tags=[[@7,41:41='a',<455>,1:41], [@13,52:52='a',<455>,1:52]]}}",
-				"{query0={inserted_tags=[[@18,63:75='inserted_tags',<455>,1:63]]}}",
-				"{def_create1={def_query0={query_dictionary={inserted_tags=[[@18,63:75='inserted_tags',<455>,1:63]]}, table_dictionary={tab1={tags=[[@7,41:41='a',<455>,1:41], [@13,52:52='a',<455>,1:52]]}}, interface={inserted_tags=[{name=tags, table_ref=a}]}, table_alias={a=tab1}}}}");
+				"{tab1={tags=[[@7,41:41='a',<457>,1:41], [@13,52:52='a',<457>,1:52]]}}",
+				"{query0={inserted_tags=[[@18,63:75='inserted_tags',<457>,1:63]]}}",
+				"{def_create1={def_query0={query_dictionary={inserted_tags=[[@18,63:75='inserted_tags',<457>,1:63]]}, table_dictionary={tab1={tags=[[@7,41:41='a',<457>,1:41], [@13,52:52='a',<457>,1:52]]}}, interface={inserted_tags=[{name=tags, table_ref=a}]}, table_alias={a=tab1}}}}");
 	}
 
 	@Test
@@ -383,8 +383,8 @@ public class SqlEventWalkerSnowflakeArrayMutatorTests extends AbstractSqlParseEv
 				"{SQL={select={1={function={function_name=array_append, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=tags, table_ref=b}}}}, alias=appended_tags}, 2={function={function_name=array_remove, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=tags, table_ref=b}}}}, alias=removed_tags}}, from={join={1={table={alias=a, table=tab1}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=tab2}}}}}}",
 				"[appended_tags, removed_tags]",
 				"{}",
-				"{tab1={id=[[@33,126:126='a',<455>,1:126]], tags=[[@3,20:20='a',<455>,1:20], [@16,67:67='a',<455>,1:67]]}, tab2={id=[[@37,133:133='b',<455>,1:133]], tags=[[@7,28:28='b',<455>,1:28], [@20,75:75='b',<455>,1:75]]}}",
-				"{query0={removed_tags=[[@25,86:97='removed_tags',<455>,1:86]], appended_tags=[[@12,39:51='appended_tags',<455>,1:39]]}}",
-				"{def_query0={query_dictionary={appended_tags=[[@12,39:51='appended_tags',<455>,1:39]], removed_tags=[[@25,86:97='removed_tags',<455>,1:86]]}, table_dictionary={tab1={id=[[@33,126:126='a',<455>,1:126]], tags=[[@3,20:20='a',<455>,1:20], [@16,67:67='a',<455>,1:67]]}, tab2={id=[[@37,133:133='b',<455>,1:133]], tags=[[@7,28:28='b',<455>,1:28], [@20,75:75='b',<455>,1:75]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}], removed_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
+				"{tab1={id=[[@33,126:126='a',<457>,1:126]], tags=[[@3,20:20='a',<457>,1:20], [@16,67:67='a',<457>,1:67]]}, tab2={id=[[@37,133:133='b',<457>,1:133]], tags=[[@7,28:28='b',<457>,1:28], [@20,75:75='b',<457>,1:75]]}}",
+				"{query0={removed_tags=[[@25,86:97='removed_tags',<457>,1:86]], appended_tags=[[@12,39:51='appended_tags',<457>,1:39]]}}",
+				"{def_query0={query_dictionary={appended_tags=[[@12,39:51='appended_tags',<457>,1:39]], removed_tags=[[@25,86:97='removed_tags',<457>,1:86]]}, table_dictionary={tab1={id=[[@33,126:126='a',<457>,1:126]], tags=[[@3,20:20='a',<457>,1:20], [@16,67:67='a',<457>,1:67]]}, tab2={id=[[@37,133:133='b',<457>,1:133]], tags=[[@7,28:28='b',<457>,1:28], [@20,75:75='b',<457>,1:75]]}}, filters=[{name=id, table_ref=a}, {name=id, table_ref=b}], interface={appended_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}], removed_tags=[{name=tags, table_ref=a}, {name=tags, table_ref=b}]}, table_alias={a=tab1, b=tab2}}}");
 	}
 }

@@ -49,9 +49,9 @@ public class SqlEventWalkerSnowflakeArraySetAggregateTests extends AbstractSqlPa
 				"{SQL={select={1={function={function_name=array_union_agg, qualifier=null, parameters={column={name=tags, table_ref=null}}}, alias=merged_tags}}, from={table={alias=e, table=events}}}}",
 				"[merged_tags]",
 				"{}",
-				"{events={tags=[[@3,23:26='tags',<455>,1:23]]}}",
-				"{query0={merged_tags=[[@6,32:42='merged_tags',<455>,1:32]]}}",
-				"{def_query0={query_dictionary={merged_tags=[[@6,32:42='merged_tags',<455>,1:32]]}, table_dictionary={events={tags=[[@3,23:26='tags',<455>,1:23]]}}, interface={merged_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
+				"{events={tags=[[@3,23:26='tags',<457>,1:23]]}}",
+				"{query0={merged_tags=[[@6,32:42='merged_tags',<457>,1:32]]}}",
+				"{def_query0={query_dictionary={merged_tags=[[@6,32:42='merged_tags',<457>,1:32]]}, table_dictionary={events={tags=[[@3,23:26='tags',<457>,1:23]]}}, interface={merged_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
 	}
 
 	@Test
@@ -73,9 +73,9 @@ public class SqlEventWalkerSnowflakeArraySetAggregateTests extends AbstractSqlPa
 				"{SQL={select={1={function={function_name=array_unique_agg, qualifier=null, parameters={column={name=tags, table_ref=null}}}, alias=unique_tags}}, from={table={alias=e, table=events}}}}",
 				"[unique_tags]",
 				"{}",
-				"{events={tags=[[@3,24:27='tags',<455>,1:24]]}}",
-				"{query0={unique_tags=[[@6,33:43='unique_tags',<455>,1:33]]}}",
-				"{def_query0={query_dictionary={unique_tags=[[@6,33:43='unique_tags',<455>,1:33]]}, table_dictionary={events={tags=[[@3,24:27='tags',<455>,1:24]]}}, interface={unique_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
+				"{events={tags=[[@3,24:27='tags',<457>,1:24]]}}",
+				"{query0={unique_tags=[[@6,33:43='unique_tags',<457>,1:33]]}}",
+				"{def_query0={query_dictionary={unique_tags=[[@6,33:43='unique_tags',<457>,1:33]]}, table_dictionary={events={tags=[[@3,24:27='tags',<457>,1:24]]}}, interface={unique_tags=[{name=tags, table_ref=events}]}, table_alias={e=events}}}");
 	}
 
 	@Test
