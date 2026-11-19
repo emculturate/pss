@@ -1,10 +1,17 @@
 # Slice D array-function reconciliation
 
+**Role:** frozen historical evidence for the completed T023/T024 milestone
+(2026-11-19), not an active workplan. Ledgers, requirements and intermediate
+checkpoints below describe that completed program; they are not instructions
+to repeat it. Maintain subsequent release status, including Slice F and
+Entry 11 decisions, only in the
+[master workplan](sql-grammar-5.1.4-workplan.md).
+
 Date: 2026-11-18. Source-audit baseline: commit `5604d3c`.
 Original planning update: the user approved four omitted functions and
 requested lexer expansion first, establishing the **21-function audit baseline**.
-**Post-T022 scope amendment:** all remaining planned array functions must now
-close in Slice D, with the structured constructor required first. **T025–T031
+**Historical post-T022 scope amendment:** all remaining planned array functions
+were assigned to Slice D, with the structured constructor first. **T025–T031
 scalar, table and higher-order implementation and the shared T032–T034
 evidence consolidation are complete. T023/T024 final default accuracy and
 Slice D accounting are also complete (2026-11-19): 4,306 reported, 4,244
@@ -12,8 +19,8 @@ passed, 62 skipped, zero failures/errors, exit 0.** Carried-forward names use th
 policy recorded below; no duplicate per-name matrices are required.
 The [expanded inventory](#expanded-all-array-closure-inventory) accounts for
 **42 canonical names**, including previously completed A/B/C work and all
-former E function work. Execute T025..T034 before the existing T023/T024 gates.
-Execution is defined by the
+former E function work. T025..T034 completed before the T023/T024 gates.
+Execution followed the
 [expanded master-plan sequence](sql-grammar-5.1.4-workplan.md#slice-d-expanded-remaining-implementation-sequence-approved-2026-11-18);
 original 21-name execution update: D0.1..D0.4 are complete. `SPLIT=456` was appended immediately
 before `Identifier`, with nonreserved-name handling. Official Java lexer
@@ -43,8 +50,8 @@ and cumulative maps are identical. See the
 The 14 focused lexical/parser controls passed during lexical preparation.
 The developer has now manually repaired the existing goldens and reports that
 all tests run from the sidebar passed; no exact sidebar count was supplied.
-**The lexical/manual-repair gate is complete; scalar completion follows below,
-while higher-order function completion is not claimed.** The original 21-name audit below remains
+**This checkpoint claimed only the completed lexical/manual-repair gate;
+later scalar and higher-order completion is recorded below.** The original 21-name audit below remains
 historical cell-level evidence; the post-shift sidebar run is recorded as
 developer-reported validation, not a new assistant-run Maven audit.
 
@@ -150,8 +157,11 @@ added names and fourteen accepted carried-forward names total **42**, as
 explicitly listed in the [inventory](#expanded-all-array-closure-inventory).
 The original 854-cell audit retains its original scope; shared family evidence
 is not recast as new independent matrices. Consumer bundle contents did not
-change, so no vendor/JAR docs regeneration was needed. Slice F, Entry 11 Tier-2,
-the opt-in release suite and packaging/publishing remain outside this sign-off.
+change, so no vendor/JAR docs regeneration was needed.
+
+**Sign-off boundary:** Slice F, Entry 11 and whole-release certification were
+outside this Slice D milestone. Their subsequent disposition belongs only
+to the master workplan, not this frozen evidence record.
 
 ## Result and scope
 
@@ -176,7 +186,7 @@ The following implementation findings describe the **original 21-name baseline**
    D3.9.3-D3.9.5, with 79, 50 and 90 independently identified cases respectively.
    T022 subsequently audited all 21 matrices and closed nine remaining cells,
    including gaps in four of the six older expanded matrices. The final
-   final default-accuracy run is now complete under T023/T024 above.
+   default-accuracy run is complete under T023/T024 above.
 4. **Four documented Snowflake functions were omitted from the conversion /
    predicate / split target list:** `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`.
    All four are explicitly approved for D3.8. `TO_ARRAY`, `AS_ARRAY` and
@@ -206,6 +216,9 @@ transferred into D. This is an exhaustive reconciliation of those documents,
 not a claim to have surveyed every function in Snowflake's evolving catalog.
 
 ## Verification requirements
+
+Historical acceptance requirements, satisfied by the evidence recorded here;
+not a new execution checklist.
 
 - **REQ-001:** Every one of the **42 canonical names**, plus existing FLATTEN
   spellings, has an explicit status/task, lexical-recognition and grammar/walker
@@ -309,7 +322,7 @@ T023 default-accuracy result and T024 accounting above.
   beyond 5.1.4. Its MODE-policy string is not proof of a lexer entry or working
   named-argument parsing. T028 uses only `FLATTEN(...)` examples, without explicit
   `LATERAL` examples or lexer changes; existing modifier support remains unchanged.
-  T033/T034 must honor this exclusion. The canonical 42-name count is unchanged.
+  T033/T034 honored this exclusion. The canonical 42-name count is unchanged.
 - The [author handoff](panto-template-remediation-5.1.4.md),
   [resolution worklist](symbol-table-resolution-consolidation-worklist.md),
   [D1 checkpoint](slice-d-d1-checkpoint-summary.md), retired workplan pointers,
@@ -318,8 +331,8 @@ T023 default-accuracy result and T024 accounting above.
   accepted author-remediation cases do not prove an independent matrix.
 - Array literals `[expr, ...]`, result subscripts `expr[index]`, constructor
   snippet parity, aggregate `WITHIN GROUP` / `OVER`, and lateral table scope
-  are required syntax/lineage controls, not extra function counts. Reuse
-  delivered 4.4 and Entry 19.3 evidence in T032 and verify it in T034.
+  were required syntax/lineage controls, not extra function counts. T032/T034
+  reused and verified delivered 4.4 and Entry 19.3 evidence.
 - LISTAGG/PERCENTILE_CONT/PERCENTILE_DISC, PARSE_URL, GENERATOR, RESULT_SCAN,
   INFER_SCHEMA, VALIDATE, TO_VARCHAR and MD5 occur as neighboring features or
   composition helpers, not unassigned Entry 4 array-function implementations.
@@ -469,7 +482,7 @@ whole-release certification remains separate.
 
 **Historical baseline through T022, not the current full closure inventory.**
 The lexical IDs, counts and PASS evidence below are from that checkpoint;
-future developer-confirmed lexer repairs must be recorded under T025.
+the later T025 lexical/manual-repair checkpoint is recorded above.
 
 Shared sources:
 
@@ -736,9 +749,9 @@ defaulting to a single space. The matrices cover delimiter omission for both
 optional signatures, empty/repeated delimiters and NULL inputs. Omitted
 delimiters remain omitted in the AST; database defaults/results are not evaluated.
 
-Decision: D3.8 will explicitly cover all four names, in separate bounded
-per-function steps. Preserve the existing `SPLIT_TO_ARRAY` behavior/diagnostics
-for compatibility; do not treat it as a replacement for documented `SPLIT`.
+Decision implemented: D3.8 covered all four names in separate bounded
+per-function steps. Existing `SPLIT_TO_ARRAY` behavior/diagnostics were retained
+for compatibility, not treated as a replacement for documented `SPLIT`.
 The D0 lexer step added `SPLIT` before `Identifier` while reusing the three
 existing conversion/predicate tokens. Its manual golden-repair gate is complete
 in `641ded6`; this batch makes no further lexer or token-ID changes.
@@ -895,7 +908,7 @@ Adding canonical FLATTEN and the three higher-order names gives the current
 **42-name** inventory above. No named array-function requirement found in
 the audited planning/companion documents remains excluded from D closure.
 
-## Executable work checklist
+## Completed execution checklist
 
 - [x] **D0.1..D0.5 FIRST:** freeze the 21-function inventory, capture official
   current and last-repaired-baseline constants, append only `SPLIT` before
@@ -1918,9 +1931,9 @@ without walking rejected syntax. REVERSE and SUM needed no new T022 cases.
   exit **0**, **27.741 s**. VS Code independently: **1,033 passed, zero failed**.
   Existing host unused-code warnings and the loose capture helper's pre-existing
   editor Java-8 analysis mismatch are unchanged; actual capture/build uses JDK 21.
-- T023 must still run focused -> Phase15 -> Smoketest -> full default accuracy
-  sequentially. T024 must still perform final accounting/sign-off. T022 does not
-  substitute its focused pass for those pending gates.
+- At this T022 checkpoint, T023/T024 validation and accounting were still
+  pending. Their later completion is recorded in the final sign-off above;
+  the focused T022 pass was not substituted for those gates.
 
 ### Per-function required-cell witnesses
 

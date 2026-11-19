@@ -8,6 +8,13 @@
 
 **This file is the single planning source** for open parser/grammar/walker/generator/hygiene work on the 5.1.4 line. Older standalone workplans in `parse/documents/` are **retired** (stub headers only); detail for completed programs lives in git history or RMCP handoff docs where noted.
 
+**Document ownership:** maintain release scope, decisions and current status
+here. The [coverage inventory](coverage/sql_walker_exit_method_gaps.md) owns
+current Entry 11 measurements and target rows. The
+[Slice D evidence record](slice-d-array-function-reconciliation.md) is frozen
+at its T023/T024 milestone; do not append later release-status updates there.
+Link to those records rather than copying their inventories or measurements.
+
 **Grammar changelog reference:** [sql-grammar-extensions-since-2026-01-01.md](./sql-grammar-extensions-since-2026-01-01.md)  
 **Lexer golden policy:** `.cursor/rules/lexer-token-id-golden-policy.mdc`
 
@@ -28,14 +35,14 @@
 | **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slices A-D complete with explicit matrix traceability; Slice E deferred until after 5.1.4 release; Slice F complete except explicitly deferred generator work (Entry 10) |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Complete** (closed 2026-11-17) — Stage A/B/C delivered and live-query fixture closeout re-scan verified |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Complete** (closed 2026-11-17) — Stage A/B/C/D delivered with cohort regression bundle green |
-| **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Partial** — baseline subscript/`ARRAY_AGG`/`FLATTEN` support exists; remaining array-function backlog open |
+| **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Complete** (2026-11-19) — Slices A–F closed within the release scope below |
 | **5** | Simple Jinja / dbt substitutions (6.1–6.4) | Enhancement | **Not started** |
 | **6** | Deep Jinja / SCRIPT prefix *(optional)* (7.x) | Enhancement | **Not started** |
 | **7** | Panto variable types × parser endpoints — test backlog (8.1–8.2) | Test / docs | **Not started** |
 | **8** | Panto cardinality & grammar-safe dynamic AST expansion (9.x) | Enhancement (exploratory) | **Not started** |
 | **9** | DDL structured options (`IF NOT EXISTS`, `OR REPLACE`, …) | Enhancement | **Not started** |
 | **10** | SQL statement generator — post-milestone completion | Enhancement | **Not started** (milestone ✅) |
-| **11** | Walker `exit*` JaCoCo coverage — Tier 2 / 3 residuals | Test / hygiene | **Optional** (Tier 1 ✅) |
+| **11** | Walker `exit*` JaCoCo coverage — Tier 2 / 3 residuals | Test / hygiene | **Open for 5.1.4** — approved Tier 2 coverage work remains; Tier 3 excluded |
 | **12** | Helper dead-code hygiene — Phases C–D | Hygiene | **Complete** (closed 2026-11-16) |
 | **13** | SELECT-list subquery alias scope (false `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`) + operand `lookup` wrapper | Defect | **Complete** (2026-11-10) |
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
@@ -66,26 +73,21 @@ does not waive the remaining coverage, audit, corpus, documentation or release
 gates listed below, and is not whole-release certification.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D — COMPLETE (2026-11-19):** all **42 canonical function names**, Entry 4.1–4.12, GC1..GC4 and former E work are accounted for. T025–T034 implementation/evidence consolidation and T023/T024 final accuracy/accounting are complete. The single full default run reported **4,306 tests: 4,244 passed, 62 existing/configured skips, zero failures/errors, exit 0**. The seven additions retain their 83/74/54/56/71/71/82-case matrices; the original 21 ledgers and fourteen carried-forward names' accepted sibling-family evidence remain distinct. `LATERAL_FLATTEN` compatibility stays deferred beyond 5.1.4. See the [final sign-off](slice-d-array-function-reconciliation.md#t023t024-final-slice-d-sign-off-2026-11-19). This is not whole-release certification.
+  - **Slice D — COMPLETE (2026-11-19):** all 42 canonical names, Entry 4.1–4.12,
+    GC1..GC4 and former E work are accounted for. The
+    [frozen final sign-off](slice-d-array-function-reconciliation.md#t023t024-final-slice-d-sign-off-2026-11-19)
+    retains the test results, matrices and accepted family evidence.
+    `LATERAL_FLATTEN` compatibility stays deferred beyond 5.1.4.
   - **Former Slice E function work — complete in D:** scalar/table FLATTEN and FILTER/TRANSFORM/REDUCE are delivered under T027..T031 and included in T023/T024. There is no second deferred array-function backlog.
-  - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
+  - **Slice F (non-generator only) — COMPLETE (2026-11-19):** existing
+    T023/T024 evidence accepted; see the delivery closeout under
+    [Entry 4](#entry-4--snowflake-array-syntax-and-functions).
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
 
-- **Entry 11 — partial coverage scope (required for 5.1.4)**
-  - Complete the remaining **Tier 2** `exit*` coverage set from
-    `documents/coverage/sql_walker_exit_method_gaps.md`:
-    - `exitPredicand_primary`
-    - `exitRelational_modifier_in_item`
-    - `exitValue_expression_primary`
-    - `exitOrdered_aggregate_call`
-    - `exitValue_expression`
-    - `exitSelect_item`
-    - `exitConflict_target`
-    - `exitTable_argument_literal`
-    - `exitSql_statement`
-    - `exitSet_operation_member`
-    - `exitJinja_function_call`
-    - `exitUnpivot_clause`
+- **Entry 11 — partial coverage scope (required for 5.1.4; still open)**
+  - Close the approved Tier 2 targets recorded in the
+    [current coverage inventory](coverage/sql_walker_exit_method_gaps.md).
+    Scope is limited to that approved twelve-method set, not a new broad audit.
   - **Tier 3 is explicitly out of 5.1.4 scope.**
 
 **Latest scope reduction — deferred beyond 5.1.4, not release prerequisites:**
@@ -2171,7 +2173,9 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 
 ## Entry 4 — Snowflake ARRAY syntax and functions
 
-**Status:** Partial — implement remaining **4.x** independently unless syntax shares one production.
+**Status:** Complete (2026-11-19) — all 42 in-scope names and Slices A–F
+closed. `LATERAL_FLATTEN` compatibility and generator expansion remain
+explicitly deferred.
 
 ### Slice A implementation decision (2026-11-17)
 
@@ -2191,12 +2195,23 @@ Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec
 | **C — mutation/set operations** | Binary/set operators + mutator family | **4.7**, **4.8** | Function/operator signature matrix + column resolution + dialect diagnostics complete |
 | **D — consolidated all-array function closure — COMPLETE** | Original transforms/conversions plus every remaining array function; completed A/B/C evidence carried forward | **4.1–4.12**, GC1..GC4, T023/T024 and T025..T034 complete | All 42 names accounted for; accepted family coverage retained; final default run: 4,244 passed, 62 skipped, zero failures/errors, exit 0 |
 | **E — former table/higher-order owner** | Function implementation and acceptance transferred into D, not deferred or duplicated | **4.5** -> T027/T028; **4.12** -> T029/T030/T031 | Satisfied by the corresponding D tasks and expanded audit, not by the ownership transfer itself |
-| **F — delivery closure** | Corpus + snippet replay, docs, and release-gate verification | Entry 4 closeout + Entry 10/consumer-doc touchpoints where needed | Focused + smoketest/full parser gates pass; workplan matrix accounting complete |
+| **F — delivery closure — COMPLETE** | Corpus + snippet replay, docs and regression-gate verification | Entry 4 delivery closeout below; generator expansion stays in Entry 10 | Existing T023/T024 evidence accepted; no duplicate execution |
 
 **Story minimum for Entry 4:** Slices **A–C**.  
 **Full Entry 4 closure:** A+B+C+D+E+F.
 Under the post-T022 amendment, D includes E's function requirements and verifies
-the A/B/C carry-forward evidence; F's non-generator delivery work remains separate.
+the A/B/C carry-forward evidence.
+
+**Slice F delivery closeout (2026-11-19):** the
+[frozen T023/T024 sign-off](slice-d-array-function-reconciliation.md#t023t024-final-slice-d-sign-off-2026-11-19)
+also supplies the non-generator delivery gate. That execution passed 42
+live/sample-query cases (three previously parked samples skipped), all 143
+non-SQL endpoint cases and the array/snippet/aggregate/pivot source suites.
+T032–T034 and T024 supply completed matrix/accounting documentation.
+No duplicate replay or full-suite run was required. This accepts the existing
+default regression/sample corpus; it does not claim that separate opt-in
+slow bound-query regressions or an external frozen CSV corpus were rerun.
+Whole-release opt-in checks and artifact packaging remain separate.
 
 ### Slice D safe implementation plan (execution order)
 
@@ -2737,7 +2752,9 @@ Requirements are defined in the [reconciliation](slice-d-array-function-reconcil
 - [x] **Final status/accounting update recorded once**
   - Updated sections: current Slice D summary, task/index checkboxes, this final checklist, Entry 4 status table, GC1..GC4 and reconciliation final sign-off.
   - T023/T024 and T025..T034 complete; all 42 canonical functions are explicitly recorded in the [closed inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory). Entry 4.1–4.12 and former E function work are closed.
-  - `LATERAL_FLATTEN` compatibility remains deferred; Slice F, Entry 11 Tier-2, opt-in release tests and packaging/publishing are not certified by this default-accuracy sign-off.
+  - `LATERAL_FLATTEN` compatibility remains deferred. This checklist records
+    the Slice D milestone only; later release decisions are maintained in
+    the release checklist and their owning entries above/below.
 
 ### Entry 4 array-function inventory and historical gap list (no ellipsis)
 
@@ -3750,15 +3767,21 @@ deferred here (Entry 10) per release-scoping decision.
 
 ## Entry 11 — Walker `exit*` coverage (JaCoCo)
 
-**Status:** Tier **1** ✅ (Aug 2026); **Tier 2** ~19 methods + **Tier 3** ~53 with minor gaps optional
+**Status:** Open — the green default suite does not close the approved Tier 2
+coverage requirement. Tier 1 is complete; Tier 3 residuals are outside 5.1.4 scope.
 
-**Measure:** `cd parse && mvn verify` → `target/site/jacoco/jacoco.xml` on `SqlParseEventWalker`.
+**Scope and evidence:** the
+[current coverage inventory](./coverage/sql_walker_exit_method_gaps.md)
+owns the approved twelve-method set, its latest measurements, evidence source
+and refresh command. Do not copy its method rows or counters into this workplan.
 
-**Priority queue:** [coverage/sql_walker_exit_method_gaps.md](./coverage/sql_walker_exit_method_gaps.md#tier-2--substantial-gaps-jacoco-aug-2026)
+**Remaining action:** add focused coverage tests or establish a justified
+unreachable-path disposition. Production changes require an actual defect
+or justified dead path, not merely a coverage percentage.
 
-**Open Tier 2 examples (unchecked in former plan):** `exitTable_argument_literal`, `exitInfer_schema_argument`, `exitJinja_arg`, `exitJinja_function_call`, `exitStatic_data_type_name`, `exitWith_clause`, `exitFlatten_argument`, `exitEveryRule`, `exitSql_statement`, `exitDrop_options`, `exitAlter_options`, `exitInsert_preamble`, … — see gaps doc for full sorted list.
-
-**Done criterion:** Re-run `mvn verify`; target `exit*` shows no missed lines (or team accepts Tier 3 residual).
+**Done criterion:** the approved targets have no missed lines or only accepted
+Tier 3 residuals. Reuse valid existing execution data for accounting; test
+changes require new execution evidence, not a duplicate run solely for sign-off.
 
 **Detail:** git — former `coverage/sql_walker_exit_method_coverage-workplan.md`.
 

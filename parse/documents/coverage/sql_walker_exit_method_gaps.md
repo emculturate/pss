@@ -1,18 +1,22 @@
 # SqlParseEventWalker — `exit*` method coverage gaps
 
-**Workplan:** [sql-grammar-5.1.4-workplan.md](../sql-grammar-5.1.4-workplan.md) **Entry 11** (retired checklist: `sql_walker_exit_method_coverage-workplan.md`)  
-**Generated:** Nov 18, 2026 (refresh after `cd parse && mvn verify`)  
+**Role:** current coverage inventory, not a separate workplan. Release scope,
+priorities and closure decisions belong to
+[master workplan Entry 11](../sql-grammar-5.1.4-workplan.md#entry-11--walker-exit-coverage-jacoco).
+Superseded measurement snapshots remain in git history.
+
+**Generated:** Nov 19, 2026, from T023's successful full default execution using report-only `mvn -f parse/pom.xml -Pisolated-build jacoco:report`; no tests rerun  
 **Class:** `sql.walker.SqlParseEventWalker`  
-**Scope:** ANTLR listener **`exit*`** methods only (317 total). Not every lexer token or private helper.
+**Scope:** ANTLR listener **`exit*`** methods only (321 total). Not every lexer token or private helper. The Tier 2 release decision below is limited to the twelve approved Entry 11 targets.
 
 ## Summary
 
 | Metric | Count |
 |--------|------:|
-| `exit*` methods | 317 |
+| `exit*` methods | 321 |
 | **Never executed** (0 lines covered by full test suite) | **0** |
-| Executed with **some** missed lines (partial = Tier 2 + Tier 3) | 72 |
-| Fully line-covered (0 missed lines in JaCoCo) | 245 |
+| Executed with **some** missed lines | 70 |
+| Fully line-covered (0 missed lines in JaCoCo) | 251 |
 
 **Interpretation:** A method with **0 covered lines** has no test that walks that grammar alternative end-to-end. **Partial** methods are hit by at least one test but still have branches or error paths uncovered — useful for a second pass, not listed exhaustively below.
 
@@ -22,48 +26,51 @@ Tier 1 remains closed in this refresh (**no zero-hit `exit*` methods**).
 
 Historical Tier 1 exemplars (`exitNamed_columns_join`, `exitUnpivot_null_policy`, pivot `IN (ANY)`/`IN (SELECT …)`, and T1.5–T1.11 follow-ups) remain covered and are now maintained as regression baseline rather than open gap targets.
 
-## Tier 2 — Substantial gaps (JaCoCo Nov 18, 2026)
+## Tier 2 — Approved release targets (JaCoCo Nov 19, 2026)
 
-Methods with **≥3 missed lines** or **<85%** line coverage (**12 methods**).
-
+The approved twelve-method set was measured from the latest successful run.
+**Ten** still have **≥3 missed lines** or **<85%** line coverage; two now have
+only Tier 3 residuals. The rows below are the single maintained inventory
+of that approved set; they do not establish parser defects.
 
 | ID | `exit*` | Lines (cov/total) | % | Missed |
 |----|---------|-------------------|---|--------|
-| T2-01 | `exitPredicand_primary` | 21/27 | 78% | 6 |
-| T2-02 | `exitRelational_modifier_in_item` | 24/30 | 80% | 6 |
-| T2-03 | `exitValue_expression_primary` | 57/63 | 90% | 6 |
-| T2-04 | `exitOrdered_aggregate_call` | 24/28 | 86% | 4 |
-| T2-05 | `exitValue_expression` | 52/56 | 93% | 4 |
-| T2-06 | `exitSelect_item` | 60/64 | 94% | 4 |
+| T2-01 | `exitPredicand_primary` | 21/27 | 77.8% | 6 |
+| T2-02 | `exitRelational_modifier_in_item` | 22/28 | 78.6% | 6 |
+| T2-03 | `exitValue_expression_primary` | 60/66 | 90.9% | 6 |
+| T2-04 | `exitOrdered_aggregate_call` | 25/29 | 86.2% | 4 |
+| T2-05 | `exitValue_expression` | 52/55 | 94.5% | 3 |
+| T2-06 | `exitSelect_item` | 58/62 | 93.5% | 4 |
 | T2-07 | `exitConflict_target` | 12/15 | 80% | 3 |
-| T2-08 | `exitTable_argument_literal` | 13/16 | 81% | 3 |
-| T2-09 | `exitSql_statement` | 22/25 | 88% | 3 |
-| T2-10 | `exitSet_operation_member` | 27/30 | 90% | 3 |
-| T2-11 | `exitJinja_function_call` | 31/34 | 91% | 3 |
-| T2-12 | `exitUnpivot_clause` | 36/39 | 92% | 3 |
+| T2-09 | `exitSql_statement` | 18/21 | 85.7% | 3 |
+| T2-10 | `exitSet_operation_member` | 24/27 | 88.9% | 3 |
+| T2-12 | `exitUnpivot_clause` | 35/38 | 92.1% | 3 |
 
-### Delta vs Aug 2026 list
+Now Tier 3, explicitly outside the approved 5.1.4 residual scope:
 
-- **Completed (now full line coverage):**
-  - `exitJinja_arg`, `exitStatic_data_type_name`, `exitWith_clause`, `exitAssignment_expression_list`, `exitInsert_preamble`, `exitSubquery`.
-- **Still partial but no longer Tier 2 (now Tier 3 residual):**
-  - `exitEveryRule`, `exitInfer_schema_argument`, `exitFlatten_argument`, `exitDrop_options`, `exitAlter_options`, `exitInsert_target_table_primary`, `exitQuantified_comparison_predicate`, `exitScript`, `exitGenerator_argument`, `exitJinja_name`, `exitOrdinary_grouping_set`, `exitRow_value_expression`.
-- **New Tier 2 additions in this refresh (data-backed from current parser):**
-  - `exitPredicand_primary`, `exitValue_expression_primary`, `exitOrdered_aggregate_call`, `exitValue_expression`, `exitSelect_item`.
+| Original ID | Method | Lines (cov/total) | % | Missed |
+|---|---|---|---|---:|
+| T2-08 | `exitTable_argument_literal` | 13/15 | 86.7% | 2 |
+| T2-11 | `exitJinja_function_call` | 31/33 | 93.9% | 2 |
 
-### 5.1.4 feature-area spot check (newly introduced/enhanced paths)
-
-- **Array/date-time feature exits are mostly full coverage** (`exitArray_conversion_seed_function`, `exitArray_range_seed_function`, `exitArray_position_seed_function`, `exitArray_zip_seed_function`, `exitArray_unary_transform_function`, `exitArray_transform_function`, `exitSnowflake_datetime_*` all at 100% line coverage in this refresh).
-- **Residual partials in nearby feature paths are Tier 3**, not Tier 2 (`exitArray_literal_elements` 15/17, `exitArray_literal_expression` 21/22, `exitPivot_in_literal` 18/20, `exitJinja_name` 12/14).
+Evidence: [current JaCoCo XML](../../target-maven/site/jacoco/jacoco.xml).
+The report-only command loaded the execution file last modified at the end
+of T023 (2026-11-19 09:18:53 -05:00), analyzed 544 classes and exited 0.
+No tests, lexer/parser changes or coverage waivers were added.
 
 ## How to refresh
 
+From the repository root, render matching existing execution data without
+executing tests again:
+
 ```bash
-cd parse && mvn verify
-# Report: parse/target/site/jacoco/jacoco.xml
+mvn -f parse/pom.xml -Pisolated-build jacoco:report
+# Report: parse/target-maven/site/jacoco/jacoco.xml
 ```
 
-Re-run the exit-method vs JaCoCo comparison after adding tests; update this file whenever Tier 2/Tier 3 membership changes.
+After test changes, execute the relevant tests before regenerating the report.
+Update the measurement date, evidence and counters here, and release decisions
+in the master workplan; do not append updates to the frozen Slice D record.
 
 ## Related docs
 
@@ -71,14 +78,3 @@ Re-run the exit-method vs JaCoCo comparison after adding tests; update this file
 - [sql_walker_astwalkers_gap_report.md](sql_walker_astwalkers_gap_report.md) — broader walker + helper method gaps (older snapshot).
 - [sql-grammar-5.1.4-workplan.md](../sql-grammar-5.1.4-workplan.md) Entry **12** — caller audit vs JaCoCo policy.
 
-## Relational-modifier lineage — operand classification
-
-**Invariant:** *operand classification ≠ skip lineage.* When convert egress classifies a column ref as `RESOLVED_PIVOT_OPERAND`, `RESOLVED_UNPIVOT_IN_SOURCE`, or derived UNPIVOT VALUE/FOR, that classification selects **how** to materialize (`applyConvertEgress*`, `materializeInterface*DependencyLineage`, derivation buckets)—not whether to skip interface/clause lineage.
-
-Single owner paths (post-M5):
-
-- **Interface loop:** `classifyColumnRefAtConvertEgress` → early egress blocks materialize operands before the qualified `switch` drain.
-- **Clause archive:** `archiveClauseColumnRefAtConvertEgress` handles operands on `clauseEgressResult` before unqualified `switch`.
-- **Remaining unresolved drain:** pivot/unpivot operands via `applyConvertEgress*` then `continue` (no duplicate `materializePivotOperandColumnAtConvertEgress` in `applyUnqualifiedScopeResolutionResult`).
-
-See [migration plan — design invariant](relational-modifier-lineage-consolidation-migration.md#design-invariant-target-end-state).
