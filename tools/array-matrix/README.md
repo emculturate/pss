@@ -13,10 +13,11 @@ JUnit/Gson dependencies and Surefire classpath; no npm install. Capture uses
 4. `node tools/array-matrix/matrix.cjs <batch-dir> emit --reviewed`
 5. Run the entire focused host **once for the batch**, using the established
    isolated Maven command. No broad suites until final Slice D gates.
-6. `node tools/array-matrix/matrix.cjs <batch-dir> finish`
-7. Insert the generated `accounting.md` sections into the existing reconciliation;
-   update only relevant checkmarks, counts and genuine findings in the master
-   workplan. Do not create another plan or hand-copy method inventories.
+6. `node tools/array-matrix/matrix.cjs <batch-dir> finish --record`
+7. The optional `--record` appends generated accounting to the existing
+   reconciliation and refuses duplicate evidence markers. Update only relevant
+   checkmarks, counts and genuine findings in the master workplan. Do not create
+   another plan or hand-copy method inventories.
 
 If a case proves a production defect, declare `production_changes: true` and
 list its actual paths in `production_files`. Reports cite the verified Surefire
@@ -24,6 +25,21 @@ XML; they do not invent a Maven exit code or claim a log file was saved.
 For directly dependent regression suites, set `test_selection` to the actual
 Maven `-Dtest` selection. Reported counts remain scoped to the named matrix host;
 record additional suite results separately.
+
+Set top-level `host` to an existing `parse/src/test/java/sql/walker/*.java`
+family host when it is not the transform class. For a related batch spanning
+hosts, use one catalog directory per host and the same combined `test_selection`;
+capture/emit each, run Maven once, then finish each against its own fresh XML.
+Hosts must provide the established `assertOutputs` and `assertExactDiagnostics`
+helpers. Route-count checks can be emitted inline with `route_checks: []`.
+
+Snippet cases use `runner: 'snippet'`, `endpoint` (for example `PREDICAND`)
+and the matching parser `entry` (for example `predicand_value`). Capture checks
+syntax, routing and AccessObject/direct-walker diagnostic parity. Emission
+asserts all six full direct outputs plus all six full AccessObject outputs.
+Supported entries cover PREDICAND, CONDITION, QUERY, TUPLE, IN_LIST,
+JOIN_EXTENSION, VALUES, INSERT, UPDATE, DELETE, DDL and SCRIPT. Give each
+function its own endpoint cells; SQL placement tests do not replace them.
 
 Cross-cutting signature audits may override `rule` per case and supply
 `route_checks: [{ rule: "routine_invocation", count: 0 }]` to distinguish

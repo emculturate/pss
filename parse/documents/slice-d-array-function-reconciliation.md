@@ -4,7 +4,8 @@ Date: 2026-11-18. Source-audit baseline: commit `5604d3c`.
 Original planning update: the user approved four omitted functions and
 requested lexer expansion first, establishing the **21-function audit baseline**.
 **Post-T022 scope amendment:** all remaining planned array functions must now
-close in Slice D, with **`ARRAY_CONSTRUCT_STRUCTURED` / T025 next**.
+close in Slice D, with the structured constructor required first. **T025–T027
+scalar closure is now complete; T028 advanced table FLATTEN is next.**
 The [expanded inventory](#expanded-all-array-closure-inventory) accounts for
 **42 canonical names**, including previously completed A/B/C work and all
 former E function work. Execute T025..T034 before the existing T023/T024 gates.
@@ -28,7 +29,7 @@ matrix cells, with nine genuine gaps repaired. Maven and VS Code each pass all
 are complete; they do not certify the expanded 42-name scope. T025..T034 and
 T023's sequential accuracy ladder / T024's final accounting remain open.
 
-**Latest execution update — lexer step complete (2026-11-19):** T025 adds
+**Previous checkpoint — lexer step complete (2026-11-19):** T025 adds
 `ARRAY_CONSTRUCT_STRUCTURED=457` and shared `LAMBDA_ARROW=458` immediately
 before Identifier. All 456 earlier IDs are unchanged; all 21 following IDs
 shift +2. The official before and last-repaired images match, so incremental
@@ -37,10 +38,54 @@ and cumulative maps are identical. See the
 The 14 focused lexical/parser controls passed during lexical preparation.
 The developer has now manually repaired the existing goldens and reports that
 all tests run from the sidebar passed; no exact sidebar count was supplied.
-**The lexical/manual-repair gate is complete; full T025 and higher-order
-function completion are not claimed.** The original 21-name audit below remains
+**The lexical/manual-repair gate is complete; scalar completion follows below,
+while higher-order function completion is not claimed.** The original 21-name audit below remains
 historical cell-level evidence; the post-shift sidebar run is recorded as
 developer-reported validation, not a new assistant-run Maven audit.
+
+## Scalar batch completion: T025/T026/T027
+
+**2026-11-19:** all three scalar tasks are complete, with independently generated
+method-to-cell ledgers appended below. **211 new methods** comprise **203
+six-output walker goldens and eight parser-only syntax controls**. Every
+function has all twelve placements and twelve snippet-endpoint cases; those
+36 endpoint cases assert six full direct outputs plus six full AccessObject
+outputs and exact complete diagnostic lists. Existing methods/goldens are
+preserved, and the official generated lexer is byte-for-byte unchanged.
+
+| Task | Function | New matrix | Routing / implementation |
+|---|---|---|---|
+| T025 | `ARRAY_CONSTRUCT_STRUCTURED` | 83: 80 goldens + 3 syntax | Existing `routine_invocation` constructor path/walker; register Snowflake affinity. Independent first/second/third and variadic fourth operand controls. |
+| T026 | `ARRAY_CONTAINS` | 74: 71 goldens + 3 syntax | Retain generic routing/affinity. Fix the proved loss of bare substitutions under postfix casts by stamping context before suffix wrapping; preserve qualified-column typing. |
+| T027 | `ARRAY_FLATTEN` | 54: 52 goldens + 2 syntax | Reuse unary family grammar/walker; add affinity. Do not confuse scalar results with table FLATTEN scope/output behavior. |
+
+### Scalar signature and runtime boundary
+
+Official Snowflake references reviewed on 2026-11-19:
+
+| Function | Documented native form | Parser/runtime distinction |
+|---|---|---|
+| [`ARRAY_CONSTRUCT_STRUCTURED`](https://docs.snowflake.com/en/sql-reference/functions/array_construct_structured) | `expr1 [, expr2 ...]`, at least one argument | Common element-type coercion, all-untyped-NULL errors and structured return typing belong to the database. NULL/nested/variadic expressions are parsed without evaluating them. |
+| [`ARRAY_CONTAINS`](https://docs.snowflake.com/en/sql-reference/functions/array_contains) | `value_expr, array` | VARIANT requirements for semi-structured arrays, structured comparability, SQL NULL versus JSON null, and BOOLEAN/NULL results are not evaluated. Casts, predicate/projection and argument lineage are tested. |
+| [`ARRAY_FLATTEN`](https://docs.snowflake.com/en/sql-reference/functions/array_flatten) | `array` | One-level flattening, non-array-element errors and NULL propagation are database responsibilities. Nested, empty and NULL shapes are syntax/lineage evidence only. |
+
+Preserve schema-qualified UDF and ordinary same-named-column neutrality.
+Native ARRAY_FLATTEN uses the unary route; empty/two-argument calls retain
+existing generic compatibility. ARRAY_CONTAINS one/three-argument generic
+compatibility is also retained. Empty generic calls retain their legacy payload
+and lack of routine-affinity warning: this is explicitly **not** native
+zero-argument support or a normalized function-AST guarantee. Malformed
+commas/parentheses still receive complete parser-only positioned diagnostics.
+There is no new global arity/type/value validator or Panto redesign.
+
+Validation: the combined isolated Maven selection passes **1,641 tests**,
+zero failures/errors/skips. The three matrix hosts contribute 112/207/1,087
+passing methods respectively; directly affected adjacent suites contribute the
+remaining 235. The VS Code selected-host run also passes (reported summary
+1,727 passed, zero failed across registered controllers, not a unique-method
+count to combine with Maven). Generator checks pass 4/4.
+The earlier 854-cell audit remains historical; expanded T033/T034 and final
+T023/T024 sign-off are still open.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
@@ -76,12 +121,11 @@ The following implementation findings describe the **original 21-name baseline**
    `SPLIT` was the only new lexer keyword needed in this D batch and
    is already present; the other three existing tokens are unchanged.
 5. `ARRAY_CONSTRUCT_STRUCTURED` was incorrectly left under Slice A / GC1 rather
-   than D closure. It is now **T025, the very next implementation**, with an
-   expanded lexical-readiness inventory, official before/after constants and
-   developer manual token-ID repair gate before matrix completion.
+   than D closure. T025 now completes its expanded lexical/manual gate,
+   Snowflake affinity and independent 83-case matrix.
 
 The initial source audit did not establish runtime certification. Subsequent
-manual token-ID repairs are committed, and the latest focused run passed
+manual token-ID repairs are committed, and the original T022 focused run passed
 1,033 tests with zero failures/errors/skips. The earlier string-to-array batch
 also passed 24 subscript and 78 table-function tests; no production code changed
 in the final three-function batch, T021 or T022. The matrix audit and
@@ -119,23 +163,23 @@ not a claim to have surveyed every function in Snowflake's evolving catalog.
 
 ## Expanded all-array closure inventory
 
-**Current execution order:** T025 -> T026 -> T027 -> T028 -> T029 -> T030 ->
+**Completed scalar batch:** T025/T026/T027. **Remaining execution order:** T028 -> T029 -> T030 ->
 T031 -> T032 -> T033 -> T034 -> T023 -> T024. Task details and exact source
 paths live in the
 [master plan](sql-grammar-5.1.4-workplan.md#d5--exhaustive-array-closure-amendment-t025t034-before-t023t024).
 Task numbers preserve history rather than numeric execution order.
 
-Inventory totals: **seven outstanding names + 21 original audited names +
-14 previously completed names = 42**. Every row below is subject to T033's
+Inventory totals: **four outstanding names + three completed scalar names +
+21 original audited names + 14 carried-forward names = 42**. Every row below is subject to T033's
 expanded signature reconciliation, T034's independent cell audit and the
 T023/T024 final gates; a prior completion is reusable evidence, not automatic
 expanded-scope sign-off.
 
 | Canonical function | Original subsection / slice | Current disposition | Slice D implementation/evidence owner |
 |---|---|---|---|
-| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | **NEXT; constructor implementation/matrix pending; lexical/manual-repair gate complete** | T025 |
-| `ARRAY_CONTAINS` | 4.1 | Partial; VARIANT/operand and broader matrix closure pending | T026 |
-| `ARRAY_FLATTEN` | 4.5 / E | Existing keyword; scalar routing/affinity/matrix closure pending | T027 |
+| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | Complete: lexical/manual gate, affinity and 83-case matrix | T025 complete; T033/T034 recheck |
+| `ARRAY_CONTAINS` | 4.1 | Complete: 74-case VARIANT/operand/full matrix; cast substitution loss repaired | T026 complete; T033/T034 recheck |
+| `ARRAY_FLATTEN` | 4.5 / E | Complete: unary routing/affinity and 54-case scalar matrix | T027 complete; T033/T034 recheck |
 | `FLATTEN` | 4.5 / E | Baseline delivered; advanced table/lateral scope and lineage parity pending | T028 |
 | `FILTER` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T029 |
 | `TRANSFORM` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T030 |
@@ -667,10 +711,10 @@ the audited planning/companion documents remains excluded from D closure.
   expanded matrices, SORT optional flags and ZIP's fourth operand. Nine real
   gaps repaired; all 1,024 previous methods preserved byte-for-byte; no
   production or lexer changes. Maven and VS Code each pass 1,033/1,033.
-- [ ] **D5.1 / T025 / GC1 NEXT:** structured constructor with complete lexical
+- [x] **D5.1 / T025 / GC1:** structured constructor with complete lexical
   inventory, official named token-ID maps, developer manual repairs and matrix.
-- [ ] **D5.2 / T026:** ARRAY_CONTAINS independent VARIANT/operand/full matrix.
-- [ ] **D5.3 / T027:** scalar ARRAY_FLATTEN routing/affinity/full matrix.
+- [x] **D5.2 / T026:** ARRAY_CONTAINS independent VARIANT/operand/full matrix.
+- [x] **D5.3 / T027:** scalar ARRAY_FLATTEN routing/affinity/full matrix.
 - [ ] **D5.4 / T028:** advanced FLATTEN/lateral forms and compatibility spelling.
 - [ ] **D5.5 / T029:** FILTER syntax/bindings/lineage/full higher-order matrix.
 - [ ] **D5.6 / T030:** TRANSFORM independent higher-order matrix.
@@ -2873,3 +2917,250 @@ Earlier detailed batch ledgers retain additional witnesses and historical counts
 | `split:RuntimeShapeBoundary` | [arC56_signaturePolicySplitRuntimeShapeBoundaryV0Test](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java#L21668) |
 | `split:QualifiedArityCompatibility` | [arC56_signaturePolicySplitQualifiedArityCompatibilityV0Test](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java#L22885) |
 | `split:qualified-malformed-comma` | [arC56_signaturePolicySplitQualifiedTrailingCommaSyntaxV0Test](../src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java#L22917) |
+
+<!-- array-matrix:T025 -->
+## D5.1 ARRAY_CONSTRUCT_STRUCTURED method-level completion evidence
+
+83 methods; 80 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC025_array_construct_structuredSelectPlacementV0Test` |
+| arg1:Qualified | `arC025_array_construct_structuredSelectPlacementV0Test` |
+| arg2:Qualified | `arC025_array_construct_structuredSelectPlacementV0Test` |
+| arg3:Qualified | `arC025_array_construct_structuredSelectPlacementV0Test` |
+| placement:Where | `arC025_array_construct_structuredWherePlacementV0Test` |
+| placement:Join | `arC025_array_construct_structuredJoinPlacementV0Test` |
+| placement:Having | `arC025_array_construct_structuredHavingPlacementV0Test` |
+| placement:Qualify | `arC025_array_construct_structuredQualifyPlacementV0Test` |
+| placement:OrderBy | `arC025_array_construct_structuredOrderByPlacementV0Test` |
+| placement:Values | `arC025_array_construct_structuredValuesPlacementV0Test` |
+| placement:Insert | `arC025_array_construct_structuredInsertPlacementV0Test` |
+| placement:Update | `arC025_array_construct_structuredUpdatePlacementV0Test` |
+| placement:Delete | `arC025_array_construct_structuredDeletePlacementV0Test` |
+| placement:Ddl | `arC025_array_construct_structuredDdlPlacementV0Test` |
+| placement:Script | `arC025_array_construct_structuredScriptPlacementV0Test` |
+| arg1:Unqualified | `arC025_array_construct_structuredArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC025_array_construct_structuredArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC025_array_construct_structuredArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC025_array_construct_structuredArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC025_array_construct_structuredArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC025_array_construct_structuredArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC025_array_construct_structuredArg1ColumnVariableV0Test` |
+| arg1:Null | `arC025_array_construct_structuredArg1NullV0Test` |
+| arg2:Unqualified | `arC025_array_construct_structuredArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC025_array_construct_structuredArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC025_array_construct_structuredArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC025_array_construct_structuredArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC025_array_construct_structuredArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC025_array_construct_structuredArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC025_array_construct_structuredArg2ColumnVariableV0Test` |
+| arg2:Null | `arC025_array_construct_structuredArg2NullV0Test` |
+| arg3:Unqualified | `arC025_array_construct_structuredArg3UnqualifiedV0Test` |
+| arg3:Unresolved | `arC025_array_construct_structuredArg3UnresolvedV0Test` |
+| arg3:Ambiguous | `arC025_array_construct_structuredArg3AmbiguousV0Test` |
+| arg3:MissingAlias | `arC025_array_construct_structuredArg3MissingAliasV0Test` |
+| arg3:HiddenAlias | `arC025_array_construct_structuredArg3HiddenAliasV0Test` |
+| arg3:PredicandVariable | `arC025_array_construct_structuredArg3PredicandVariableV0Test` |
+| arg3:ColumnVariable | `arC025_array_construct_structuredArg3ColumnVariableV0Test` |
+| arg3:Null | `arC025_array_construct_structuredArg3NullV0Test` |
+| combined:unqualified | `arC025_array_construct_structuredUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC025_array_construct_structuredAllPredicandVariablesV0Test` |
+| combined:column | `arC025_array_construct_structuredAllColumnVariablesV0Test` |
+| deep:nested | `arC025_array_construct_structuredNestedExpressionV0Test` |
+| deep:derived | `arC025_array_construct_structuredDerivedOutputV0Test` |
+| deep:setop | `arC025_array_construct_structuredSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC025_array_construct_structuredQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC025_array_construct_structuredSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC025_array_construct_structuredUppercaseV0Test` |
+| dialect:mixed | `arC025_array_construct_structuredMixedDialectV0Test` |
+| syntax:TrailingComma | `arC025_array_construct_structuredTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC025_array_construct_structuredMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC025_array_construct_structuredMissingCommaSyntaxV0Test` |
+| variadic:arg4:Unqualified | `arC025_array_construct_structuredVariadicArg4UnqualifiedV0Test` |
+| variadic:arg4:Unresolved | `arC025_array_construct_structuredVariadicArg4UnresolvedV0Test` |
+| variadic:arg4:Ambiguous | `arC025_array_construct_structuredVariadicArg4AmbiguousV0Test` |
+| variadic:arg4:MissingAlias | `arC025_array_construct_structuredVariadicArg4MissingAliasV0Test` |
+| variadic:arg4:HiddenAlias | `arC025_array_construct_structuredVariadicArg4HiddenAliasV0Test` |
+| variadic:arg4:PredicandVariable | `arC025_array_construct_structuredVariadicArg4PredicandVariableV0Test` |
+| variadic:arg4:ColumnVariable | `arC025_array_construct_structuredVariadicArg4ColumnVariableV0Test` |
+| variadic:arg4:Null | `arC025_array_construct_structuredVariadicArg4NullV0Test` |
+| variadic:combined:predicand | `arC025_array_construct_structuredVariadicAllPredicandVariablesV0Test` |
+| variadic:combined:column | `arC025_array_construct_structuredVariadicAllColumnVariablesV0Test` |
+| form:single-argument | `arC025_array_construct_structuredSingleArgumentV0Test` |
+| variadic:arg4:Qualified | `arC025_array_construct_structuredVariadicQualifiedTailV0Test` |
+| boundary:empty-generic-compatibility | `arC025_array_construct_structuredEmptyCompatibilityV0Test` |
+| boundary:all-untyped-null | `arC025_array_construct_structuredAllUntypedNullRuntimeBoundaryV0Test` |
+| input:typed-null | `arC025_array_construct_structuredTypedNullV0Test` |
+| boundary:common-type-coercion | `arC025_array_construct_structuredCommonTypeRuntimeBoundaryV0Test` |
+| input:nested-constructor | `arC025_array_construct_structuredNestedConstructorsV0Test` |
+| input:nested-arrays | `arC025_array_construct_structuredNestedArraysV0Test` |
+| input:repeated-operand | `arC025_array_construct_structuredRepeatedOperandV0Test` |
+| deep:cte-rename-chain | `arC025_array_construct_structuredCteRenameChainV0Test` |
+| deep:cte-missing-export | `arC025_array_construct_structuredCteMissingExportV0Test` |
+| deep:correlated-subquery | `arC025_array_construct_structuredCorrelatedSubqueryV0Test` |
+| endpoint:PREDICAND | `arC025_array_construct_structuredPREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC025_array_construct_structuredCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC025_array_construct_structuredQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC025_array_construct_structuredTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC025_array_construct_structuredIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC025_array_construct_structuredJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC025_array_construct_structuredVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC025_array_construct_structuredINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC025_array_construct_structuredUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC025_array_construct_structuredDELETESnippetV0Test` |
+| endpoint:DDL | `arC025_array_construct_structuredDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC025_array_construct_structuredSCRIPTSnippetV0Test` |
+
+Focused host: 112 passed, zero failures/errors/skips; 106 six-output cases and 3 syntax controls.
+
+<!-- array-matrix:T026 -->
+## D5.2 ARRAY_CONTAINS method-level completion evidence
+
+74 methods; 71 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC026_array_containsSelectPlacementV0Test` |
+| arg1:Qualified | `arC026_array_containsSelectPlacementV0Test` |
+| arg2:Qualified | `arC026_array_containsSelectPlacementV0Test` |
+| placement:Where | `arC026_array_containsWherePlacementV0Test` |
+| placement:Join | `arC026_array_containsJoinPlacementV0Test` |
+| placement:Having | `arC026_array_containsHavingPlacementV0Test` |
+| placement:Qualify | `arC026_array_containsQualifyPlacementV0Test` |
+| placement:OrderBy | `arC026_array_containsOrderByPlacementV0Test` |
+| placement:Values | `arC026_array_containsValuesPlacementV0Test` |
+| placement:Insert | `arC026_array_containsInsertPlacementV0Test` |
+| placement:Update | `arC026_array_containsUpdatePlacementV0Test` |
+| placement:Delete | `arC026_array_containsDeletePlacementV0Test` |
+| placement:Ddl | `arC026_array_containsDdlPlacementV0Test` |
+| placement:Script | `arC026_array_containsScriptPlacementV0Test` |
+| arg1:Unqualified | `arC026_array_containsArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC026_array_containsArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC026_array_containsArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC026_array_containsArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC026_array_containsArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC026_array_containsArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC026_array_containsArg1ColumnVariableV0Test` |
+| arg1:Null | `arC026_array_containsArg1NullV0Test` |
+| arg2:Unqualified | `arC026_array_containsArg2UnqualifiedV0Test` |
+| arg2:Unresolved | `arC026_array_containsArg2UnresolvedV0Test` |
+| arg2:Ambiguous | `arC026_array_containsArg2AmbiguousV0Test` |
+| arg2:MissingAlias | `arC026_array_containsArg2MissingAliasV0Test` |
+| arg2:HiddenAlias | `arC026_array_containsArg2HiddenAliasV0Test` |
+| arg2:PredicandVariable | `arC026_array_containsArg2PredicandVariableV0Test` |
+| arg2:ColumnVariable | `arC026_array_containsArg2ColumnVariableV0Test` |
+| arg2:Null | `arC026_array_containsArg2NullV0Test` |
+| combined:unqualified | `arC026_array_containsUnqualifiedOperandsV0Test` |
+| combined:predicand | `arC026_array_containsAllPredicandVariablesV0Test` |
+| combined:column | `arC026_array_containsAllColumnVariablesV0Test` |
+| deep:nested | `arC026_array_containsNestedExpressionV0Test` |
+| deep:derived | `arC026_array_containsDerivedOutputV0Test` |
+| deep:setop | `arC026_array_containsSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC026_array_containsQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC026_array_containsSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC026_array_containsUppercaseV0Test` |
+| dialect:mixed | `arC026_array_containsMixedDialectV0Test` |
+| syntax:TrailingComma | `arC026_array_containsTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC026_array_containsMissingRightParenthesisSyntaxV0Test` |
+| syntax:MissingComma | `arC026_array_containsMissingCommaSyntaxV0Test` |
+| input:variant-postfix-cast | `arC026_array_containsVariantPostfixCastV0Test` |
+| input:variant-cast-function | `arC026_array_containsVariantCastFunctionV0Test` |
+| input:variant-substitution | `arC026_array_containsVariantSubstitutionV0Test` |
+| input:variant-column-substitution | `arC026_array_containsVariantQualifiedColumnSubstitutionV0Test` |
+| input:variant-postfix-column-substitution | `arC026_array_containsVariantPostfixColumnSubstitutionV0Test` |
+| input:variant-parenthesized-substitution | `arC026_array_containsVariantParenthesizedSubstitutionV0Test` |
+| input:empty-array | `arC026_array_containsEmptyArrayV0Test` |
+| input:sql-null-element | `arC026_array_containsSqlNullElementV0Test` |
+| input:json-null-element | `arC026_array_containsJsonNullElementV0Test` |
+| input:both-null | `arC026_array_containsBothNullV0Test` |
+| input:numeric-no-variant-cast | `arC026_array_containsNumericNeedleV0Test` |
+| input:boolean-no-variant-cast | `arC026_array_containsBooleanNeedleV0Test` |
+| input:date-variant | `arC026_array_containsDateVariantV0Test` |
+| boundary:runtime-variant-requirement | `arC026_array_containsUncastStringRuntimeBoundaryV0Test` |
+| boundary:one-argument-compatibility | `arC026_array_containsOneArgumentCompatibilityV0Test` |
+| boundary:three-argument-compatibility | `arC026_array_containsThreeArgumentCompatibilityV0Test` |
+| composition:boolean-predicate | `arC026_array_containsPredicateBooleanV0Test` |
+| composition:case-projection | `arC026_array_containsCaseProjectionV0Test` |
+| deep:cte-rename-chain | `arC026_array_containsCteRenameChainV0Test` |
+| deep:cte-missing-export | `arC026_array_containsCteMissingExportV0Test` |
+| deep:correlated-subquery | `arC026_array_containsCorrelatedSubqueryV0Test` |
+| endpoint:PREDICAND | `arC026_array_containsPREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC026_array_containsCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC026_array_containsQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC026_array_containsTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC026_array_containsIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC026_array_containsJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC026_array_containsVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC026_array_containsINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC026_array_containsUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC026_array_containsDELETESnippetV0Test` |
+| endpoint:DDL | `arC026_array_containsDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC026_array_containsSCRIPTSnippetV0Test` |
+
+Focused host: 207 passed, zero failures/errors/skips; 133 six-output cases and 3 syntax controls.
+
+<!-- array-matrix:T027 -->
+## D5.3 ARRAY_FLATTEN method-level completion evidence
+
+54 methods; 52 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC027_array_flattenSelectPlacementV0Test` |
+| arg1:Qualified | `arC027_array_flattenSelectPlacementV0Test` |
+| placement:Where | `arC027_array_flattenWherePlacementV0Test` |
+| placement:Join | `arC027_array_flattenJoinPlacementV0Test` |
+| placement:Having | `arC027_array_flattenHavingPlacementV0Test` |
+| placement:Qualify | `arC027_array_flattenQualifyPlacementV0Test` |
+| placement:OrderBy | `arC027_array_flattenOrderByPlacementV0Test` |
+| placement:Values | `arC027_array_flattenValuesPlacementV0Test` |
+| placement:Insert | `arC027_array_flattenInsertPlacementV0Test` |
+| placement:Update | `arC027_array_flattenUpdatePlacementV0Test` |
+| placement:Delete | `arC027_array_flattenDeletePlacementV0Test` |
+| placement:Ddl | `arC027_array_flattenDdlPlacementV0Test` |
+| placement:Script | `arC027_array_flattenScriptPlacementV0Test` |
+| arg1:Unqualified | `arC027_array_flattenArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC027_array_flattenArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC027_array_flattenArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC027_array_flattenArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC027_array_flattenArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC027_array_flattenArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC027_array_flattenArg1ColumnVariableV0Test` |
+| arg1:Null | `arC027_array_flattenArg1NullV0Test` |
+| deep:nested | `arC027_array_flattenNestedExpressionV0Test` |
+| deep:derived | `arC027_array_flattenDerivedOutputV0Test` |
+| deep:setop | `arC027_array_flattenSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC027_array_flattenQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC027_array_flattenSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC027_array_flattenUppercaseV0Test` |
+| dialect:mixed | `arC027_array_flattenMixedDialectV0Test` |
+| syntax:TrailingComma | `arC027_array_flattenTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC027_array_flattenMissingRightParenthesisSyntaxV0Test` |
+| input:empty-array | `arC027_array_flattenEmptyArrayV0Test` |
+| input:empty-nested-arrays | `arC027_array_flattenEmptyNestedArraysV0Test` |
+| input:nested-null-elements | `arC027_array_flattenNestedNullElementsV0Test` |
+| boundary:null-array-element | `arC027_array_flattenNullArrayElementV0Test` |
+| input:multiple-nesting-levels | `arC027_array_flattenMultipleNestingLevelsV0Test` |
+| boundary:non-array-element | `arC027_array_flattenNonArrayElementRuntimeBoundaryV0Test` |
+| input:expression-operand | `arC027_array_flattenExpressionOperandV0Test` |
+| composition:nested-flatten | `arC027_array_flattenNestedFlattenV0Test` |
+| boundary:empty-generic-compatibility | `arC027_array_flattenEmptyCompatibilityV0Test` |
+| boundary:two-argument-generic-compatibility | `arC027_array_flattenTwoArgumentCompatibilityV0Test` |
+| deep:cte-rename-chain | `arC027_array_flattenCteRenameChainV0Test` |
+| deep:cte-missing-export | `arC027_array_flattenCteMissingExportV0Test` |
+| deep:correlated-subquery | `arC027_array_flattenCorrelatedSubqueryV0Test` |
+| endpoint:PREDICAND | `arC027_array_flattenPREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC027_array_flattenCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC027_array_flattenQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC027_array_flattenTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC027_array_flattenIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC027_array_flattenJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC027_array_flattenVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC027_array_flattenINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC027_array_flattenUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC027_array_flattenDELETESnippetV0Test` |
+| endpoint:DDL | `arC027_array_flattenDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC027_array_flattenSCRIPTSnippetV0Test` |
+
+Focused host: 1087 passed, zero failures/errors/skips; 1026 six-output cases and 61 syntax controls.

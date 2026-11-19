@@ -8,10 +8,16 @@ const dir = path.resolve(process.argv[2]);
 const action = process.argv[3];
 const config = require(path.join(dir, 'batch.cjs'));
 const functions = functionsFor(config);
-const host = 'parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java';
+const host = config.host || 'parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java';
+assert.match(host, /^parse\/src\/test\/java\/sql\/walker\/\w+\.java$/);
+const suiteName = 'sql.walker.' + path.basename(host, '.java');
+const reportPath = 'parse/target-maven/surefire-reports/TEST-' + suiteName + '.xml';
 const q = value => value == null ? 'null' : JSON.stringify(value);
 const scan = source => [...source.matchAll(/\t@Test\n\tpublic void (\w+)\(\) \{([\s\S]*?)\n\t\}/g)]
   .map(m => ({ name: m[1], body: m[2], text: m[0] }));
+const hasSixOutputs = m => m.body.includes('assertOutputs(')
+  || ['AST', 'Interface', 'Substitution List', 'Table Dictionary', 'Query Column Dictionary', 'Symbol Table']
+    .every(label => m.body.includes('"' + label + ' is wrong"'));
 const load = name => JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
 const save = (name, value) => fs.writeFileSync(path.join(dir, name), JSON.stringify(value, null, 2) + '\n');
 const hash = source => crypto.createHash('sha256').update(source).digest('hex');
@@ -111,10 +117,12 @@ function emit() {
         + '\t\tdiagnostics.addAll(collectParserListenerDiagnostics(parser));\n'
         + '\t\tAssert.assertEquals("Parser diagnostics are wrong", Arrays.asList(\n\t\t\t\t' + diagnosticArgs(r) + '), diagnostics);\n';
     } else {
-      if (c.runner === 'ddl' || c.runner === 'script' || c.route_checks) {
+      if (c.runner === 'ddl' || c.runner === 'script' || c.runner === 'snippet' || c.route_checks) {
         const type = c.runner === 'ddl' ? 'Ddl' : c.runner === 'script' ? 'Script' : 'Sql';
+        if (c.runner === 'snippet') assert.match(c.entry, /^[a-z_]+$/);
         text += '\t\tfinal SQLSelectParserParser parser = parse(query);\n'
-          + '\t\tfinal SQLSelectParserParser.' + type + 'Context tree = parser.' + (c.runner || 'sql') + '();\n'
+          + '\t\tfinal ' + (c.runner === 'snippet' ? 'org.antlr.v4.runtime.ParserRuleContext' : 'SQLSelectParserParser.' + type + 'Context')
+          + ' tree = parser.' + (c.runner === 'snippet' ? c.entry : c.runner || 'sql') + '();\n'
           + '\t\tAssert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());\n'
           + '\t\tAssert.assertEquals("Unexpected primary array function routing", ' + c.routes + ',\n'
           + '\t\t\t\tTrees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_' + c.rule + ').size());\n';
@@ -126,6 +134,20 @@ function emit() {
         : 'runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_' + c.rule + ')') + ';\n';
       if (!r.diagnostics.some(d => d.severity === 'FATAL')) text += '\t\tassertNoFatalErrors(extractor);\n';
       text += exact(r) + '\t\tassertOutputs(extractor,\n' + r.outputs.map(s => '\t\t\t\t' + q(s)).join(',\n') + ');\n';
+      if (c.runner === 'snippet') {
+        assert.equal(r.access_outputs.length, 6);
+        const getters = ['getSqlAbstractTree', 'getQueryInterface', 'getSubstitutionsMap',
+          'getTableDictionary', 'getQueryColumnDictionaryMap', 'getSymbolTable'];
+        const labels = ['AST', 'Interface', 'Substitution List', 'Table Dictionary', 'Query Column Dictionary', 'Symbol Table'];
+        text += '\t\tfinal access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);\n'
+          + '\t\taccessParser.executeTheParse(query, ' + q(c.endpoint) + ');\n'
+          + '\t\tAssert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());\n'
+          + '\t\tAssert.assertEquals("Access diagnostics are wrong", Arrays.asList(' + diagnosticArgs(r)
+          + '), accessParser.getAllDiagnostics());\n';
+        for (let i = 0; i < getters.length; i++)
+          text += '\t\tAssert.assertEquals("Access ' + labels[i] + ' is wrong", ' + q(r.access_outputs[i])
+            + ', accessParser.getSnippet().' + getters[i] + '().toString());\n';
+      }
     }
     return text + '\t}';
   }).join('\n\n');
@@ -142,7 +164,9 @@ function emit() {
     assert.equal((body.match(/final String query\s*=/g) || []).length, 1, c.name);
     assert.ok(body.includes(c.runner === 'syntax' ? '"Parser diagnostics are wrong"' : 'assertExactDiagnostics('), c.name);
     if (c.runner !== 'syntax')
-      assert.equal([...body.slice(body.indexOf('assertOutputs(')).matchAll(/"(?:\\.|[^"\\])*"/g)].length, 6, c.name);
+      assert.equal([...body.slice(body.indexOf('assertOutputs('),
+        c.runner === 'snippet' ? body.indexOf('\t\tfinal access.SqlParserAccess') : undefined)
+        .matchAll(/"(?:\\.|[^"\\])*"/g)].length, 6, c.name);
   }
   fs.writeFileSync(host, source);
   save('counts.json', { functions: functions.map(f => {
@@ -152,13 +176,13 @@ function emit() {
       syntax: own.filter(c => c.runner === 'syntax').length };
   }), host_hash: hash(source),
     unrelated_methods_preserved: scan(before).length - functions.reduce((n, f) => n + f.legacyCount, 0),
-    host_methods: after.size, host_six_goldens: [...after.values()].filter(m => m.body.includes('assertOutputs(')).length,
+    host_methods: after.size, host_six_goldens: [...after.values()].filter(hasSixOutputs).length,
     host_syntax: [...after.values()].filter(m => m.body.includes('"Parser diagnostics are wrong"')).length });
   console.log(fs.readFileSync(path.join(dir, 'counts.json'), 'utf8'));
 }
 function finish() {
   const counts = load('counts.json'), cases = load('cases.json');
-  const xmlPath = 'parse/target-maven/surefire-reports/TEST-sql.walker.SqlEventWalkerSnowflakeArrayTransformTests.xml';
+  const xmlPath = reportPath;
   const xml = fs.readFileSync(xmlPath, 'utf8');
   const suite = xml.match(/<testsuite\b[^>]*>/)[0];
   const number = name => Number(suite.match(new RegExp('\\b' + name + '="([^"]+)"'))[1]);
@@ -167,6 +191,8 @@ function finish() {
     assert.equal(number(name), 0, 'Focused ' + name + ' must be zero');
   const source = fs.readFileSync(host, 'utf8');
   assert.equal(hash(source), counts.host_hash, 'Host changed after generation');
+  counts.host_six_goldens = scan(source).filter(hasSixOutputs).length;
+  save('counts.json', counts);
   assert.ok(fs.statSync(xmlPath).mtimeMs >= fs.statSync(host).mtimeMs, 'Stale test report; run the focused host');
   assert.deepEqual([...xml.matchAll(/<testcase\b[^>]*\bname="([^"]+)"/g)].map(m => m[1]).sort(),
     scan(source).map(m => m.name).sort(), 'Test report does not cover the current host');
@@ -191,10 +217,10 @@ function finish() {
   });
   assert.equal(typeof config.next_task, 'string', 'Declare the next task');
   const command = 'mvn -f parse/pom.xml -Pisolated-build -Dtest='
-    + (config.test_selection || 'SqlEventWalkerSnowflakeArrayTransformTests') + ' '
+    + (config.test_selection || path.basename(host, '.java')) + ' '
     + '-Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test';
   const files = f => [host, planPath, reconciliationPath, ...(f.production_files || [])];
-  const tests = { command, suite: 'sql.walker.SqlEventWalkerSnowflakeArrayTransformTests',
+  const tests = { command, suite: suiteName,
     passed: number('tests'), failed: 0, errors: 0, skipped: 0, evidence: xmlPath };
   const traces = functions.map(f => ({ plan_item: f.plan, task: f.task, requirements: ['REQ-001', 'REQ-002', 'REQ-003'] }));
   const report = { batch_id: functions.map(f => f.plan + '-' + f.function).join('+'),
@@ -223,6 +249,13 @@ function finish() {
   fs.writeFileSync(path.join(dir, 'accounting.md'), ledgers.join('\n')
     + `\nFocused host: ${counts.host_methods} passed, zero failures/errors/skips; `
     + `${counts.host_six_goldens} six-output cases and ${counts.host_syntax} syntax controls.\n`);
+  if (process.argv.includes('--record')) {
+    const marker = '<!-- array-matrix:' + functions.map(f => f.task).join('+') + ' -->';
+    const reconciliation = fs.readFileSync(reconciliationPath, 'utf8');
+    assert.ok(!reconciliation.includes(marker), 'Evidence already recorded; review the existing section before replacing it');
+    fs.appendFileSync(reconciliationPath, '\n' + marker + '\n'
+      + fs.readFileSync(path.join(dir, 'accounting.md'), 'utf8'));
+  }
   console.log('Verified ' + cases.length + ' methods and fresh focused results; generated accounting and reports. Apply only compact status/count edits to the master documents.');
 }
 if (action === 'capture') prepare();

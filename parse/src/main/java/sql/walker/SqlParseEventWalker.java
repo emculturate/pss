@@ -9086,6 +9086,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() >= 2) {
 			Object currentValue = normalizeCharacterLiteralOperand(subMap.remove("1"));
+			if (currentValue instanceof Map<?, ?> currentMap) {
+				currentValue = walker.stampSubstitutionVariableFromContext((Map<String, Object>) currentMap, ctx);
+			}
 			List<Integer> suffixKeyOrder = new ArrayList<Integer>();
 			for (String key : subMap.keySet()) {
 				try {

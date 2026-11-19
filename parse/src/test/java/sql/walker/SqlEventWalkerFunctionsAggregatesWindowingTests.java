@@ -1,7 +1,11 @@
 package sql.walker;
+import java.util.Arrays;
+
+import org.antlr.v4.runtime.tree.Trees;
 import org.junit.Assert;
 import org.junit.Test;
 
+import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 /**
@@ -14,6 +18,21 @@ import sql.SQLSelectParserParser;
  * clauses unless product policy explicitly requires it.
  */
 public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSqlParseEventWalkerTest {
+
+	private void assertExactDiagnostics(SqlParseEventWalker extractor, ParseDiagnostic... expected) {
+		Assert.assertEquals("Diagnostics are wrong",
+				Arrays.asList(expected), extractor.getSnippet().getParserDiagnosticList());
+	}
+
+	private void assertOutputs(SqlParseEventWalker extractor, String ast, String outputInterface, String substitutions,
+			String tableDictionary, String queryDictionary, String symbolTable) {
+		Assert.assertEquals("AST is wrong", ast, extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", outputInterface, extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", substitutions, extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", tableDictionary, extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", queryDictionary, extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", symbolTable, extractor.getSymbolTable().toString());
+	}
 
 	@Test
 	public void aggregateFunctionWithDistinctQualifierTest() {
@@ -2496,5 +2515,1989 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getSymbolTable().toString());
 	}
 
-}
 
+	@Test
+	public void arC026_array_containsSelectPlacementV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsWherePlacementV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE array_contains(a.needle, a.tags) IS NOT NULL AND a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={active=[[@26,90:90='a',<459>,1:90]], id=[[@1,7:7='a',<459>,1:7]], label=[[@5,13:13='a',<459>,1:13]], needle=[[@14,56:56='a',<459>,1:56]], tags=[[@18,66:66='a',<459>,1:66]]}}",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}, table_dictionary={events={active=[[@26,90:90='a',<459>,1:90]], id=[[@1,7:7='a',<459>,1:7]], label=[[@5,13:13='a',<459>,1:13]], needle=[[@14,56:56='a',<459>,1:56]], tags=[[@18,66:66='a',<459>,1:66]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON array_contains(a.needle, a.tags) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<459>,1:7], [@30,103:103='a',<459>,1:103]], needle=[[@17,67:67='a',<459>,1:67]], tags=[[@21,77:77='a',<459>,1:77]]}, labels={ref_value=[[@26,87:87='b',<459>,1:87]], event_id=[[@34,110:110='b',<459>,1:110]], active=[[@38,127:127='b',<459>,1:127]], label=[[@5,13:13='b',<459>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}, table_dictionary={events={id=[[@1,7:7='a',<459>,1:7], [@30,103:103='a',<459>,1:103]], needle=[[@17,67:67='a',<459>,1:67]], tags=[[@21,77:77='a',<459>,1:77]]}, labels={ref_value=[[@26,87:87='b',<459>,1:87]], event_id=[[@34,110:110='b',<459>,1:110]], active=[[@38,127:127='b',<459>,1:127]], label=[[@5,13:13='b',<459>,1:13]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC026_array_containsHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.needle, a.tags HAVING array_contains(a.needle, a.tags) IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:84) is recognized as Snowflake-specific grammar.",
+						1, 84, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=needle, table_ref=a}}, 3={column={name=tags, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={*=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<459>,1:7], [@16,54:54='a',<459>,1:54]], needle=[[@20,60:60='a',<459>,1:60], [@30,99:99='a',<459>,1:99]], tags=[[@24,70:70='a',<459>,1:70], [@34,109:109='a',<459>,1:109]]}}",
+				"{query0={total=[[@10,25:29='total',<459>,1:25]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<459>,1:25]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={*=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<459>,1:7], [@16,54:54='a',<459>,1:54]], needle=[[@20,60:60='a',<459>,1:60], [@30,99:99='a',<459>,1:99]], tags=[[@24,70:70='a',<459>,1:70], [@34,109:109='a',<459>,1:109]]}}, grouped_by=[{name=id, table_ref=a}, {name=needle, table_ref=a}, {name=tags, table_ref=a}], filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY array_contains(a.needle, a.tags) IS NOT NULL AND rn <= 5";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={group_id=[[@12,45:45='a',<459>,1:45]], id=[[@1,7:7='a',<459>,1:7], [@17,65:65='a',<459>,1:65]], needle=[[@29,114:114='a',<459>,1:114]], tags=[[@33,124:124='a',<459>,1:124]]}}",
+				"{query0={rn=[[@22,74:75='rn',<459>,1:74], [@41,148:149='rn',<459>,1:148]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<459>,1:9]], rn=[[@22,74:75='rn',<459>,1:74], [@41,148:149='rn',<459>,1:148]]}, table_dictionary={events={group_id=[[@12,45:45='a',<459>,1:45]], id=[[@1,7:7='a',<459>,1:7], [@17,65:65='a',<459>,1:65]], needle=[[@29,114:114='a',<459>,1:114]], tags=[[@33,124:124='a',<459>,1:124]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE a.active = 1 ORDER BY array_contains(a.needle, a.tags), a.id";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:54) is recognized as Snowflake-specific grammar.",
+						1, 54, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id]",
+				"{}",
+				"{events={active=[[@8,32:32='a',<459>,1:32]], id=[[@1,7:7='a',<459>,1:7], [@26,88:88='a',<459>,1:88]], needle=[[@17,69:69='a',<459>,1:69]], tags=[[@21,79:79='a',<459>,1:79]]}}",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@8,32:32='a',<459>,1:32]], id=[[@1,7:7='a',<459>,1:7], [@26,88:88='a',<459>,1:88]], needle=[[@17,69:69='a',<459>,1:69]], tags=[[@21,79:79='a',<459>,1:79]]}}, ordered_by=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=id, table_ref=a}], filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsValuesPlacementV0Test() {
+		final String query = "VALUES (7, array_contains('x'::VARIANT, ['x', 'y']))";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:40) is recognized as Snowflake-specific grammar.",
+						1, 40, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=x}}}, 2={function={function_name=array_construct, parameters={1={literal='x'}, 2={literal='y'}}}}}, function_name=array_contains}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC026_array_containsInsertPlacementV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}",
+				"{query0={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}, def_query0={query_dictionary={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, table_dictionary={events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void arC026_array_containsUpdatePlacementV0Test() {
+		final String query = "UPDATE events SET result_value = array_contains(needle, tags) WHERE active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<459>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=needle, table_ref=events}, {name=tags, table_ref=events}]}, table_dictionary={events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<459>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<459>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<459>,1:18]]}}}}");
+	}
+
+	@Test
+	public void arC026_array_containsDeletePlacementV0Test() {
+		final String query = "DELETE FROM events WHERE array_contains(needle, tags) IS NULL AND active = 0";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={delete={table={alias=null, table=events}, where={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}, filters=[{name=needle, table_ref=events}, {name=tags, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+	}
+
+	@Test
+	public void arC026_array_containsDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_array_contains AS SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:45) is recognized as Snowflake-specific grammar.",
+						1, 45, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_array_contains}, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}",
+				"{query0={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}, table_dictionary={events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC026_array_containsScriptPlacementV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, array_contains(c.needle, c.tags) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={parameters={1={column={name=needle, table_ref=c}}, 2={column={name=tags, table_ref=c}}}, function_name=array_contains}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, 2={orders={active=[[@35,128:128='b',<459>,2:32]], id=[[@28,103:103='b',<459>,2:7]]}}, 3={archive_events={active=[[@62,231:231='c',<459>,3:89]], id=[[@42,149:149='c',<459>,3:7]], needle=[[@48,170:170='c',<459>,3:28]], tags=[[@52,180:180='c',<459>,3:38]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}, 2={query0={id=[[@30,105:106='id',<459>,2:9]]}}, 3={query0={other_value=[[@57,191:201='other_value',<459>,3:49]], id=[[@44,151:152='id',<459>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,105:106='id',<459>,2:9]]}, table_dictionary={orders={active=[[@35,128:128='b',<459>,2:32]], id=[[@28,103:103='b',<459>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@57,191:201='other_value',<459>,3:49]], id=[[@44,151:152='id',<459>,3:9]]}, table_dictionary={archive_events={active=[[@62,231:231='c',<459>,3:89]], id=[[@42,149:149='c',<459>,3:7]], needle=[[@48,170:170='c',<459>,3:28]], tags=[[@52,180:180='c',<459>,3:38]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=needle, table_ref=c}, {name=tags, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, array_contains(needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:33='needle',<459>,1:28]], tags=[[@9,36:36='a',<459>,1:36]]}}",
+				"{query0={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:33='needle',<459>,1:28]], tags=[[@9,36:36='a',<459>,1:36]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=events}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, array_contains(needle, ['x', 'y']) AS result_value";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:43) is recognized as Snowflake-specific grammar.",
+						1, 43, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [needle [(l:1 c:35)]]",
+						1, 35, "SqlASTWalkerHelper", null, "needle", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={column={name=needle, table_ref=null}}, 2={function={function_name=array_construct, parameters={1={literal='x'}, 2={literal='y'}}}}}, function_name=array_contains}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<459>,1:12]], result_value=[[@16,58:69='result_value',<459>,1:58]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<459>,1:12]], result_value=[[@16,58:69='result_value',<459>,1:58]]}, interface={marker=[], result_value=[{name=needle, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, array_contains(needle, a.tags) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'needle' at (l:1 c:28). Possible sources: [events, labels]",
+						1, 28, "SqlASTWalkerHelper", null, "needle", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [needle [(l:1 c:28)]]",
+						1, 28, "SqlASTWalkerHelper", null, "needle", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<459>,1:7], [@22,91:91='a',<459>,1:91]], tags=[[@9,36:36='a',<459>,1:36]]}, labels={event_id=[[@26,98:98='b',<459>,1:98]], active=[[@30,115:115='b',<459>,1:115]]}}",
+				"{query0={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<459>,1:7], [@22,91:91='a',<459>,1:91]], tags=[[@9,36:36='a',<459>,1:36]]}, labels={event_id=[[@26,98:98='b',<459>,1:98]], active=[[@30,115:115='b',<459>,1:115]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=needle, table_ref=null}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1MissingAliasV0Test() {
+		final String query = "SELECT a.id, array_contains(z.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'needle' at (l:1 c:49). No alias or table called 'z'.",
+						1, 49, "SqlASTWalkerHelper", null, "needle", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=z}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=z}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, array_contains(a.needle, q.tags) AS result_value FROM (SELECT a.id, a.needle, a.tags FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'needle' at (l:1 c:49). No alias or table called 'a'.",
+						1, 49, "SqlASTWalkerHelper", null, "needle", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=q}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=needle, table_ref=a}}, 3={column={name=tags, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@35,118:118='a',<459>,1:118]], id=[[@20,75:75='a',<459>,1:75]], needle=[[@24,81:81='a',<459>,1:81]], tags=[[@28,91:91='a',<459>,1:91]]}}",
+				"{query0={needle=[[@26,83:88='needle',<459>,1:83]], id=[[@22,77:78='id',<459>,1:77], [@1,7:7='q',<459>,1:7], [@43,140:140='q',<459>,1:140]], tags=[[@30,93:96='tags',<459>,1:93], [@11,38:38='q',<459>,1:38]]}, query1={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={id=[[@22,77:78='id',<459>,1:77], [@1,7:7='q',<459>,1:7], [@43,140:140='q',<459>,1:140]], needle=[[@26,83:88='needle',<459>,1:83]], tags=[[@30,93:96='tags',<459>,1:93], [@11,38:38='q',<459>,1:38]]}, table_dictionary={events={active=[[@35,118:118='a',<459>,1:118]], id=[[@20,75:75='a',<459>,1:75]], needle=[[@24,81:81='a',<459>,1:81]], tags=[[@28,91:91='a',<459>,1:91]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], needle=[{name=needle, table_ref=a}], tags=[{name=tags, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, array_contains(<needle_expr>, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_expr>=predicand}",
+				"{events={active=[[@19,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,43:43='a',<459>,1:43]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,43:43='a',<459>,1:43]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<needle_expr>, type=predicand}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, array_contains(a.<needle_col>, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={substitution={name=<needle_col>, type=column}, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_col>=column}",
+				"{events={<needle_col>=[[@7,28:28='a',<459>,1:28]], active=[[@21,88:88='a',<459>,1:88]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,44:44='a',<459>,1:44]]}}",
+				"{query0={result_value=[[@16,55:66='result_value',<459>,1:55]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<459>,1:55]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={<needle_col>=[[@7,28:28='a',<459>,1:28]], active=[[@21,88:88='a',<459>,1:88]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,44:44='a',<459>,1:44]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<needle_col>, type=column}, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg1NullV0Test() {
+		final String query = "SELECT a.id, array_contains(NULL, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={null_literal=null}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,78:78='a',<459>,1:78]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,34:34='a',<459>,1:34]]}}",
+				"{query0={result_value=[[@14,45:56='result_value',<459>,1:45]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,45:56='result_value',<459>,1:45]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,78:78='a',<459>,1:78]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,34:34='a',<459>,1:34]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:41='tags',<459>,1:38]]}}",
+				"{query0={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:41='tags',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, array_contains('x'::VARIANT, tags) AS result_value";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [tags [(l:1 c:49)]]",
+						1, 49, "SqlASTWalkerHelper", null, "tags", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=x}}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<459>,1:12]], result_value=[[@14,58:69='result_value',<459>,1:58]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<459>,1:12]], result_value=[[@14,58:69='result_value',<459>,1:58]]}, interface={marker=[], result_value=[{name=tags, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2AmbiguousV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, tags) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'tags' at (l:1 c:38). Possible sources: [events, labels]",
+						1, 38, "SqlASTWalkerHelper", null, "tags", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [tags [(l:1 c:38)]]",
+						1, 38, "SqlASTWalkerHelper", null, "tags", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<459>,1:7], [@22,91:91='a',<459>,1:91]], needle=[[@7,28:28='a',<459>,1:28]]}, labels={event_id=[[@26,98:98='b',<459>,1:98]], active=[[@30,115:115='b',<459>,1:115]]}}",
+				"{query0={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<459>,1:7], [@22,91:91='a',<459>,1:91]], needle=[[@7,28:28='a',<459>,1:28]]}, labels={event_id=[[@26,98:98='b',<459>,1:98]], active=[[@30,115:115='b',<459>,1:115]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2MissingAliasV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, z.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'tags' at (l:1 c:49). No alias or table called 'z'.",
+						1, 49, "SqlASTWalkerHelper", null, "tags", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=z}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2HiddenAliasV0Test() {
+		final String query = "SELECT q.id, array_contains(q.needle, a.tags) AS result_value FROM (SELECT a.id, a.needle, a.tags FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'tags' at (l:1 c:49). No alias or table called 'a'.",
+						1, 49, "SqlASTWalkerHelper", null, "tags", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=needle, table_ref=q}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=needle, table_ref=a}}, 3={column={name=tags, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@35,118:118='a',<459>,1:118]], id=[[@20,75:75='a',<459>,1:75]], needle=[[@24,81:81='a',<459>,1:81]], tags=[[@28,91:91='a',<459>,1:91]]}}",
+				"{query0={needle=[[@26,83:88='needle',<459>,1:83], [@7,28:28='q',<459>,1:28]], id=[[@22,77:78='id',<459>,1:77], [@1,7:7='q',<459>,1:7], [@43,140:140='q',<459>,1:140]], tags=[[@30,93:96='tags',<459>,1:93]]}, query1={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={id=[[@22,77:78='id',<459>,1:77], [@1,7:7='q',<459>,1:7], [@43,140:140='q',<459>,1:140]], needle=[[@26,83:88='needle',<459>,1:83], [@7,28:28='q',<459>,1:28]], tags=[[@30,93:96='tags',<459>,1:93]]}, table_dictionary={events={active=[[@35,118:118='a',<459>,1:118]], id=[[@20,75:75='a',<459>,1:75]], needle=[[@24,81:81='a',<459>,1:81]], tags=[[@28,91:91='a',<459>,1:91]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], needle=[{name=needle, table_ref=a}], tags=[{name=tags, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=needle, table_ref=q}, {name=tags, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2PredicandVariableV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, <tags_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<tags_expr>=predicand}",
+				"{events={active=[[@19,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}",
+				"{query0={result_value=[[@14,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=<tags_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2ColumnVariableV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.<tags_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={substitution={name=<tags_col>, type=column}, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<tags_col>=column}",
+				"{events={active=[[@21,88:88='a',<459>,1:88]], id=[[@1,7:7='a',<459>,1:7]], <tags_col>=[[@11,38:38='a',<459>,1:38]], needle=[[@7,28:28='a',<459>,1:28]]}}",
+				"{query0={result_value=[[@16,55:66='result_value',<459>,1:55]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<459>,1:55]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,88:88='a',<459>,1:88]], id=[[@1,7:7='a',<459>,1:7]], <tags_col>=[[@11,38:38='a',<459>,1:38]], needle=[[@7,28:28='a',<459>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {substitution={name=<tags_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsArg2NullV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={null_literal=null}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}",
+				"{query0={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,47:58='result_value',<459>,1:47]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,80:80='a',<459>,1:80]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsUnqualifiedOperandsV0Test() {
+		final String query = "SELECT a.id, array_contains(needle, tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,78:78='a',<459>,1:78]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:33='needle',<459>,1:28]], tags=[[@9,36:39='tags',<459>,1:36]]}}",
+				"{query0={result_value=[[@12,45:56='result_value',<459>,1:45]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,45:56='result_value',<459>,1:45]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@17,78:78='a',<459>,1:78]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:33='needle',<459>,1:28]], tags=[[@9,36:39='tags',<459>,1:36]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=events}, {name=tags, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsAllPredicandVariablesV0Test() {
+		final String query = "SELECT a.id, array_contains(<needle_predicand>, <tags_predicand>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={substitution={name=<needle_predicand>, type=predicand}}, 2={substitution={name=<tags_predicand>, type=predicand}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<tags_predicand>=predicand, <needle_predicand>=predicand}",
+				"{events={active=[[@17,102:102='a',<459>,1:102]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@12,69:80='result_value',<459>,1:69]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,69:80='result_value',<459>,1:69]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@17,102:102='a',<459>,1:102]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<needle_predicand>, type=predicand}, {name=<tags_predicand>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsAllColumnVariablesV0Test() {
+		final String query = "SELECT a.id, array_contains(a.<needle_column>, a.<tags_column>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={substitution={name=<needle_column>, type=column}, table_ref=a}}, 2={column={substitution={name=<tags_column>, type=column}, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_column>=column, <tags_column>=column}",
+				"{events={active=[[@21,100:100='a',<459>,1:100]], <needle_column>=[[@7,28:28='a',<459>,1:28]], id=[[@1,7:7='a',<459>,1:7]], <tags_column>=[[@11,47:47='a',<459>,1:47]]}}",
+				"{query0={result_value=[[@16,67:78='result_value',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,67:78='result_value',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,100:100='a',<459>,1:100]], <needle_column>=[[@7,28:28='a',<459>,1:28]], id=[[@1,7:7='a',<459>,1:7]], <tags_column>=[[@11,47:47='a',<459>,1:47]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<needle_column>, type=column}, table_ref=a}, {substitution={name=<tags_column>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(array_contains(a.needle, a.tags), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@18,56:56='a',<459>,1:56]], active=[[@28,110:110='a',<459>,1:110]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,37:37='a',<459>,1:37]], tags=[[@13,47:47='a',<459>,1:47]]}}",
+				"{query0={result_value=[[@23,77:88='result_value',<459>,1:77]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@23,77:88='result_value',<459>,1:77]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={fallback_value=[[@18,56:56='a',<459>,1:56]], active=[[@28,110:110='a',<459>,1:110]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,37:37='a',<459>,1:37]], tags=[[@13,47:47='a',<459>,1:47]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@31,116:116='a',<459>,1:116]], id=[[@11,41:41='a',<459>,1:41]], needle=[[@17,62:62='a',<459>,1:62]], tags=[[@21,72:72='a',<459>,1:72]]}}",
+				"{query0={result_value=[[@26,83:94='result_value',<459>,1:83], [@5,13:13='q',<459>,1:13], [@39,138:138='q',<459>,1:138]], id=[[@13,43:44='id',<459>,1:43], [@1,7:7='q',<459>,1:7], [@47,174:174='q',<459>,1:174]]}, query1={result_value=[[@7,15:26='result_value',<459>,1:15]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<459>,1:15]], id=[[@3,9:10='id',<459>,1:9]]}, def_query0={query_dictionary={result_value=[[@26,83:94='result_value',<459>,1:83], [@5,13:13='q',<459>,1:13], [@39,138:138='q',<459>,1:138]], id=[[@13,43:44='id',<459>,1:43], [@1,7:7='q',<459>,1:7], [@47,174:174='q',<459>,1:174]]}, table_dictionary={events={active=[[@31,116:116='a',<459>,1:116]], id=[[@11,41:41='a',<459>,1:41]], needle=[[@17,62:62='a',<459>,1:62]], tags=[[@21,72:72='a',<459>,1:72]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC026_array_containsSetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, array_contains(a.needle, a.tags) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@46,196:196='b',<459>,1:196]], other_value=[[@37,139:139='b',<459>,1:139]], id=[[@31,121:121='b',<459>,1:121]]}, events={active=[[@23,91:91='a',<459>,1:91]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,39:39='a',<459>,1:39]], tags=[[@13,49:49='a',<459>,1:49]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<459>,1:15]], left_value=[[@18,60:69='left_value',<459>,1:60]]}, query1={right_id=[[@35,129:136='right_id',<459>,1:129]], right_value=[[@41,156:166='right_value',<459>,1:156]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@35,129:136='right_id',<459>,1:129]], right_value=[[@41,156:166='right_value',<459>,1:156]]}, table_dictionary={archive_events={archived=[[@46,196:196='b',<459>,1:196]], other_value=[[@37,139:139='b',<459>,1:139]], id=[[@31,121:121='b',<459>,1:121]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@18,60:69='left_value',<459>,1:60]], left_id=[[@5,15:21='left_id',<459>,1:15]]}, table_dictionary={events={active=[[@23,91:91='a',<459>,1:91]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,39:39='a',<459>,1:39]], tags=[[@13,49:49='a',<459>,1:49]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC026_array_containsQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@23,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,33:33='a',<459>,1:33]], tags=[[@13,43:43='a',<459>,1:43]]}}",
+				"{query0={result_value=[[@18,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,54:65='result_value',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@23,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,33:33='a',<459>,1:33]], tags=[[@13,43:43='a',<459>,1:43]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsSameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.array_contains AS stored_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=array_contains, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={active=[[@14,66:66='a',<459>,1:66]], array_contains=[[@5,13:13='a',<459>,1:13]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]], stored_value=[[@9,33:44='stored_value',<459>,1:33]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]], stored_value=[[@9,33:44='stored_value',<459>,1:33]]}, table_dictionary={events={active=[[@14,66:66='a',<459>,1:66]], array_contains=[[@5,13:13='a',<459>,1:13]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=array_contains, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsUppercaseV0Test() {
+		final String query = "SELECT a.id, ARRAY_CONTAINS(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'ARRAY_CONTAINS' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=ARRAY_CONTAINS}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsMixedDialectV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:63); unlikely to run on either engine.",
+						1, 63, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={active=[[@32,128:128='a',<459>,1:128]], created_at=[[@22,83:83='a',<459>,1:83]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={weekday=[[@27,100:106='weekday',<459>,1:100]], result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@27,100:106='weekday',<459>,1:100]], result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@32,128:128='a',<459>,1:128]], created_at=[[@22,83:83='a',<459>,1:83]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_contains(a.needle, a.tags,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:39 - unexpected input: ')' in rule value_expression: SELECT array_contains(a.needle, a.tags,) AS result_value FROM events a",
+						1, 39, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_contains(a.needle, a.tags,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:39 - Syntax error, attempting recovery",
+						1, 39, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC026_array_containsMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_contains(a.needle, a.tags AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:39 - unexpected input: 'AS' in rule value_expression: SELECT array_contains(a.needle, a.tags AS result_value FROM events a",
+						1, 39, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_contains(a.needle, a.tags AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:39 - Syntax error, attempting recovery",
+						1, 39, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC026_array_containsMissingCommaSyntaxV0Test() {
+		final String query = "SELECT array_contains(a.needle a.tags) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:31 - unexpected input: 'a' in rule value_expression: SELECT array_contains(a.needle a.tags) AS result_value FROM events a",
+						1, 31, "ParseErrorCollector", "value_expression", "a", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_contains(a.needle a.tags) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:31 - Syntax error, attempting recovery",
+						1, 31, "ParseErrorCollector", null, "a", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:21 - Invalid syntax near '('",
+						1, 21, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC026_array_containsVariantPostfixCastV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle::VARIANT, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={column={name=needle, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@23,91:91='a',<459>,1:91]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@13,47:47='a',<459>,1:47]]}}",
+				"{query0={result_value=[[@18,58:69='result_value',<459>,1:58]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,58:69='result_value',<459>,1:58]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@23,91:91='a',<459>,1:91]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@13,47:47='a',<459>,1:47]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsVariantCastFunctionV0Test() {
+		final String query = "SELECT a.id, array_contains(CAST(a.needle AS VARIANT), a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=CAST, data_type={type=VARIANT}, type=CAST, value={column={name=needle, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@26,99:99='a',<459>,1:99]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,33:33='a',<459>,1:33]], tags=[[@16,55:55='a',<459>,1:55]]}}",
+				"{query0={result_value=[[@21,66:77='result_value',<459>,1:66]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@21,66:77='result_value',<459>,1:66]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@26,99:99='a',<459>,1:99]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@9,33:33='a',<459>,1:33]], tags=[[@16,55:55='a',<459>,1:55]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsVariantSubstitutionV0Test() {
+		final String query = "SELECT a.id, array_contains(<needle_expr>::VARIANT, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={substitution={name=<needle_expr>, type=predicand}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_expr>=predicand}",
+				"{events={active=[[@21,96:96='a',<459>,1:96]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,52:52='a',<459>,1:52]]}}",
+				"{query0={result_value=[[@16,63:74='result_value',<459>,1:63]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,63:74='result_value',<459>,1:63]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,96:96='a',<459>,1:96]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@11,52:52='a',<459>,1:52]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<needle_expr>, type=predicand}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsVariantQualifiedColumnSubstitutionV0Test() {
+		final String query = "SELECT a.id, array_contains(CAST(a.<needle_col> AS VARIANT), a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=CAST, data_type={type=VARIANT}, type=CAST, value={column={substitution={name=<needle_col>, type=column}, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_col>=column}",
+				"{events={<needle_col>=[[@9,33:33='a',<459>,1:33]], active=[[@26,105:105='a',<459>,1:105]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@16,61:61='a',<459>,1:61]]}}",
+				"{query0={result_value=[[@21,72:83='result_value',<459>,1:72]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@21,72:83='result_value',<459>,1:72]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={<needle_col>=[[@9,33:33='a',<459>,1:33]], active=[[@26,105:105='a',<459>,1:105]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@16,61:61='a',<459>,1:61]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<needle_col>, type=column}, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsVariantPostfixColumnSubstitutionV0Test() {
+		final String query = "SELECT a.id, array_contains(a.<needle_col>::VARIANT, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={column={substitution={name=<needle_col>, type=column}, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_col>=column}",
+				"{events={<needle_col>=[[@7,28:28='a',<459>,1:28]], active=[[@23,97:97='a',<459>,1:97]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@13,53:53='a',<459>,1:53]]}}",
+				"{query0={result_value=[[@18,64:75='result_value',<459>,1:64]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,64:75='result_value',<459>,1:64]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={<needle_col>=[[@7,28:28='a',<459>,1:28]], active=[[@23,97:97='a',<459>,1:97]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@13,53:53='a',<459>,1:53]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<needle_col>, type=column}, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsVariantParenthesizedSubstitutionV0Test() {
+		final String query = "SELECT a.id, array_contains((<needle_expr>::VARIANT), a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={parentheses={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={substitution={name=<needle_expr>, type=predicand}}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<needle_expr>=predicand}",
+				"{events={active=[[@23,98:98='a',<459>,1:98]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@13,54:54='a',<459>,1:54]]}}",
+				"{query0={result_value=[[@18,65:76='result_value',<459>,1:65]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,65:76='result_value',<459>,1:65]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@23,98:98='a',<459>,1:98]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@13,54:54='a',<459>,1:54]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<needle_expr>, type=predicand}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsEmptyArrayV0Test() {
+		final String query = "SELECT a.id, array_contains('x'::VARIANT, []) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:42) is recognized as Snowflake-specific grammar.",
+						1, 42, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=x}}}, 2={function={function_name=array_construct, parameters={}}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@20,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@15,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@15,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@20,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsSqlNullElementV0Test() {
+		final String query = "SELECT a.id, array_contains(NULL, ['x', NULL]) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:34) is recognized as Snowflake-specific grammar.",
+						1, 34, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={null_literal=null}, 2={function={function_name=array_construct, parameters={1={literal='x'}, 2={null_literal=null}}}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,83:83='a',<459>,1:83]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@16,50:61='result_value',<459>,1:50]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,50:61='result_value',<459>,1:50]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,83:83='a',<459>,1:83]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsJsonNullElementV0Test() {
+		final String query = "SELECT a.id, array_contains(parse_json('null'), [parse_json('null'), 'x']) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 3,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:48) is recognized as Snowflake-specific grammar.",
+						1, 48, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={parameters={1={literal='null'}}, function_name=parse_json}}, 2={function={function_name=array_construct, parameters={1={function={parameters={1={literal='null'}}, function_name=parse_json}}, 2={literal='x'}}}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@27,111:111='a',<459>,1:111]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@22,78:89='result_value',<459>,1:78]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@22,78:89='result_value',<459>,1:78]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@27,111:111='a',<459>,1:111]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsBothNullV0Test() {
+		final String query = "SELECT a.id, array_contains(NULL, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={null_literal=null}, 2={null_literal=null}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,76:76='a',<459>,1:76]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<459>,1:43]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<459>,1:43]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@17,76:76='a',<459>,1:76]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsNumericNeedleV0Test() {
+		final String query = "SELECT a.id, array_contains(1, [1, 2]) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:31) is recognized as Snowflake-specific grammar.",
+						1, 31, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=1}, 2={function={function_name=array_construct, parameters={1={literal=1}, 2={literal=2}}}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,75:75='a',<459>,1:75]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@16,42:53='result_value',<459>,1:42]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,42:53='result_value',<459>,1:42]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,75:75='a',<459>,1:75]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsBooleanNeedleV0Test() {
+		final String query = "SELECT a.id, array_contains(TRUE, [TRUE, FALSE]) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:34) is recognized as Snowflake-specific grammar.",
+						1, 34, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=TRUE}, 2={function={function_name=array_construct, parameters={1={literal=TRUE}, 2={literal=FALSE}}}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,85:85='a',<459>,1:85]], id=[[@1,7:7='a',<459>,1:7]]}}",
+				"{query0={result_value=[[@16,52:63='result_value',<459>,1:52]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,52:63='result_value',<459>,1:52]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,85:85='a',<459>,1:85]], id=[[@1,7:7='a',<459>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsDateVariantV0Test() {
+		final String query = "SELECT a.id, array_contains(DATE '2026-11-19'::VARIANT, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={source_type=DATE, literal=2026-11-19}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@22,100:100='a',<459>,1:100]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@12,56:56='a',<459>,1:56]]}}",
+				"{query0={result_value=[[@17,67:78='result_value',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@17,67:78='result_value',<459>,1:67]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@22,100:100='a',<459>,1:100]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@12,56:56='a',<459>,1:56]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsUncastStringRuntimeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_contains('x', a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal='x'}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,77:77='a',<459>,1:77]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,33:33='a',<459>,1:33]]}}",
+				"{query0={result_value=[[@14,44:55='result_value',<459>,1:44]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,44:55='result_value',<459>,1:44]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@19,77:77='a',<459>,1:77]], id=[[@1,7:7='a',<459>,1:7]], tags=[[@9,33:33='a',<459>,1:33]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsOneArgumentCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,74:74='a',<459>,1:74]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}",
+				"{query0={result_value=[[@12,41:52='result_value',<459>,1:41]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,41:52='result_value',<459>,1:41]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@17,74:74='a',<459>,1:74]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsThreeArgumentCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@15,46:46='a',<459>,1:46]], active=[[@25,97:97='a',<459>,1:97]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={result_value=[[@20,64:75='result_value',<459>,1:64]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,64:75='result_value',<459>,1:64]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={extra_value=[[@15,46:46='a',<459>,1:46]], active=[[@25,97:97='a',<459>,1:97]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsPredicateBooleanV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE array_contains(a.needle::VARIANT, a.tags) AND a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={column={name=needle, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={active=[[@25,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], label=[[@5,13:13='a',<459>,1:13]], needle=[[@14,56:56='a',<459>,1:56]], tags=[[@20,75:75='a',<459>,1:75]]}}",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]], label=[[@7,15:19='label',<459>,1:15]]}, table_dictionary={events={active=[[@25,87:87='a',<459>,1:87]], id=[[@1,7:7='a',<459>,1:7]], label=[[@5,13:13='a',<459>,1:13]], needle=[[@14,56:56='a',<459>,1:56]], tags=[[@20,75:75='a',<459>,1:75]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsCaseProjectionV0Test() {
+		final String query = "SELECT a.id, CASE WHEN array_contains(a.needle::VARIANT, a.tags) THEN a.label ELSE a.fallback_value END AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+						1, 23, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=result_value, case={clauses={1={then={column={name=label, table_ref=a}}, when={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={column={name=needle, table_ref=a}}}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}}}, else={column={name=fallback_value, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@24,83:83='a',<459>,1:83]], active=[[@34,140:140='a',<459>,1:140]], id=[[@1,7:7='a',<459>,1:7]], label=[[@20,70:70='a',<459>,1:70]], needle=[[@9,38:38='a',<459>,1:38]], tags=[[@15,57:57='a',<459>,1:57]]}}",
+				"{query0={result_value=[[@29,107:118='result_value',<459>,1:107]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@29,107:118='result_value',<459>,1:107]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={fallback_value=[[@24,83:83='a',<459>,1:83]], active=[[@34,140:140='a',<459>,1:140]], id=[[@1,7:7='a',<459>,1:7]], label=[[@20,70:70='a',<459>,1:70]], needle=[[@9,38:38='a',<459>,1:38]], tags=[[@15,57:57='a',<459>,1:57]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=label, table_ref=a}, {name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsCteRenameChainV0Test() {
+		final String query = "WITH seed AS (SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1), renamed AS (SELECT id, result_value AS exported_value FROM seed) SELECT r.id, r.exported_value FROM renamed r WHERE r.exported_value IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:27) is recognized as Snowflake-specific grammar.",
+						1, 27, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={with={1={cte={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, alias=seed}, 2={cte={select={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}, alias=exported_value}}, from={table={alias=null, table=seed}}}, alias=renamed}}, query={select={1={column={name=id, table_ref=r}}, 2={column={name=exported_value, table_ref=r}}}, from={table={alias=r, table=renamed}}, where={condition={left={column={name=exported_value, table_ref=r}}, operator=IS NOT NULL}}}}}",
+				"[exported_value, id]",
+				"{}",
+				"{events={active=[[@25,96:96='a',<459>,1:96]], id=[[@5,21:21='a',<459>,1:21]], needle=[[@11,42:42='a',<459>,1:42]], tags=[[@15,52:52='a',<459>,1:52]]}}",
+				"{query0={result_value=[[@20,63:74='result_value',<459>,1:63], [@38,134:145='result_value',<459>,1:134]], id=[[@7,23:24='id',<459>,1:23], [@36,130:131='id',<459>,1:130]]}, query1={exported_value=[[@40,150:163='exported_value',<459>,1:150], [@49,189:189='r',<459>,1:189], [@56,227:227='r',<459>,1:227]], id=[[@36,130:131='id',<459>,1:130], [@45,183:183='r',<459>,1:183]]}, query2={exported_value=[[@51,191:204='exported_value',<459>,1:191]], id=[[@47,185:186='id',<459>,1:185]]}}",
+				"{def_query2={context_list={seed=query0, renamed=query1, r=query1}, query_dictionary={exported_value=[[@51,191:204='exported_value',<459>,1:191]], id=[[@47,185:186='id',<459>,1:185]]}, def_query1={context_list={seed=query0}, query_dictionary={exported_value=[[@40,150:163='exported_value',<459>,1:150], [@49,189:189='r',<459>,1:189], [@56,227:227='r',<459>,1:227]], id=[[@36,130:131='id',<459>,1:130], [@45,183:183='r',<459>,1:183]]}, interface={exported_value=[{name=result_value, table_ref=query0}], id=[{name=id, table_ref=query0}]}, table_alias={seed=query0}}, def_query0={query_dictionary={result_value=[[@20,63:74='result_value',<459>,1:63], [@38,134:145='result_value',<459>,1:134]], id=[[@7,23:24='id',<459>,1:23], [@36,130:131='id',<459>,1:130]]}, table_dictionary={events={active=[[@25,96:96='a',<459>,1:96]], id=[[@5,21:21='a',<459>,1:21]], needle=[[@11,42:42='a',<459>,1:42]], tags=[[@15,52:52='a',<459>,1:52]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=exported_value, table_ref=r}], interface={exported_value=[{name=exported_value, table_ref=r}], id=[{name=id, table_ref=r}]}, table_alias={r=query1, seed=query0, renamed=query1}}}");
+	}
+
+	@Test
+	public void arC026_array_containsCteMissingExportV0Test() {
+		final String query = "WITH seed AS (SELECT a.id FROM events a WHERE a.active = 1) SELECT s.id, array_contains(s.needle, s.tags) AS result_value FROM seed s";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:73) is recognized as Snowflake-specific grammar.",
+						1, 73, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+						"Qualified column 'needle' at (l:1 c:88) was not found in output interface of query alias 's'.",
+						1, 88, "SqlASTWalkerHelper", null, "s.needle", false, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+						"Qualified column 'tags' at (l:1 c:98) was not found in output interface of query alias 's'.",
+						1, 98, "SqlASTWalkerHelper", null, "s.tags", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={with={1={cte={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, alias=seed}}, query={select={1={column={name=id, table_ref=s}}, 2={function={parameters={1={column={name=needle, table_ref=s}}, 2={column={name=tags, table_ref=s}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=s, table=seed}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@12,46:46='a',<459>,1:46]], id=[[@5,21:21='a',<459>,1:21]]}}",
+				"{query0={id=[[@7,23:24='id',<459>,1:23], [@19,67:67='s',<459>,1:67]]}, query1={result_value=[[@34,109:120='result_value',<459>,1:109]], id=[[@21,69:70='id',<459>,1:69]]}}",
+				"{def_query1={context_list={seed=query0, s=query0}, query_dictionary={result_value=[[@34,109:120='result_value',<459>,1:109]], id=[[@21,69:70='id',<459>,1:69]]}, def_query0={query_dictionary={id=[[@7,23:24='id',<459>,1:23], [@19,67:67='s',<459>,1:67]]}, table_dictionary={events={active=[[@12,46:46='a',<459>,1:46]], id=[[@5,21:21='a',<459>,1:21]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={result_value=[{name=needle, table_ref=s}, {name=tags, table_ref=s}], id=[{name=id, table_ref=s}]}, table_alias={s=query0, seed=query0}}}");
+	}
+
+	@Test
+	public void arC026_array_containsCorrelatedSubqueryV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE EXISTS (SELECT b.id FROM orders b WHERE b.event_id = a.id AND array_contains(a.needle, a.tags) IS NOT NULL)";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:94) is recognized as Snowflake-specific grammar.",
+						1, 94, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, from={table={alias=a, table=events}}, where={exists={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={and={1={condition={left={column={name=event_id, table_ref=b}}, right={column={name=id, table_ref=a}}, operator==}}, 2={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}}}, operator=EXISTS}}}}",
+				"[id]",
+				"{}",
+				"{orders={event_id=[[@18,72:72='b',<459>,1:72]], id=[[@11,47:47='b',<459>,1:47]]}, events={id=[[@1,7:7='a',<459>,1:7], [@22,85:85='a',<459>,1:85]], needle=[[@28,109:109='a',<459>,1:109]], tags=[[@32,119:119='a',<459>,1:119]]}}",
+				"{query0={id=[[@13,49:50='id',<459>,1:49]]}, query2={id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query2={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<459>,1:7], [@22,85:85='a',<459>,1:85]], needle=[[@28,109:109='a',<459>,1:109]], tags=[[@32,119:119='a',<459>,1:119]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={id=[[@13,49:50='id',<459>,1:49]]}, table_dictionary={orders={event_id=[[@18,72:72='b',<459>,1:72]], id=[[@11,47:47='b',<459>,1:47]]}}, filters=[{name=event_id, table_ref=b}, {name=id, table_ref=a}, {name=needle, table_ref=a}, {name=tags, table_ref=a}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}, filters=[], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC026_array_containsPREDICANDSnippetV0Test() {
+		final String query = "array_contains(<needle_expr>, <tags_expr>)";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.predicand_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:0) is recognized as Snowflake-specific grammar.",
+						1, 0, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{PREDICAND={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}}",
+				"[]",
+				"{<needle_expr>=predicand, <tags_expr>=predicand}",
+				"{}",
+				"{}",
+				"{}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "PREDICAND");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:0) is recognized as Snowflake-specific grammar.",
+						1, 0, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{PREDICAND={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{<needle_expr>=predicand, <tags_expr>=predicand}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsCONDITIONSnippetV0Test() {
+		final String query = "array_contains(<needle_expr>, <tags_expr>) IS NOT NULL AND 1 = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.condition_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:0) is recognized as Snowflake-specific grammar.",
+						1, 0, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{CONDITION={and={1={condition={left={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={literal=1}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{<needle_expr>=predicand, <tags_expr>=predicand}",
+				"{}",
+				"{}",
+				"{}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "CONDITION");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:0) is recognized as Snowflake-specific grammar.",
+						1, 0, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{CONDITION={and={1={condition={left={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={literal=1}, right={literal=1}, operator==}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{<needle_expr>=predicand, <tags_expr>=predicand}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsQUERYSnippetV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.query_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{QUERY={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "QUERY");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{QUERY={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[result_value, id]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsTUPLESnippetV0Test() {
+		final String query = "(SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1)";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.tuple_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:14) is recognized as Snowflake-specific grammar.",
+						1, 14, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{TUPLE={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@22,83:83='a',<459>,1:83]], id=[[@2,8:8='a',<459>,1:8]], needle=[[@8,29:29='a',<459>,1:29]], tags=[[@12,39:39='a',<459>,1:39]]}}",
+				"{query0={result_value=[[@17,50:61='result_value',<459>,1:50]], id=[[@4,10:11='id',<459>,1:10]]}}",
+				"{def_query0={query_dictionary={result_value=[[@17,50:61='result_value',<459>,1:50]], id=[[@4,10:11='id',<459>,1:10]]}, table_dictionary={events={active=[[@22,83:83='a',<459>,1:83]], id=[[@2,8:8='a',<459>,1:8]], needle=[[@8,29:29='a',<459>,1:29]], tags=[[@12,39:39='a',<459>,1:39]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "TUPLE");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:14) is recognized as Snowflake-specific grammar.",
+						1, 14, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{TUPLE={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[result_value, id]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@22,83:83='a',<459>,1:83]], id=[[@2,8:8='a',<459>,1:8]], needle=[[@8,29:29='a',<459>,1:29]], tags=[[@12,39:39='a',<459>,1:39]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{query0={result_value=[[@17,50:61='result_value',<459>,1:50]], id=[[@4,10:11='id',<459>,1:10]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_query0={query_dictionary={result_value=[[@17,50:61='result_value',<459>,1:50]], id=[[@4,10:11='id',<459>,1:10]]}, table_dictionary={events={active=[[@22,83:83='a',<459>,1:83]], id=[[@2,8:8='a',<459>,1:8]], needle=[[@8,29:29='a',<459>,1:29]], tags=[[@12,39:39='a',<459>,1:39]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, table_alias={query0=query0}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsIN_LISTSnippetV0Test() {
+		final String query = "(array_contains(<needle_expr>, <tags_expr>), NULL)";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.in_list_predicate_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:1) is recognized as Snowflake-specific grammar.",
+						1, 1, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{IN_LIST={list={1={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}, 2={null_literal=null}}}}",
+				"[]",
+				"{<needle_expr>=predicand, <tags_expr>=predicand}",
+				"{}",
+				"{}",
+				"{}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "IN_LIST");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:1) is recognized as Snowflake-specific grammar.",
+						1, 1, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{IN_LIST={list={1={function={parameters={1={substitution={name=<needle_expr>, type=predicand}}, 2={substitution={name=<tags_expr>, type=predicand}}}, function_name=array_contains}}, 2={null_literal=null}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{<needle_expr>=predicand, <tags_expr>=predicand}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsJOIN_EXTENSIONSnippetV0Test() {
+		final String query = "JOIN events a ON array_contains(a.needle, a.tags) IS NOT NULL AND a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.join_extension_value();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:17) is recognized as Snowflake-specific grammar.",
+						1, 17, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{JOIN_EXTENSION={1={join=JOIN, on={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, 2={table={alias=a, table=events}}}}",
+				"[]",
+				"{}",
+				"{events={active=[[@18,66:66='a',<459>,1:66]], needle=[[@6,32:32='a',<459>,1:32]], tags=[[@10,42:42='a',<459>,1:42]]}}",
+				"{}",
+				"{table_dictionary={events={active=[[@18,66:66='a',<459>,1:66]], needle=[[@6,32:32='a',<459>,1:32]], tags=[[@10,42:42='a',<459>,1:42]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=active, table_ref=a}], table_alias={a=events}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "JOIN_EXTENSION");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:17) is recognized as Snowflake-specific grammar.",
+						1, 17, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{JOIN_EXTENSION={1={join=JOIN, on={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, 2={table={alias=a, table=events}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@18,66:66='a',<459>,1:66]], needle=[[@6,32:32='a',<459>,1:32]], tags=[[@10,42:42='a',<459>,1:42]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{table_dictionary={events={active=[[@18,66:66='a',<459>,1:66]], needle=[[@6,32:32='a',<459>,1:32]], tags=[[@10,42:42='a',<459>,1:42]]}}, filters=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=active, table_ref=a}], table_alias={a=events}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsVALUESSnippetV0Test() {
+		final String query = "VALUES (7, array_contains('x'::VARIANT, ['x', 'y']))";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.values_statement_end();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:40) is recognized as Snowflake-specific grammar.",
+						1, 40, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{VALUES={values={matrix={1={row={1={literal=7}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=x}}}, 2={function={function_name=array_construct, parameters={1={literal='x'}, 2={literal='y'}}}}}, function_name=array_contains}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "VALUES");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:40) is recognized as Snowflake-specific grammar.",
+						1, 40, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{VALUES={values={matrix={1={row={1={literal=7}, 2={function={parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=x}}}, 2={function={function_name=array_construct, parameters={1={literal='x'}, 2={literal='y'}}}}}, function_name=array_contains}}}}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[$1, $2]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsINSERTSnippetV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.insert_end_point();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}",
+				"{query0={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}, def_query0={query_dictionary={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, table_dictionary={events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "INSERT");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[result_value, id]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{query0={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<459>,1:25]], id=[[@4,21:22='id',<459>,1:21]]}}, def_query0={query_dictionary={result_value=[[@24,88:99='result_value',<459>,1:88]], id=[[@11,48:49='id',<459>,1:48]]}, table_dictionary={events={active=[[@29,121:121='a',<459>,1:121]], id=[[@9,46:46='a',<459>,1:46]], needle=[[@15,67:67='a',<459>,1:67]], tags=[[@19,77:77='a',<459>,1:77]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsUPDATESnippetV0Test() {
+		final String query = "UPDATE events SET result_value = array_contains(needle, tags) WHERE active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.update_end_point();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{UPDATE={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<459>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=needle, table_ref=events}, {name=tags, table_ref=events}]}, table_dictionary={events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<459>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<459>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<459>,1:18]]}}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "UPDATE");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{UPDATE={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[result_value]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{update0={result_value=[[@3,18:29='result_value',<459>,1:18]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_update0={assignments={result_value=[{name=needle, table_ref=events}, {name=tags, table_ref=events}]}, table_dictionary={events={active=[[@12,68:73='active',<459>,1:68]], needle=[[@7,48:53='needle',<459>,1:48], [@10,60:60=')',<288>,1:60]], tags=[[@9,56:59='tags',<459>,1:56], [@10,60:60=')',<288>,1:60]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<459>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<459>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<459>,1:18]]}}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsDELETESnippetV0Test() {
+		final String query = "DELETE FROM events WHERE array_contains(needle, tags) IS NULL AND active = 0";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.delete_end_point();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DELETE={delete={table={alias=null, table=events}, where={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}, filters=[{name=needle, table_ref=events}, {name=tags, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "DELETE");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{DELETE={delete={table={alias=null, table=events}, where={and={1={condition={left={function={parameters={1={column={name=needle, table_ref=null}}, 2={column={name=tags, table_ref=null}}}, function_name=array_contains}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_delete0={query_dictionary={}, table_dictionary={events={active=[[@13,66:71='active',<459>,1:66]], needle=[[@6,40:45='needle',<459>,1:40]], tags=[[@8,48:51='tags',<459>,1:48]]}}, filters=[{name=needle, table_ref=events}, {name=tags, table_ref=events}, {name=active, table_ref=events}], interface=null}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsDDLSnippetV0Test() {
+		final String query = "CREATE VIEW v_array_contains AS SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:45) is recognized as Snowflake-specific grammar.",
+						1, 45, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_array_contains}, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}",
+				"{query0={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}, table_dictionary={events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "DDL");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:45) is recognized as Snowflake-specific grammar.",
+						1, 45, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{DDL={create={type=VIEW, name={table=v_array_contains}, query={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{query0={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{def_create1={def_query0={query_dictionary={result_value=[[@20,81:92='result_value',<459>,1:81]], id=[[@7,41:42='id',<459>,1:41]]}, table_dictionary={events={active=[[@25,114:114='a',<459>,1:114]], id=[[@5,39:39='a',<459>,1:39]], needle=[[@11,60:60='a',<459>,1:60]], tags=[[@15,70:70='a',<459>,1:70]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+
+	@Test
+	public void arC026_array_containsSCRIPTSnippetV0Test() {
+		final String query = "SELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b;\nSELECT a.id, array_contains(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final org.antlr.v4.runtime.ParserRuleContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}}, 3={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, 2={orders={id=[[@28,103:103='b',<459>,2:7]]}}, 3={events={active=[[@56,205:205='a',<459>,3:82]], id=[[@36,130:130='a',<459>,3:7]], needle=[[@42,151:151='a',<459>,3:28]], tags=[[@46,161:161='a',<459>,3:38]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}, 2={query0={id=[[@30,105:106='id',<459>,2:9]]}}, 3={query0={result_value=[[@51,172:183='result_value',<459>,3:49]], id=[[@38,132:133='id',<459>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,105:106='id',<459>,2:9]]}, table_dictionary={orders={id=[[@28,103:103='b',<459>,2:7]]}}, interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={result_value=[[@51,172:183='result_value',<459>,3:49]], id=[[@38,132:133='id',<459>,3:9]]}, table_dictionary={events={active=[[@56,205:205='a',<459>,3:82]], id=[[@36,130:130='a',<459>,3:7]], needle=[[@42,151:151='a',<459>,3:28]], tags=[[@46,161:161='a',<459>,3:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}}");
+		final access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+		accessParser.executeTheParse(query, "SCRIPT");
+		Assert.assertEquals("Access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+		Assert.assertEquals("Access diagnostics are wrong", Arrays.asList(new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_contains' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), accessParser.getAllDiagnostics());
+		Assert.assertEquals("Access AST is wrong", "{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}}, 3={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}, function_name=array_contains}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}", accessParser.getSnippet().getSqlAbstractTree().toString());
+		Assert.assertEquals("Access Interface is wrong", "[]", accessParser.getSnippet().getQueryInterface().toString());
+		Assert.assertEquals("Access Substitution List is wrong", "{SCRIPT={1={}, 2={}, 3={}}}", accessParser.getSnippet().getSubstitutionsMap().toString());
+		Assert.assertEquals("Access Table Dictionary is wrong", "{SCRIPT={1={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, 2={orders={id=[[@28,103:103='b',<459>,2:7]]}}, 3={events={active=[[@56,205:205='a',<459>,3:82]], id=[[@36,130:130='a',<459>,3:7]], needle=[[@42,151:151='a',<459>,3:28]], tags=[[@46,161:161='a',<459>,3:38]]}}}}", accessParser.getSnippet().getTableDictionary().toString());
+		Assert.assertEquals("Access Query Column Dictionary is wrong", "{SCRIPT={1={query0={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}}, 2={query0={id=[[@30,105:106='id',<459>,2:9]]}}, 3={query0={result_value=[[@51,172:183='result_value',<459>,3:49]], id=[[@38,132:133='id',<459>,3:9]]}}}}", accessParser.getSnippet().getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Access Symbol Table is wrong", "{SCRIPT={1={def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<459>,1:49]], id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<459>,1:82]], id=[[@1,7:7='a',<459>,1:7]], needle=[[@7,28:28='a',<459>,1:28]], tags=[[@11,38:38='a',<459>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@30,105:106='id',<459>,2:9]]}, table_dictionary={orders={id=[[@28,103:103='b',<459>,2:7]]}}, interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={result_value=[[@51,172:183='result_value',<459>,3:49]], id=[[@38,132:133='id',<459>,3:9]]}, table_dictionary={events={active=[[@56,205:205='a',<459>,3:82]], id=[[@36,130:130='a',<459>,3:7]], needle=[[@42,151:151='a',<459>,3:28]], tags=[[@46,161:161='a',<459>,3:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}}", accessParser.getSnippet().getSymbolTable().toString());
+	}
+}

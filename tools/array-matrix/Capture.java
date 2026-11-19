@@ -35,6 +35,21 @@ public class Capture extends AbstractSqlParseEventWalkerTest {
             ParserRuleContext tree = switch (mode) {
                 case "script" -> parser.script();
                 case "ddl" -> parser.ddl();
+                case "snippet" -> switch (input.get("entry").getAsString()) {
+                    case "predicand_value" -> parser.predicand_value();
+                    case "condition_value" -> parser.condition_value();
+                    case "query_value" -> parser.query_value();
+                    case "tuple_value" -> parser.tuple_value();
+                    case "in_list_predicate_value" -> parser.in_list_predicate_value();
+                    case "join_extension_value" -> parser.join_extension_value();
+                    case "values_statement_end" -> parser.values_statement_end();
+                    case "insert_end_point" -> parser.insert_end_point();
+                    case "update_end_point" -> parser.update_end_point();
+                    case "delete_end_point" -> parser.delete_end_point();
+                    case "ddl" -> parser.ddl();
+                    case "script" -> parser.script();
+                    default -> throw new IllegalArgumentException("Unsupported snippet entry: " + input.get("entry"));
+                };
                 default -> parser.sql();
             };
             ParseErrorCollector collector = (ParseErrorCollector) parser.getErrorHandler();
@@ -70,6 +85,17 @@ public class Capture extends AbstractSqlParseEventWalkerTest {
                             walker.getInterface().toString(), walker.getSubstitutionsMap().toString(),
                             walker.getTableColumnDictionaryMap().toString(),
                             walker.getQueryColumnDictionaryMap().toString(), walker.getSymbolTable().toString())));
+                }
+                if (mode.equals("snippet")) {
+                    access.SqlParserAccess accessParser = new access.SqlParserAccess(false, false, false);
+                    accessParser.executeTheParse(query, input.get("endpoint").getAsString());
+                    Assert.assertEquals(name + ": access syntax errors", 0, accessParser.getParser().getNumberOfSyntaxErrors());
+                    Assert.assertEquals(name + ": access diagnostics", diagnostics, accessParser.getAllDiagnostics());
+                    access.Snippet snippet = accessParser.getSnippet();
+                    result.add("access_outputs", gson.toJsonTree(List.of(snippet.getSqlAbstractTree().toString(),
+                            snippet.getQueryInterface().toString(), snippet.getSubstitutionsMap().toString(),
+                            snippet.getTableDictionary().toString(), snippet.getQueryColumnDictionaryMap().toString(),
+                            snippet.getSymbolTable().toString())));
                 }
             }
             result.add("diagnostics", gson.toJsonTree(diagnostics));

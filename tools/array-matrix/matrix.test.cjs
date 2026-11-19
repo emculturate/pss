@@ -52,12 +52,14 @@ test('paired catalogs retain separate ownership and accounting rejects missing e
   for (const c of cases) assert.ok(ledger.includes('`' + c.name + '`'));
 });
 
-test('paired emission and accounting preserve isolation and reject unreviewed, stale or failed results', t => {
+for (const customHost of [false, true]) test('paired emission preserves isolation and rejects stale results (' + (customHost ? 'custom snippet host' : 'default host') + ')', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-matrix-test-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const batch = path.join(root, 'batch');
   fs.mkdirSync(batch);
-  const host = path.join(root, 'parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java');
+  const hostName = customHost ? 'ScalarFixtureTests' : 'SqlEventWalkerSnowflakeArrayTransformTests';
+  const hostPath = 'parse/src/test/java/sql/walker/' + hostName + '.java';
+  const host = path.join(root, hostPath);
   fs.mkdirSync(path.dirname(host), { recursive: true });
   const method = name => '\t@Test\n\tpublic void ' + name + '() {\n'
     + '\t\tfinal String query = "SELECT 1";\n\t\tfinal SqlParseEventWalker extractor = runQuery(query);\n'
@@ -66,6 +68,7 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   fs.writeFileSync(host, old);
   fs.writeFileSync(path.join(batch, 'before.java'), old);
   fs.writeFileSync(path.join(batch, 'batch.cjs'), 'module.exports = ' + JSON.stringify({
+    ...(customHost ? { host: hostPath } : {}),
     test_selection: 'SqlEventWalkerSnowflakeArrayTransformTests,RelatedCompositionTests',
     next_task: 'T003 / P3', functions: [
     { function: 'A', prefix: 'newA', legacyPrefix: 'oldA', legacyCount: 1, task: 'T001', plan: 'P1', production_changes: false,
@@ -81,9 +84,11 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   cases[2].rule = 'routine_invocation';
   cases[2].routes = 1;
   cases[2].route_checks = [{ rule: 'array_transform_function', count: 0 }];
+  if (customHost) Object.assign(cases[2], { runner: 'snippet', endpoint: 'PREDICAND', entry: 'predicand_value' });
   fs.writeFileSync(path.join(batch, 'cases.json'), JSON.stringify(cases));
   fs.writeFileSync(path.join(batch, 'captured.json'), JSON.stringify(cases.map(c => ({
-    name: c.name, errors: 0, diagnostics: [], outputs: ['ast', 'interface', 'subs', 'table', 'query', 'symbols']
+    name: c.name, errors: 0, diagnostics: [], outputs: ['ast', 'interface', 'subs', 'table', 'query', 'symbols'],
+    ...(c.runner === 'snippet' ? { access_outputs: ['ast', 'interface', 'subs', 'table', 'query', 'symbols'] } : {})
   }))));
   const invoke = (...args) => spawnSync(process.execPath, [cli, batch, ...args], { cwd: root, encoding: 'utf8' });
   assert.notEqual(invoke('emit').status, 0, 'Unreviewed captures must not emit');
@@ -93,10 +98,11 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   assert.ok(source.includes(method('unrelated')));
   assert.equal((source.match(/"ast", "interface", "subs", "table", "query", "symbols"/g) || []).length, 3);
   assert.ok(source.includes('runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_unary_transform_function)'));
-  assert.ok(source.includes('SQLSelectParserParser.SqlContext tree = parser.sql();'));
+  assert.ok(source.includes(customHost ? 'tree = parser.predicand_value();' : 'SQLSelectParserParser.SqlContext tree = parser.sql();'));
+  if (customHost) assert.ok(source.includes('accessParser.getSnippet().getSymbolTable().toString()'));
   assert.ok(source.includes('Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size()'));
   assert.ok(source.includes('Assert.assertEquals("Unexpected array_transform_function routing", 0,'));
-  const xmlPath = path.join(root, 'parse/target-maven/surefire-reports/TEST-sql.walker.SqlEventWalkerSnowflakeArrayTransformTests.xml');
+  const xmlPath = path.join(root, 'parse/target-maven/surefire-reports/TEST-sql.walker.' + hostName + '.xml');
   fs.mkdirSync(path.dirname(xmlPath), { recursive: true });
   const writeSuite = failures => fs.writeFileSync(xmlPath, `<testsuite tests="5" failures="${failures}" errors="0" skipped="0">`
     + [...cases.map(c => c.name), 'unrelated'].map(name => `<testcase name="${name}"/>`).join('') + '</testsuite>');
@@ -106,11 +112,15 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   fs.mkdirSync(path.dirname(planPath), { recursive: true });
   fs.writeFileSync(planPath, '- [ ] T001 [Plan:P1]\n- [ ] T002 [Plan:P2]\n'
     + Array.from({ length: 22 }, (_, i) => '- [ ] T' + String(i + 3).padStart(3, '0') + ' pending').join('\n'));
-  const finished = invoke('finish');
+  const reconciliationPath = path.join(path.dirname(planPath), 'slice-d-array-function-reconciliation.md');
+  fs.writeFileSync(reconciliationPath, '# Existing evidence\n');
+  const finished = invoke('finish', '--record');
   assert.equal(finished.status, 0, finished.stderr);
   const accounting = fs.readFileSync(path.join(batch, 'accounting.md'), 'utf8');
   assert.ok(accounting.includes('## P1 A'));
   assert.ok(accounting.includes('## P2 B'));
+  assert.equal(fs.readFileSync(reconciliationPath, 'utf8'), '# Existing evidence\n\n<!-- array-matrix:T001+T002 -->\n' + accounting);
+  assert.match(invoke('finish', '--record').stderr, /Evidence already recorded/);
   assert.ok(fs.readFileSync(path.join(batch, 'batch-report.yaml'), 'utf8').includes('completed_tasks: ["T001","T002"]'));
   assert.ok(fs.readFileSync(path.join(batch, 'batch-report.yaml'), 'utf8')
     .includes('-Dtest=SqlEventWalkerSnowflakeArrayTransformTests,RelatedCompositionTests'));

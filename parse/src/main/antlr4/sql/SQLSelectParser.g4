@@ -1339,6 +1339,7 @@ array_unary_transform_function
 array_unary_transform_function_name
   : ARRAY_DISTINCT
   | ARRAY_COMPACT
+  | ARRAY_FLATTEN
   | ARRAY_SIZE
   | ARRAY_SORT
   | ARRAY_MAX

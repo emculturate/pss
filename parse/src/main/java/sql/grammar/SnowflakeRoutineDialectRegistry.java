@@ -11,6 +11,7 @@ public final class SnowflakeRoutineDialectRegistry {
 	private static final Set<String> SNOWFLAKE_DIALECT_ROUTINE_NAMES = Set.of(
 			"array_construct",
 			"array_construct_compact",
+			"array_construct_structured",
 			"array_contains",
 			"array_union_agg",
 			"array_unique_agg",
@@ -28,6 +29,7 @@ public final class SnowflakeRoutineDialectRegistry {
 			"array_repeat",
 			"array_distinct",
 			"array_compact",
+			"array_flatten",
 			"array_size",
 			"array_sort",
 			"array_max",
