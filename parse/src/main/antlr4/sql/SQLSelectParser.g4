@@ -1269,6 +1269,7 @@ nonparenthesized_value_expression_primary
   | array_range_seed_function
   | array_position_seed_function
   | array_zip_seed_function
+  | array_higher_order_function
   | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
@@ -1286,6 +1287,29 @@ predicand_subquery
 // scalar subquery used in an anonymous location in a condition or value expression, such as in a comparison predicate 
 //or in a select item expression
   : subquery
+  ;
+
+array_higher_order_function
+  : function=(FILTER | TRANSFORM)
+    LEFT_PAREN array_operand=value_expression COMMA unary_lambda_expression RIGHT_PAREN
+  | function=REDUCE
+    LEFT_PAREN array_operand=value_expression COMMA initial_value=value_expression
+    COMMA reduce_lambda_expression RIGHT_PAREN
+  ;
+
+unary_lambda_expression
+  : lambda_parameter LAMBDA_ARROW body=value_expression
+  | LEFT_PAREN lambda_parameter RIGHT_PAREN LAMBDA_ARROW body=value_expression
+  ;
+
+reduce_lambda_expression
+  : LEFT_PAREN lambda_parameter COMMA lambda_parameter RIGHT_PAREN
+    LAMBDA_ARROW body=value_expression
+  | lambda_parameter COMMA lambda_parameter LAMBDA_ARROW body=value_expression
+  ;
+
+lambda_parameter
+  : name=identifier data_type?
   ;
 
 array_set_binary_function

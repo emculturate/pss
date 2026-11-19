@@ -45,6 +45,9 @@ public final class SnowflakeRoutineDialectRegistry {
 			"array_generate_range",
 			"array_position",
 			"arrays_zip",
+			"filter",
+			"transform",
+			"reduce",
 			"arrays_to_object");
 
 	private SnowflakeRoutineDialectRegistry() {

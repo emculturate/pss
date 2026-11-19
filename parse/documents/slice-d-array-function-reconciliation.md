@@ -4,8 +4,8 @@ Date: 2026-11-18. Source-audit baseline: commit `5604d3c`.
 Original planning update: the user approved four omitted functions and
 requested lexer expansion first, establishing the **21-function audit baseline**.
 **Post-T022 scope amendment:** all remaining planned array functions must now
-close in Slice D, with the structured constructor required first. **T025–T027
-scalar closure and T028 advanced table FLATTEN are complete; T029/T030/T031 are next.**
+close in Slice D, with the structured constructor required first. **T025–T031
+scalar, table and higher-order closure is complete; T032 is next.**
 The [expanded inventory](#expanded-all-array-closure-inventory) accounts for
 **42 canonical names**, including previously completed A/B/C work and all
 former E function work. Execute T025..T034 before the existing T023/T024 gates.
@@ -163,13 +163,13 @@ not a claim to have surveyed every function in Snowflake's evolving catalog.
 
 ## Expanded all-array closure inventory
 
-**Completed scalar/table batches:** T025/T026/T027/T028. **Remaining execution order:** T029 -> T030 ->
-T031 -> T032 -> T033 -> T034 -> T023 -> T024. Task details and exact source
+**Completed scalar/table/higher-order batches:** T025–T031. **Remaining execution order:**
+T032 -> T033 -> T034 -> T023 -> T024. Task details and exact source
 paths live in the
 [master plan](sql-grammar-5.1.4-workplan.md#d5--exhaustive-array-closure-amendment-t025t034-before-t023t024).
 Task numbers preserve history rather than numeric execution order.
 
-Inventory totals: **four outstanding names + three completed scalar names +
+Inventory totals: **seven completed scalar/table/higher-order names +
 21 original audited names + 14 carried-forward names = 42**. Every row below is subject to T033's
 expanded signature reconciliation, T034's independent cell audit and the
 T023/T024 final gates; a prior completion is reusable evidence, not automatic
@@ -181,9 +181,9 @@ expanded-scope sign-off.
 | `ARRAY_CONTAINS` | 4.1 | Complete: 74-case VARIANT/operand/full matrix; cast substitution loss repaired | T026 complete; T033/T034 recheck |
 | `ARRAY_FLATTEN` | 4.5 / E | Complete: unary routing/affinity and 54-case scalar matrix | T027 complete; T033/T034 recheck |
 | `FLATTEN` | 4.5 / E | Complete: 56 new independent cases, 134 passing host tests; underscored compatibility deferred | T028 |
-| `FILTER` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T029 |
-| `TRANSFORM` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T030 |
-| `REDUCE` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T031 |
+| `FILTER` | 4.12 / E | Complete: 71 independent higher-order cases | T029 |
+| `TRANSFORM` | 4.12 / E | Complete: 71 independent higher-order cases | T030 |
+| `REDUCE` | 4.12 / E | Complete: 82 independent array/initial-value/lambda cases | T031 |
 | `ARRAY_TO_STRING` | 4.9 / D | Original T021/T022 audit complete | T007 evidence; T033/T034 recheck |
 | `ARRAY_SLICE` | 4.9 / D | Original T021/T022 audit complete | T008 evidence; T033/T034 recheck |
 | `ARRAY_REPEAT` | 4.9 / D / GC2 | Original T021/T022 audit complete | T006 evidence; T033/T034 recheck |
@@ -738,9 +738,22 @@ the audited planning/companion documents remains excluded from D closure.
   database responsibilities.
 - `LATERAL_FLATTEN` compatibility is deferred; new examples use `FLATTEN(...)`
   only. No lexer or parser-grammar changes are required.
-- [ ] **D5.5 / T029:** FILTER syntax/bindings/lineage/full higher-order matrix.
-- [ ] **D5.6 / T030:** TRANSFORM independent higher-order matrix.
-- [ ] **D5.7 / T031:** REDUCE independent array/initial-value/lambda matrix.
+- [x] **D5.5 / T029:** FILTER syntax/bindings/lineage/full higher-order matrix.
+- [x] **D5.6 / T030:** TRANSFORM independent higher-order matrix.
+- [x] **D5.7 / T031:** REDUCE independent array/initial-value/lambda matrix.
+
+  Completed 2026-11-19: 224 new methods (71 FILTER, 71 TRANSFORM, 82 REDUCE),
+  with 215 complete six-output goldens and nine exact syntax controls. Each
+  function has twelve SQL placements and twelve dual-output snippet endpoints.
+  Focused selection: **1,688 passed, zero failures/errors/skips, exit 0**.
+  Existing goldens and lexer IDs are unchanged. VS Code's generated-rule
+  diagnostic has cleared without a code workaround or another test run.
+
+  Lambda ASTs retain ordered `parameters` and `body`. Local uses appear as
+  `lambda_reference={name=..., depth=...}` (zero for the nearest lambda),
+  preserving nested shadowing/capture without inventing physical columns.
+  Array, initial-value and external body references retain normal SQL lineage.
+  Runtime lambda evaluation, coercion and result types remain database concerns.
 - [ ] **D5.8 / T032:** verify/reuse all 14 A/B/C completions plus literal,
   subscript and constructor snippet controls; fill only demonstrated gaps.
 - [ ] **D5-SIG / T033:** all 42 signatures, routing and runtime boundaries.
@@ -3186,3 +3199,251 @@ Focused host: 207 passed, zero failures/errors/skips; 133 six-output cases and 3
 | endpoint:SCRIPT | `arC027_array_flattenSCRIPTSnippetV0Test` |
 
 Focused host: 1087 passed, zero failures/errors/skips; 1026 six-output cases and 61 syntax controls.
+
+<!-- array-matrix:T029+T030+T031 -->
+## D5.5 FILTER method-level completion evidence
+
+71 methods; 68 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC029_filterSelectPlacementV0Test` |
+| placement:Where | `arC029_filterWherePlacementV0Test` |
+| placement:Join | `arC029_filterJoinPlacementV0Test` |
+| placement:Having | `arC029_filterHavingPlacementV0Test` |
+| placement:Qualify | `arC029_filterQualifyPlacementV0Test` |
+| placement:OrderBy | `arC029_filterOrderByPlacementV0Test` |
+| placement:Values | `arC029_filterValuesPlacementV0Test` |
+| placement:Insert | `arC029_filterInsertPlacementV0Test` |
+| placement:Update | `arC029_filterUpdatePlacementV0Test` |
+| placement:Delete | `arC029_filterDeletePlacementV0Test` |
+| placement:Ddl | `arC029_filterDdlPlacementV0Test` |
+| placement:Script | `arC029_filterScriptPlacementV0Test` |
+| Array:qualified | `arC029_filterArrayQualifiedV0Test` |
+| Array:unqualified | `arC029_filterArrayUnqualifiedV0Test` |
+| Array:ambiguous | `arC029_filterArrayAmbiguousV0Test` |
+| Array:missing-alias | `arC029_filterArrayMissingAliasV0Test` |
+| Array:hidden-alias | `arC029_filterArrayHiddenAliasV0Test` |
+| Array:unresolved | `arC029_filterArrayUnresolvedV0Test` |
+| Array:predicand | `arC029_filterArrayPredicandVariableV0Test` |
+| Array:column | `arC029_filterArrayColumnVariableV0Test` |
+| Array:null | `arC029_filterArrayNullV0Test` |
+| Body:qualified | `arC029_filterBodyQualifiedV0Test` |
+| Body:unqualified | `arC029_filterBodyUnqualifiedV0Test` |
+| Body:ambiguous | `arC029_filterBodyAmbiguousV0Test` |
+| Body:missing-alias | `arC029_filterBodyMissingAliasV0Test` |
+| Body:hidden-alias | `arC029_filterBodyHiddenAliasV0Test` |
+| Body:unresolved | `arC029_filterBodyUnresolvedV0Test` |
+| Body:predicand | `arC029_filterBodyPredicandVariableV0Test` |
+| Body:column | `arC029_filterBodyColumnVariableV0Test` |
+| Body:null | `arC029_filterBodyNullV0Test` |
+| binding:local-only | `arC029_filterLocalOnlyNoSourceV0Test` |
+| binding:typed | `arC029_filterTypedBindingsV0Test` |
+| binding:parenthesized | `arC029_filterParenthesizedBindingsV0Test` |
+| binding:json-path | `arC029_filterLocalJsonPathV0Test` |
+| binding:qualified-external | `arC029_filterLocalNameMatchesColumnV0Test` |
+| binding:table-alias | `arC029_filterLocalNameMatchesTableAliasV0Test` |
+| binding:no-leak | `arC029_filterNoLeakAfterCallV0Test` |
+| binding:array-outside-body | `arC029_filterNoBindingInArrayOperandV0Test` |
+| binding:nested-shadow | `arC029_filterNestedShadowingV0Test` |
+| binding:nested-capture | `arC029_filterNestedOuterCaptureV0Test` |
+| input:empty-array | `arC029_filterEmptyArrayV0Test` |
+| input:null-array | `arC029_filterNullArrayV0Test` |
+| boundary:null-body | `arC029_filterNullBodyRuntimeBoundaryV0Test` |
+| binding:body-substitution | `arC029_filterBareBodySubstitutionV0Test` |
+| combined:predicand | `arC029_filterCombinedSubstitutionsV0Test` |
+| deep:derived | `arC029_filterDerivedOutputV0Test` |
+| deep:cte-rename | `arC029_filterCteRenameChainV0Test` |
+| deep:missing-export | `arC029_filterCteMissingExportV0Test` |
+| deep:setop | `arC029_filterSetOpSiblingIsolationV0Test` |
+| deep:correlated | `arC029_filterCorrelatedSubqueryV0Test` |
+| neutral:generic | `arC029_filterGenericCompatibilityV0Test` |
+| boundary:null-lambda | `arC029_filterNullLambdaCompatibilityV0Test` |
+| neutral:udf | `arC029_filterQualifiedUdfV0Test` |
+| neutral:column | `arC029_filterSameNamedColumnV0Test` |
+| dialect:uppercase | `arC029_filterUppercaseV0Test` |
+| dialect:mixed | `arC029_filterMixedDialectV0Test` |
+| endpoint:PREDICAND | `arC029_filterPREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC029_filterCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC029_filterQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC029_filterTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC029_filterIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC029_filterJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC029_filterVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC029_filterINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC029_filterUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC029_filterDELETESnippetV0Test` |
+| endpoint:DDL | `arC029_filterDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC029_filterSCRIPTSnippetV0Test` |
+| syntax:trailing-comma | `arC029_filterTrailingCommaSyntaxV0Test` |
+| syntax:missing-parenthesis | `arC029_filterMissingParenthesisSyntaxV0Test` |
+| syntax:missing-lambda-body | `arC029_filterMissingLambdaBodySyntaxV0Test` |
+
+## D5.6 TRANSFORM method-level completion evidence
+
+71 methods; 68 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC030_transformSelectPlacementV0Test` |
+| placement:Where | `arC030_transformWherePlacementV0Test` |
+| placement:Join | `arC030_transformJoinPlacementV0Test` |
+| placement:Having | `arC030_transformHavingPlacementV0Test` |
+| placement:Qualify | `arC030_transformQualifyPlacementV0Test` |
+| placement:OrderBy | `arC030_transformOrderByPlacementV0Test` |
+| placement:Values | `arC030_transformValuesPlacementV0Test` |
+| placement:Insert | `arC030_transformInsertPlacementV0Test` |
+| placement:Update | `arC030_transformUpdatePlacementV0Test` |
+| placement:Delete | `arC030_transformDeletePlacementV0Test` |
+| placement:Ddl | `arC030_transformDdlPlacementV0Test` |
+| placement:Script | `arC030_transformScriptPlacementV0Test` |
+| Array:qualified | `arC030_transformArrayQualifiedV0Test` |
+| Array:unqualified | `arC030_transformArrayUnqualifiedV0Test` |
+| Array:ambiguous | `arC030_transformArrayAmbiguousV0Test` |
+| Array:missing-alias | `arC030_transformArrayMissingAliasV0Test` |
+| Array:hidden-alias | `arC030_transformArrayHiddenAliasV0Test` |
+| Array:unresolved | `arC030_transformArrayUnresolvedV0Test` |
+| Array:predicand | `arC030_transformArrayPredicandVariableV0Test` |
+| Array:column | `arC030_transformArrayColumnVariableV0Test` |
+| Array:null | `arC030_transformArrayNullV0Test` |
+| Body:qualified | `arC030_transformBodyQualifiedV0Test` |
+| Body:unqualified | `arC030_transformBodyUnqualifiedV0Test` |
+| Body:ambiguous | `arC030_transformBodyAmbiguousV0Test` |
+| Body:missing-alias | `arC030_transformBodyMissingAliasV0Test` |
+| Body:hidden-alias | `arC030_transformBodyHiddenAliasV0Test` |
+| Body:unresolved | `arC030_transformBodyUnresolvedV0Test` |
+| Body:predicand | `arC030_transformBodyPredicandVariableV0Test` |
+| Body:column | `arC030_transformBodyColumnVariableV0Test` |
+| Body:null | `arC030_transformBodyNullV0Test` |
+| binding:local-only | `arC030_transformLocalOnlyNoSourceV0Test` |
+| binding:typed | `arC030_transformTypedBindingsV0Test` |
+| binding:parenthesized | `arC030_transformParenthesizedBindingsV0Test` |
+| binding:json-path | `arC030_transformLocalJsonPathV0Test` |
+| binding:qualified-external | `arC030_transformLocalNameMatchesColumnV0Test` |
+| binding:table-alias | `arC030_transformLocalNameMatchesTableAliasV0Test` |
+| binding:no-leak | `arC030_transformNoLeakAfterCallV0Test` |
+| binding:array-outside-body | `arC030_transformNoBindingInArrayOperandV0Test` |
+| binding:nested-shadow | `arC030_transformNestedShadowingV0Test` |
+| binding:nested-capture | `arC030_transformNestedOuterCaptureV0Test` |
+| input:empty-array | `arC030_transformEmptyArrayV0Test` |
+| input:null-array | `arC030_transformNullArrayV0Test` |
+| boundary:null-body | `arC030_transformNullBodyRuntimeBoundaryV0Test` |
+| binding:body-substitution | `arC030_transformBareBodySubstitutionV0Test` |
+| combined:predicand | `arC030_transformCombinedSubstitutionsV0Test` |
+| deep:derived | `arC030_transformDerivedOutputV0Test` |
+| deep:cte-rename | `arC030_transformCteRenameChainV0Test` |
+| deep:missing-export | `arC030_transformCteMissingExportV0Test` |
+| deep:setop | `arC030_transformSetOpSiblingIsolationV0Test` |
+| deep:correlated | `arC030_transformCorrelatedSubqueryV0Test` |
+| neutral:generic | `arC030_transformGenericCompatibilityV0Test` |
+| boundary:null-lambda | `arC030_transformNullLambdaCompatibilityV0Test` |
+| neutral:udf | `arC030_transformQualifiedUdfV0Test` |
+| neutral:column | `arC030_transformSameNamedColumnV0Test` |
+| dialect:uppercase | `arC030_transformUppercaseV0Test` |
+| dialect:mixed | `arC030_transformMixedDialectV0Test` |
+| endpoint:PREDICAND | `arC030_transformPREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC030_transformCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC030_transformQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC030_transformTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC030_transformIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC030_transformJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC030_transformVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC030_transformINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC030_transformUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC030_transformDELETESnippetV0Test` |
+| endpoint:DDL | `arC030_transformDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC030_transformSCRIPTSnippetV0Test` |
+| syntax:trailing-comma | `arC030_transformTrailingCommaSyntaxV0Test` |
+| syntax:missing-parenthesis | `arC030_transformMissingParenthesisSyntaxV0Test` |
+| syntax:missing-lambda-body | `arC030_transformMissingLambdaBodySyntaxV0Test` |
+
+## D5.7 REDUCE method-level completion evidence
+
+82 methods; 79 six-output goldens; 3 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC031_reduceSelectPlacementV0Test` |
+| placement:Where | `arC031_reduceWherePlacementV0Test` |
+| placement:Join | `arC031_reduceJoinPlacementV0Test` |
+| placement:Having | `arC031_reduceHavingPlacementV0Test` |
+| placement:Qualify | `arC031_reduceQualifyPlacementV0Test` |
+| placement:OrderBy | `arC031_reduceOrderByPlacementV0Test` |
+| placement:Values | `arC031_reduceValuesPlacementV0Test` |
+| placement:Insert | `arC031_reduceInsertPlacementV0Test` |
+| placement:Update | `arC031_reduceUpdatePlacementV0Test` |
+| placement:Delete | `arC031_reduceDeletePlacementV0Test` |
+| placement:Ddl | `arC031_reduceDdlPlacementV0Test` |
+| placement:Script | `arC031_reduceScriptPlacementV0Test` |
+| Array:qualified | `arC031_reduceArrayQualifiedV0Test` |
+| Array:unqualified | `arC031_reduceArrayUnqualifiedV0Test` |
+| Array:ambiguous | `arC031_reduceArrayAmbiguousV0Test` |
+| Array:missing-alias | `arC031_reduceArrayMissingAliasV0Test` |
+| Array:hidden-alias | `arC031_reduceArrayHiddenAliasV0Test` |
+| Array:unresolved | `arC031_reduceArrayUnresolvedV0Test` |
+| Array:predicand | `arC031_reduceArrayPredicandVariableV0Test` |
+| Array:column | `arC031_reduceArrayColumnVariableV0Test` |
+| Array:null | `arC031_reduceArrayNullV0Test` |
+| Initial:qualified | `arC031_reduceInitialQualifiedV0Test` |
+| Initial:unqualified | `arC031_reduceInitialUnqualifiedV0Test` |
+| Initial:ambiguous | `arC031_reduceInitialAmbiguousV0Test` |
+| Initial:missing-alias | `arC031_reduceInitialMissingAliasV0Test` |
+| Initial:hidden-alias | `arC031_reduceInitialHiddenAliasV0Test` |
+| Initial:unresolved | `arC031_reduceInitialUnresolvedV0Test` |
+| Initial:predicand | `arC031_reduceInitialPredicandVariableV0Test` |
+| Initial:column | `arC031_reduceInitialColumnVariableV0Test` |
+| Initial:null | `arC031_reduceInitialNullV0Test` |
+| Body:qualified | `arC031_reduceBodyQualifiedV0Test` |
+| Body:unqualified | `arC031_reduceBodyUnqualifiedV0Test` |
+| Body:ambiguous | `arC031_reduceBodyAmbiguousV0Test` |
+| Body:missing-alias | `arC031_reduceBodyMissingAliasV0Test` |
+| Body:hidden-alias | `arC031_reduceBodyHiddenAliasV0Test` |
+| Body:unresolved | `arC031_reduceBodyUnresolvedV0Test` |
+| Body:predicand | `arC031_reduceBodyPredicandVariableV0Test` |
+| Body:column | `arC031_reduceBodyColumnVariableV0Test` |
+| Body:null | `arC031_reduceBodyNullV0Test` |
+| binding:local-only | `arC031_reduceLocalOnlyNoSourceV0Test` |
+| binding:typed | `arC031_reduceTypedBindingsV0Test` |
+| binding:parenthesized | `arC031_reduceParenthesizedBindingsV0Test` |
+| binding:unparenthesized | `arC031_reduceUnparenthesizedBindingsV0Test` |
+| binding:json-path | `arC031_reduceLocalJsonPathV0Test` |
+| binding:qualified-external | `arC031_reduceLocalNameMatchesColumnV0Test` |
+| binding:table-alias | `arC031_reduceLocalNameMatchesTableAliasV0Test` |
+| binding:no-leak | `arC031_reduceNoLeakAfterCallV0Test` |
+| binding:array-outside-body | `arC031_reduceNoBindingInArrayOperandV0Test` |
+| binding:initial-outside-body | `arC031_reduceNoBindingInInitialOperandV0Test` |
+| binding:nested-shadow | `arC031_reduceNestedShadowingV0Test` |
+| binding:nested-capture | `arC031_reduceNestedOuterCaptureV0Test` |
+| input:empty-array | `arC031_reduceEmptyArrayV0Test` |
+| input:null-array | `arC031_reduceNullArrayV0Test` |
+| boundary:null-body | `arC031_reduceNullBodyRuntimeBoundaryV0Test` |
+| binding:body-substitution | `arC031_reduceBareBodySubstitutionV0Test` |
+| combined:predicand | `arC031_reduceCombinedSubstitutionsV0Test` |
+| deep:derived | `arC031_reduceDerivedOutputV0Test` |
+| deep:cte-rename | `arC031_reduceCteRenameChainV0Test` |
+| deep:missing-export | `arC031_reduceCteMissingExportV0Test` |
+| deep:setop | `arC031_reduceSetOpSiblingIsolationV0Test` |
+| deep:correlated | `arC031_reduceCorrelatedSubqueryV0Test` |
+| neutral:generic | `arC031_reduceGenericCompatibilityV0Test` |
+| boundary:null-lambda | `arC031_reduceNullLambdaCompatibilityV0Test` |
+| neutral:udf | `arC031_reduceQualifiedUdfV0Test` |
+| neutral:column | `arC031_reduceSameNamedColumnV0Test` |
+| dialect:uppercase | `arC031_reduceUppercaseV0Test` |
+| dialect:mixed | `arC031_reduceMixedDialectV0Test` |
+| endpoint:PREDICAND | `arC031_reducePREDICANDSnippetV0Test` |
+| endpoint:CONDITION | `arC031_reduceCONDITIONSnippetV0Test` |
+| endpoint:QUERY | `arC031_reduceQUERYSnippetV0Test` |
+| endpoint:TUPLE | `arC031_reduceTUPLESnippetV0Test` |
+| endpoint:IN_LIST | `arC031_reduceIN_LISTSnippetV0Test` |
+| endpoint:JOIN_EXTENSION | `arC031_reduceJOIN_EXTENSIONSnippetV0Test` |
+| endpoint:VALUES | `arC031_reduceVALUESSnippetV0Test` |
+| endpoint:INSERT | `arC031_reduceINSERTSnippetV0Test` |
+| endpoint:UPDATE | `arC031_reduceUPDATESnippetV0Test` |
+| endpoint:DELETE | `arC031_reduceDELETESnippetV0Test` |
+| endpoint:DDL | `arC031_reduceDDLSnippetV0Test` |
+| endpoint:SCRIPT | `arC031_reduceSCRIPTSnippetV0Test` |
+| syntax:trailing-comma | `arC031_reduceTrailingCommaSyntaxV0Test` |
+| syntax:missing-parenthesis | `arC031_reduceMissingParenthesisSyntaxV0Test` |
+| syntax:missing-lambda-body | `arC031_reduceMissingLambdaBodySyntaxV0Test` |
+
+Focused host: 224 passed, zero failures/errors/skips; 215 six-output cases and 9 syntax controls.

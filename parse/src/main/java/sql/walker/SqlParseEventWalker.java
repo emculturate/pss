@@ -8831,6 +8831,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (ctx.tb_name == null && ctx.name != null
+				&& collectLambdaReference(ctx, ctx.name.getText(), ctx.path_name, subMap)) {
+			return;
+		}
 
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
@@ -8914,6 +8918,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (ctx.tb_name == null && ctx.name != null
+				&& collectLambdaReference(ctx, ctx.name.getText(), ctx.path_name, subMap)) {
+			return;
+		}
 
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
@@ -8968,6 +8976,43 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		}
+	}
+
+	private boolean collectLambdaReference(
+			ParserRuleContext ctx, String name,
+			List<SQLSelectParserParser.IdentifierContext> path,
+			Map<String, Object> subMap) {
+		int depth = 0;
+		ParseTree child = ctx;
+		for (ParserRuleContext parent = ctx.getParent(); parent != null; parent = parent.getParent()) {
+			SQLSelectParserParser.Value_expressionContext body = null;
+			if (parent instanceof SQLSelectParserParser.Unary_lambda_expressionContext lambda) {
+				body = lambda.body;
+			} else if (parent instanceof SQLSelectParserParser.Reduce_lambda_expressionContext lambda) {
+				body = lambda.body;
+			}
+			// A lambda binds only its body, never its array or initial-value operands.
+			if (body != null && child == body) {
+				for (SQLSelectParserParser.Lambda_parameterContext parameter
+						: parent.getRuleContexts(SQLSelectParserParser.Lambda_parameterContext.class)) {
+					if (parameter.name.getText().equalsIgnoreCase(name)) {
+						Map<String, Object> reference = new LinkedHashMap<>();
+						reference.put(MUMBLE_NAME_KEY, name);
+						reference.put("depth", depth);
+						String jsonPath = buildJsonPath(path);
+						if (jsonPath != null) {
+							reference.put(MUMBLE_JSON_PATH_KEY, jsonPath);
+						}
+						subMap.clear();
+						subMap.put("lambda_reference", reference);
+						return true;
+					}
+				}
+				depth++;
+			}
+			child = parent;
+		}
+		return false;
 	}
 
 	private org.antlr.v4.runtime.Token resolveClauseColumnSiteToken(
@@ -12054,6 +12099,73 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		maybeRecordSnowflakeSetFunctionAffinity(ctx.getStart(), item.get(MUMBLE_FUNCTION_NAME_KEY));
+	}
+
+	@Override
+	public void exitLambda_parameter(SQLSelectParserParser.Lambda_parameterContext ctx) {
+		Map<String, Object> subMap = walker.getNodeMap(ctx.getRuleIndex(),
+				walker.currentStackLevel(ctx.getRuleIndex()));
+		Object dataType = subMap.get("2");
+		subMap.clear();
+		subMap.put(MUMBLE_NAME_KEY, ctx.name.getText());
+		if (ctx.data_type() != null) {
+			subMap.put("data_type", dataType);
+		}
+	}
+
+	@Override
+	public void exitUnary_lambda_expression(SQLSelectParserParser.Unary_lambda_expressionContext ctx) {
+		collectLambdaExpression(ctx, ctx.body);
+	}
+
+	@Override
+	public void exitReduce_lambda_expression(SQLSelectParserParser.Reduce_lambda_expressionContext ctx) {
+		collectLambdaExpression(ctx, ctx.body);
+	}
+
+	private void collectLambdaExpression(
+			ParserRuleContext ctx, SQLSelectParserParser.Value_expressionContext bodyContext) {
+		Map<String, Object> subMap = walker.getNodeMap(ctx.getRuleIndex(),
+				walker.currentStackLevel(ctx.getRuleIndex()));
+		int parameterCount = ctx.getRuleContexts(SQLSelectParserParser.Lambda_parameterContext.class).size();
+		Map<String, Object> parameters = new LinkedHashMap<>();
+		for (int i = 1; i <= parameterCount; i++) {
+			parameters.put(Integer.toString(i), subMap.get(Integer.toString(i)));
+		}
+		Object body = subMap.get(Integer.toString(parameterCount + 1));
+		if (body instanceof Map<?, ?> bodyMap) {
+			body = walker.stampSubstitutionVariableFromContext((Map<String, Object>) bodyMap, bodyContext);
+		}
+		Map<String, Object> lambda = new LinkedHashMap<>();
+		lambda.put(MUMBLE_PARAMETERS_KEY, parameters);
+		lambda.put("body", body);
+		subMap.clear();
+		subMap.put("lambda", lambda);
+	}
+
+	@Override
+	public void exitArray_higher_order_function(SQLSelectParserParser.Array_higher_order_functionContext ctx) {
+		Map<String, Object> subMap = walker.getNodeMap(ctx.getRuleIndex(),
+				walker.currentStackLevel(ctx.getRuleIndex()));
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> parameters = new LinkedHashMap<>();
+		int count = ctx.initial_value == null ? 2 : 3;
+		for (int i = 1; i <= count; i++) {
+			Object argument = subMap.get(Integer.toString(i));
+			if (argument instanceof Map<?, ?> argumentMap) {
+				ParserRuleContext argumentContext = i == 1 ? ctx.array_operand
+						: i == 2 && ctx.initial_value != null ? ctx.initial_value : ctx;
+				argument = walker.stampSubstitutionVariableFromContext(
+						(Map<String, Object>) argumentMap, argumentContext);
+			}
+			parameters.put(Integer.toString(i), argument);
+		}
+		Map<String, Object> function = new HashMap<>();
+		function.put(MUMBLE_FUNCTION_NAME_KEY, ctx.function.getText());
+		function.put(MUMBLE_PARAMETERS_KEY, parameters);
+		subMap.clear();
+		subMap.put(MUMBLE_FUNCTION_KEY, function);
+		maybeRecordSnowflakeSetFunctionAffinity(ctx.function, ctx.function.getText());
 	}
 
 	@Override
