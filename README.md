@@ -25,11 +25,41 @@ artifacts under each module's `target-maven/`, separate from the IDE's `target/`
 The VS Code Maven test tasks use this profile. Java auto-build can remain enabled.
 Subsequent runs can use `mvn -Pisolated-build test`.
 
-The profile is opt-in: existing release/build commands without it retain their
-normal output paths. Tools that explicitly read `parse/target/` do not consume
-the isolated output; use `parse/target-maven/` when inspecting an isolated build.
+Use `target-maven/` for isolated test execution and its reports, **not as the
+release JAR handoff location**. Tools that explicitly read `parse/target/`
+do not consume isolated test output.
 If the IDE reports missing Maven dependencies, its project model still needs
 repair; isolated tests do not depend on the IDE's compiled output.
+
+### Local release JARs
+
+**Each module's standard `target/` is authoritative for release JARs.**
+Keep isolated test builds separate, but do not distribute JARs from
+`target-maven/` or retain competing release copies there.
+
+1. In [workspace settings](.vscode/settings.json), record the current value of
+   `java.autobuild.enabled`, set it to `false` and let any in-progress IDE
+   compilation finish.
+2. Run **Build Local Release JARs** in VS Code, or run this command from the
+   repository root, **without** the `isolated-build` profile:
+
+   ```bash
+   mvn -Prelease-tests clean verify
+   ```
+
+3. Restore the prior `java.autobuild.enabled` value afterward, **including
+   after a failed or cancelled build**. The task does not toggle this setting
+   automatically.
+
+The reactor builds the parser and companion documentation together, including
+the release-test suite. The principal handoff files for the current version are:
+
+- `parse/target/pss-parse-5.1.4-1-fat.jar`
+- `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
+
+The standard parser and test JARs are also produced in `parse/target/`.
+Local packaging is not publication: do not run `deploy` or upload to Archiva
+without explicit owner authorization.
 
 ### Test suite selection
 

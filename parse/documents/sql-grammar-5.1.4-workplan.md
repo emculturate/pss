@@ -112,12 +112,40 @@ does not itself authorize publication.
 1. [ ] **Prepare and verify the local candidate.** Finish consumer/release
    documentation and the remaining frozen-corpus comparison using the existing
    accepted dispositions. Build the parser and docs together from the repository
-   root with `mvn -Pisolated-build,release-tests clean verify`; inspect the
+   root with `mvn -Prelease-tests clean verify`; inspect the
    packaged artifacts and documentation manifest. This is local packaging and
-   verification, not publication. Principal handoff artifacts:
-   - `parse/target-maven/pss-parse-5.1.4-1-fat.jar`
-   - `pss-parse-docs/target-maven/pss-parse-docs-5.1.4-1.jar`
+   verification, not publication. Pause `java.autobuild.enabled` before the
+   build and restore its prior value afterward, even on failure or cancellation;
+   see [local release instructions](../../README.md#local-release-jars).
+   Standard `target/` directories are authoritative for release JARs;
+   `target-maven/` remains for isolated testing. Principal handoff artifacts:
+   - `parse/target/pss-parse-5.1.4-1-fat.jar`
+   - `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
    Record the source revision and artifact SHA-256 checksums for the candidate.
+
+   **Local build complete — 2026-11-19 10:42:30 -05:00:** the initial reactor
+   build used `mvn -Pisolated-build,release-tests clean verify` and succeeded
+   with **4,311 reported, 4,271 passed, 40 skipped, zero
+   failures/errors**; the release profile enabled the slow regressions.
+   Both artifact versions are `5.1.4-1`; the docs API version is `5.1.4`.
+   All eight bundled guides match their canonical sources, and the parser
+   includes its runtime dependencies and Java 17-compatible walker bytecode.
+   Candidate source matches `cfcb948` (the only commit during the build
+   changed this rollout plan, not parser or bundled-doc sources).
+   The verified JARs were subsequently relocated byte-for-byte to the standard
+   `target/` handoff paths above, removing their isolated-output copies without
+   another build or any checksum change.
+
+   | Handoff artifact | SHA-256 |
+   |------------------|---------|
+   | `pss-parse-5.1.4-1-fat.jar` | `4b7cde697d03cc5fc80189ab3797ff87ff13a46cd91e3890a09b0da0fa6ce3cf` |
+   | `pss-parse-docs-5.1.4-1.jar` | `244424038249f56a3fe10af56bd26493351f873e78782e9a69c4f5e68f655f45` |
+
+   The standard parser and test JARs were also generated locally. No Maven
+   install, deploy or repository upload was performed. This completes the
+   local packaging/test portion only; the separate frozen-corpus comparison
+   and final release sign-off remain open.
+
 2. [ ] **Owner-managed RMCP integration and acceptance.** The owner manually
    integrates the local JARs into the RMCP extension project, runs additional
    tests and reports the results. Await that feedback before final sign-off.

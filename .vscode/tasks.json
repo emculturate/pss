@@ -152,14 +152,14 @@
       }
     },
     {
-      "label": "Clean Package (Force ANTLR)",
+      "label": "Build Local Release JARs",
+      "detail": "Pause java.autobuild.enabled before running; restore its prior value afterward, even on failure. Builds parser and docs into target/. Does not publish.",
       "type": "shell",
       "command": "mvn",
       "args": [
-        "-f",
-        "parse/pom.xml",
+        "-Prelease-tests",
         "clean",
-        "package"
+        "verify"
       ],
       "group": "build",
       "options": {
