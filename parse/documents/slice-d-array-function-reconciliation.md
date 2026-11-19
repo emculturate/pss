@@ -11,8 +11,9 @@ snapshots verify both complete replacement maps, recorded in the master plan.
 Generation/compilation passed; D0.5's developer manual golden repairs are now
 committed in `641ded6`, with all 36 affected classes validated. D1.1 completes
 the ARRAY_REPEAT matrix with 48 cases. D1.2.1 completes ARRAY_TO_STRING with 45
-cases; D1.2.2 completes ARRAY_SLICE with 55 cases. The focused host passes
-377/377. Eight older matrix remediations and four D3.8 implementations remain pending.
+cases; D1.2.2 completes ARRAY_SLICE with 55 cases. D2.6 completes ARRAY_DISTINCT,
+ARRAY_COMPACT and ARRAY_SIZE with 31 cases each. The focused host passes
+452/452. Five older matrix remediations and four D3.8 implementations remain pending.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
@@ -26,9 +27,11 @@ verification and reusable tooling added since the manual token-ID repair commit.
    There is no further absent lexer token within that fixed list.
 2. `ARRAY_REPEAT` now has its required strict matrix: 48 independent cases,
    including 45 six-output goldens and three parser-only syntax controls.
-3. **Eight other assigned functions have incomplete per-function matrices.**
+3. **Five other assigned functions have incomplete per-function matrices.**
    `ARRAY_TO_STRING` and `ARRAY_SLICE` are complete under D1.2.1/D1.2.2, with
    exact diagnostics and their original extractor goldens retained.
+   `ARRAY_DISTINCT`, `ARRAY_COMPACT` and `ARRAY_SIZE` are complete under D2.6,
+   each with 29 six-output cases and two parser-only syntax controls.
    The remaining functions'
    earlier green tests did not establish the workplan's full closure contract.
 4. **Four documented Snowflake functions were omitted from the conversion /
@@ -41,7 +44,7 @@ verification and reusable tooling added since the manual token-ID repair commit.
    another supposedly final token-ID repair pass.
 
 The initial source audit did not establish runtime certification. Subsequent
-manual token-ID repairs are committed, and the D1.2.2 focused run passed 377/377
+manual token-ID repairs are committed, and the D2.6 focused run passed 452/452
 with zero failures/errors/skips. This does not close the remaining per-function
 gaps or the final Slice D sign-off ladder.
 
@@ -102,9 +105,9 @@ diagnostic assertions and complete output goldens.
 | `ARRAY_TO_STRING` | D1.2.1 complete | 362 | T | Yes | 45 | 42 | 45 | Expanded matrix and exact legacy diagnostics; parser nonreserved-name fix; evidence below |
 | `ARRAY_SLICE` | D1.2.2 complete | 369 | T | Yes | 55 | 52 | 55 | All three arguments isolated; exact legacy diagnostics; evidence below |
 | `ARRAY_REPEAT` | D1.1 / GC2 complete | 455 | T | Yes | 48 | 45 | 48 | Expanded matrix plus three parser-only syntax cases; evidence below |
-| `ARRAY_DISTINCT` | D2.1; remediation D2.6 | 363 | U | Yes | 2 | 2 | 0 | SELECT + missing-alias seed only |
-| `ARRAY_COMPACT` | D2.2; remediation D2.6 | 364 | U | Yes | 8 | 8 | 0 | Matrix gaps |
-| `ARRAY_SIZE` | D2.2; remediation D2.6 | 368 | U | Yes | 8 | 8 | 0 | Matrix gaps |
+| `ARRAY_DISTINCT` | D2.6.1 / T009 complete | 363 | U | Yes | 31 | 29 | 31 | Independent strict matrix; original goldens preserved; evidence below |
+| `ARRAY_COMPACT` | D2.6.2 / T010 complete | 364 | U | Yes | 31 | 29 | 31 | Independent strict matrix; original goldens preserved; evidence below |
+| `ARRAY_SIZE` | D2.6.3 / T011 complete | 368 | U | Yes | 31 | 29 | 31 | Independent strict matrix; original goldens preserved; evidence below |
 | `ARRAY_SORT` | D2.3 | 370 | U + generic optional-argument calls | Yes | 28 | 28 | 28 | Expanded placement/resolution matrix present |
 | `ARRAY_MAX` | D2.3 | 371 | U | Yes | 25 | 25 | 25 | Expanded placement/resolution matrix present |
 | `ARRAY_MIN` | D2.3 | 372 | U | Yes | 25 | 25 | 25 | Expanded placement/resolution matrix present |
@@ -121,8 +124,8 @@ diagnostic assertions and complete output goldens.
 | `IS_ARRAY` | D3.8.3 | 378 | Generic; explicit family pending | No | 0 | 0 | 0 | Approved implementation/matrix pending |
 | `SPLIT` | D0 complete; D3.8.4 pending | 456 | Generic; explicit family pending | No | 0 | 0 | 0 | Dedicated D matrix pending; composition coverage exists elsewhere |
 
-Total: **377 methods**, of which 366 assert all six extractor outputs and eleven
-are parser-only syntax controls. The focused run passes all 377. This is not a
+Total: **452 methods**, of which 435 assert all six extractor outputs and seventeen
+are parser-only syntax controls. The focused run passes all 452. This is not a
 claim that every signature-negative case across all 21 functions is established;
 D-SIG and the remaining per-function batches remain open.
 
@@ -379,3 +382,122 @@ Retrieved 2026-11-18:
 - [IS_ARRAY](https://docs.snowflake.com/en/sql-reference/functions/is_array)
 - [SPLIT](https://docs.snowflake.com/en/sql-reference/functions/split)
 - [ARRAY_REPEAT](https://docs.snowflake.com/en/sql-reference/functions/array_repeat)
+
+## D2.6.1 ARRAY_DISTINCT method-level completion evidence
+
+31 methods; 29 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeArrayDistinctSelectPlacementV0Test` |
+| arg1:Qualified | `snowflakeArrayDistinctSelectPlacementV0Test` |
+| arg1:MissingAlias | `snowflakeArrayDistinctMissingAliasFatalV0Test` |
+| placement:Where | `arC44_arrayDistinctWherePlacementV0Test` |
+| placement:Join | `arC44_arrayDistinctJoinPlacementV0Test` |
+| placement:Having | `arC44_arrayDistinctHavingPlacementV0Test` |
+| placement:Qualify | `arC44_arrayDistinctQualifyPlacementV0Test` |
+| placement:OrderBy | `arC44_arrayDistinctOrderByPlacementV0Test` |
+| placement:Values | `arC44_arrayDistinctValuesPlacementV0Test` |
+| placement:Insert | `arC44_arrayDistinctInsertPlacementV0Test` |
+| placement:Update | `arC44_arrayDistinctUpdatePlacementV0Test` |
+| placement:Delete | `arC44_arrayDistinctDeletePlacementV0Test` |
+| placement:Ddl | `arC44_arrayDistinctDdlPlacementV0Test` |
+| placement:Script | `arC44_arrayDistinctScriptPlacementV0Test` |
+| arg1:Unqualified | `arC44_arrayDistinctArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC44_arrayDistinctArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC44_arrayDistinctArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC44_arrayDistinctArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC44_arrayDistinctArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC44_arrayDistinctArg1ColumnVariableV0Test` |
+| arg1:Null | `arC44_arrayDistinctArg1NullV0Test` |
+| deep:nested | `arC44_arrayDistinctNestedExpressionV0Test` |
+| deep:derived | `arC44_arrayDistinctDerivedOutputV0Test` |
+| deep:setop | `arC44_arrayDistinctSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC44_arrayDistinctQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC44_arrayDistinctSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC44_arrayDistinctUppercaseV0Test` |
+| dialect:mixed | `arC44_arrayDistinctMixedDialectV0Test` |
+| syntax:TrailingComma | `arC44_arrayDistinctTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC44_arrayDistinctMissingRightParenthesisSyntaxV0Test` |
+| literal:empty-array | `arC44_arrayDistinctEmptyArrayLiteralV0Test` |
+| literal:null-and-duplicates | `arC44_arrayDistinctLiteralArrayWithNullAndDuplicatesV0Test` |
+
+## D2.6.2 ARRAY_COMPACT method-level completion evidence
+
+31 methods; 29 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeArrayCompactSelectPlacementV0Test` |
+| arg1:Qualified | `snowflakeArrayCompactSelectPlacementV0Test` |
+| arg1:MissingAlias | `snowflakeArrayCompactMissingAliasFatalV0Test` |
+| placement:Where | `snowflakeArrayCompactWherePlacementV0Test` |
+| placement:OrderBy | `snowflakeArrayCompactOrderByPlacementV0Test` |
+| placement:Values | `snowflakeArrayCompactValuesPlacementV0Test` |
+| placement:Insert | `snowflakeArrayCompactInsertPlacementV0Test` |
+| placement:Update | `snowflakeArrayCompactUpdatePlacementV0Test` |
+| placement:Delete | `snowflakeArrayCompactDeletePlacementV0Test` |
+| placement:Join | `arC45_arrayCompactJoinPlacementV0Test` |
+| placement:Having | `arC45_arrayCompactHavingPlacementV0Test` |
+| placement:Qualify | `arC45_arrayCompactQualifyPlacementV0Test` |
+| placement:Ddl | `arC45_arrayCompactDdlPlacementV0Test` |
+| placement:Script | `arC45_arrayCompactScriptPlacementV0Test` |
+| arg1:Unqualified | `arC45_arrayCompactArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC45_arrayCompactArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC45_arrayCompactArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC45_arrayCompactArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC45_arrayCompactArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC45_arrayCompactArg1ColumnVariableV0Test` |
+| arg1:Null | `arC45_arrayCompactArg1NullV0Test` |
+| deep:nested | `arC45_arrayCompactNestedExpressionV0Test` |
+| deep:derived | `arC45_arrayCompactDerivedOutputV0Test` |
+| deep:setop | `arC45_arrayCompactSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC45_arrayCompactQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC45_arrayCompactSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC45_arrayCompactUppercaseV0Test` |
+| dialect:mixed | `arC45_arrayCompactMixedDialectV0Test` |
+| syntax:TrailingComma | `arC45_arrayCompactTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC45_arrayCompactMissingRightParenthesisSyntaxV0Test` |
+| literal:empty-array | `arC45_arrayCompactEmptyArrayLiteralV0Test` |
+| literal:null-and-duplicates | `arC45_arrayCompactLiteralArrayWithNullAndDuplicatesV0Test` |
+
+## D2.6.3 ARRAY_SIZE method-level completion evidence
+
+31 methods; 29 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `snowflakeArraySizeSelectPlacementV0Test` |
+| arg1:Qualified | `snowflakeArraySizeSelectPlacementV0Test` |
+| arg1:MissingAlias | `snowflakeArraySizeMissingAliasFatalV0Test` |
+| placement:Where | `snowflakeArraySizeWherePlacementV0Test` |
+| placement:OrderBy | `snowflakeArraySizeOrderByPlacementV0Test` |
+| placement:Values | `snowflakeArraySizeValuesPlacementV0Test` |
+| placement:Insert | `snowflakeArraySizeInsertPlacementV0Test` |
+| placement:Update | `snowflakeArraySizeUpdatePlacementV0Test` |
+| placement:Delete | `snowflakeArraySizeDeletePlacementV0Test` |
+| placement:Join | `arC46_arraySizeJoinPlacementV0Test` |
+| placement:Having | `arC46_arraySizeHavingPlacementV0Test` |
+| placement:Qualify | `arC46_arraySizeQualifyPlacementV0Test` |
+| placement:Ddl | `arC46_arraySizeDdlPlacementV0Test` |
+| placement:Script | `arC46_arraySizeScriptPlacementV0Test` |
+| arg1:Unqualified | `arC46_arraySizeArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC46_arraySizeArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC46_arraySizeArg1AmbiguousV0Test` |
+| arg1:HiddenAlias | `arC46_arraySizeArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC46_arraySizeArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC46_arraySizeArg1ColumnVariableV0Test` |
+| arg1:Null | `arC46_arraySizeArg1NullV0Test` |
+| deep:nested | `arC46_arraySizeNestedExpressionV0Test` |
+| deep:derived | `arC46_arraySizeDerivedOutputV0Test` |
+| deep:setop | `arC46_arraySizeSetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC46_arraySizeQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC46_arraySizeSameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC46_arraySizeUppercaseV0Test` |
+| dialect:mixed | `arC46_arraySizeMixedDialectV0Test` |
+| syntax:TrailingComma | `arC46_arraySizeTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC46_arraySizeMissingRightParenthesisSyntaxV0Test` |
+| literal:empty-array | `arC46_arraySizeEmptyArrayLiteralV0Test` |
+| literal:null-and-duplicates | `arC46_arraySizeLiteralArrayWithNullAndDuplicatesV0Test` |
+
+Focused host: 452 passed, zero failures/errors/skips; 435 six-output cases and 17 syntax controls.

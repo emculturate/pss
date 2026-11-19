@@ -84,7 +84,7 @@ function signatureCases({ name, args, covered = [] }) {
 
 function functionsFor(config) {
   const functions = config.functions || [config];
-  assert.ok(functions.length >= 1 && functions.length <= 2, 'Use one function or a related pair');
+  assert.ok(functions.length >= 1 && functions.length <= 3, 'Use one function or an approved related batch of up to three');
   for (const field of ['function', 'prefix', 'legacyPrefix', 'task'])
     assert.equal(new Set(functions.map(f => f[field])).size, functions.length, 'Duplicate ' + field);
   return functions.map(f => {

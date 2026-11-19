@@ -5,7 +5,8 @@ JUnit/Gson dependencies and Surefire classpath; no npm install. Capture uses
 `JAVA_HOME`, or the JDK recorded in the existing focused-test report.
 
 1. Create a session-local batch directory with `batch.cjs` exporting one function
-   configuration, or `{ functions: [first, second], next_task: "..." }`.
+   configuration, or `{ functions: [first, second, third], next_task: "..." }`
+   for an approved related batch of up to three functions.
 2. `node tools/array-matrix/matrix.cjs <batch-dir> capture`
 3. Review new expectations in `captured.json` against the established contracts;
    investigate unexpected diagnostics/outputs rather than rereading unchanged docs.

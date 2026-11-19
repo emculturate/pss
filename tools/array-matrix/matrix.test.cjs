@@ -37,6 +37,13 @@ test('paired catalogs retain separate ownership and accounting rejects missing e
   }] });
   assert.equal(pair.length, 2);
   assert.equal(pair[0].cases.length, signatureCases(signature).length);
+  const third = { function: 'ARRAY_COMPACT', prefix: 'newCompact', legacyPrefix: 'oldCompact',
+    task: 'T010', legacyCount: 0,
+    signature: { name: 'array_compact', args: [{ column: 'tags', literal: '[]' }] } };
+  const triple = functionsFor({ functions: [...pair, third].map(({ cases, ...f }) => f) });
+  assert.equal(triple.length, 3);
+  assert.equal(triple[2].cases.length, signatureCases(third.signature).length);
+  assert.throws(() => functionsFor({ functions: [...triple, third] }), /up to three/);
   assert.throws(() => functionsFor({ functions: [f, f] }), /Duplicate/);
   assert.throws(() => ledgerFor(f, [{ name: 'unmapped' }], { methods: 1 }), /assign evidence/);
   assert.throws(() => ledgerFor(f, [], { methods: 0 }), /missing cell/);
@@ -97,6 +104,9 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   assert.ok(accounting.includes('## P1 A'));
   assert.ok(accounting.includes('## P2 B'));
   assert.ok(fs.readFileSync(path.join(batch, 'batch-report.yaml'), 'utf8').includes('completed_tasks: ["T001","T002"]'));
+  const checkpoint = fs.readFileSync(path.join(batch, 'checkpoints/tasks-to-impl.yaml'), 'utf8');
+  const chain = JSON.parse(checkpoint.match(/^traceability_chain: (.*)$/m)[1]);
+  assert.ok(chain.every(trace => Array.isArray(trace.files) && trace.files.length === 3));
   writeSuite(1);
   assert.match(invoke('finish').stderr, /Focused failures must be zero/);
   writeSuite(0);

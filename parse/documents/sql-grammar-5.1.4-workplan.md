@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. D0 lexer/manual-repair work and the D1 matrices (`ARRAY_REPEAT`, `ARRAY_TO_STRING`, `ARRAY_SLICE`) are complete; the focused host passes 377/377. Next is D2.6.1 `ARRAY_DISTINCT`, followed by the remaining older matrix remediations and four approved per-function implementations in the sequence below. Prior green runs do not establish full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
+  - **Slice D:** the approved expanded scope is **21 functions**, including `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`. D0 lexer/manual-repair work, D1 matrices and D2.6 matrices (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`) are complete; the focused host passes 452/452. Next is D3.8.1 `TO_ARRAY`; five older matrix remediations and four approved per-function implementations remain. Prior green runs do not establish full matrix closure. See the [function reconciliation](slice-d-array-function-reconciliation.md).
   - **Slice E:** complete `4.5` advanced `FLATTEN` parity and `4.12` higher-order (`FILTER`/`TRANSFORM`/`REDUCE`) closure.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2206,7 +2206,7 @@ implementation sequence** below them governs all next steps.
 **Current completeness correction (2026-11-18):** use the
 [function reconciliation and explicit remaining-task checklist](slice-d-array-function-reconciliation.md).
 The historical D2.5/D3.7 green class runs did not establish complete independent
-matrices for all earlier functions. D1.1 is now complete; D1.2/D2.6/D3.9 remain
+matrices for all earlier functions. D1 and D2.6 are now complete; D3.9 remains
 required remediation. The user approved D3.8's four additions on 2026-11-18 and requested
 another lexer expansion first. The approved D0 batch adds `SPLIT`; `TO_ARRAY`,
 `AS_ARRAY`, and `IS_ARRAY` already have tokens and must not be duplicated.
@@ -2289,7 +2289,7 @@ historical completion records into current sign-off claims.
 | Area | Exact functions | Remaining execution owner |
 |---|---|---|
 | 4.9 transforms (3) | `ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT` | D1.1/D1.2 |
-| 4.10 unary (8) | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` | D2.6 remediation for the first three; preserve and reverify D2.3/D2.4 matrices for the other five |
+| 4.10 unary (8) | `ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM` | D2.6 complete for the first three; preserve and reverify all eight at final D-AUDIT/sign-off |
 | 4.11 conversion/predicate/split/range/position/zip (10) | `SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT` | D3.8 for the four approved additions; D3.9 for the five older gaps; preserve and reverify D3.6 for `ARRAYS_TO_OBJECT` |
 
 **Implementation conventions and source anchors:**
@@ -2344,9 +2344,9 @@ only for a proved defect. Do not commit unless requested.
 
 2. [x] **D1.2.1 / T007:** `Complete D1.2.1: ARRAY_TO_STRING.`
 3. [x] **D1.2.2 / T008:** `Complete D1.2.2: ARRAY_SLICE.`
-4. [ ] **D2.6.1 / T009:** `Complete D2.6.1: ARRAY_DISTINCT.`
-5. [ ] **D2.6.2 / T010:** `Complete D2.6.2: ARRAY_COMPACT.`
-6. [ ] **D2.6.3 / T011:** `Complete D2.6.3: ARRAY_SIZE.`
+4. [x] **D2.6.1 / T009:** `Complete D2.6.1: ARRAY_DISTINCT.`
+5. [x] **D2.6.2 / T010:** `Complete D2.6.2: ARRAY_COMPACT.`
+6. [x] **D2.6.3 / T011:** `Complete D2.6.3: ARRAY_SIZE.`
 
 **Implement the four approved additions**
 
@@ -2480,9 +2480,14 @@ accounting sequence:
 
 ##### D2.6 — older unary matrix completion
 
-- [ ] T009 [Plan:D2.6.1] Complete `ARRAY_DISTINCT` in the focused host beyond its SELECT/missing-alias seeds, satisfying every per-function contract cell.
-- [ ] T010 [Plan:D2.6.2] Complete `ARRAY_COMPACT` in the focused host: JOIN ON/HAVING/QUALIFY/DDL/SCRIPT, independent resolution and variable typing, nested/derived/set-op controls and exact diagnostics.
-- [ ] T011 [Plan:D2.6.3] Complete `ARRAY_SIZE` in the focused host under the same independent contract; do not credit `ARRAY_COMPACT` tests as its evidence.
+- [x] T009 [Plan:D2.6.1] Complete `ARRAY_DISTINCT` in the focused host beyond its SELECT/missing-alias seeds, satisfying every per-function contract cell.
+- [x] T010 [Plan:D2.6.2] Complete `ARRAY_COMPACT` in the focused host: JOIN ON/HAVING/QUALIFY/DDL/SCRIPT, independent resolution and variable typing, nested/derived/set-op controls and exact diagnostics.
+- [x] T011 [Plan:D2.6.3] Complete `ARRAY_SIZE` in the focused host under the same independent contract; do not credit `ARRAY_COMPACT` tests as its evidence.
+  - Completed 2026-11-18 as one approved batch: 31 cases per function (29
+    six-output goldens and two parser-only controls), 75 added methods and all
+    18 older diagnostic lists strengthened. Existing extractor goldens and all
+    359 unrelated methods preserved. One focused run passed 452/452, zero
+    failures/errors/skips. Coverage-only work; no production or lexer changes.
 
 ##### D3.8 — four approved conversion/predicate/split additions
 
@@ -2617,7 +2622,7 @@ All five gap functions are in-scope for Entry 4 closure. Sequence them in bounde
      - **4.9**: `ARRAY_REPEAT` (multi-arg transform)
      - **4.10**: `ARRAY_REVERSE`, `ARRAY_SUM` (unary transforms/scalar)
    - Deliverables: dedicated function routing by signature family, strict per-function matrix, focused validations during implementation; include gate/full-suite evidence at Slice D final sign-off.
-   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` have dedicated unary routing and 27 strict tests each; that historical focused run passed 216/216. D1 matrices are complete with 48 `ARRAY_REPEAT`, 45 `ARRAY_TO_STRING` and 55 `ARRAY_SLICE` cases; the latest focused host passes 377/377. Older unary remediations, D-SIG and the Slice D sign-off ladder remain open.
+   - D2.4 unary portion complete (2026-11-18): `ARRAY_REVERSE` and `ARRAY_SUM` have dedicated unary routing and 27 strict tests each; that historical focused run passed 216/216. D1 matrices are complete with 48 `ARRAY_REPEAT`, 45 `ARRAY_TO_STRING` and 55 `ARRAY_SLICE` cases. D2.6 completes `ARRAY_DISTINCT`, `ARRAY_COMPACT` and `ARRAY_SIZE` with 31 cases each; the latest focused host passes 452/452. D-SIG, final D-AUDIT and the Slice D sign-off ladder remain open.
 
 3. **GC3 — Slice D conversion extension**
    - Function: `ARRAYS_TO_OBJECT`
@@ -2780,7 +2785,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.9** | Transforms with extra arguments (`ARRAY_TO_STRING`, `ARRAY_SLICE`, `ARRAY_REPEAT`) | D1 matrices complete; D-SIG/final gates pending | All three names have routing/registry entries and independent matrices: 45 `ARRAY_TO_STRING`, 55 `ARRAY_SLICE`, 48 `ARRAY_REPEAT` cases. Existing extractor goldens retained; focused host 377/377. This is not final Slice D or release sign-off. |
-| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | Focused runs recorded; D2.6 matrix remediation required | D2.3/D2.4 expanded matrices are present. `ARRAY_DISTINCT`, `ARRAY_COMPACT`, and `ARRAY_SIZE` do not yet meet the full independent matrix contract. D2.5's historical 216/216 pass does not close those gaps. |
+| **4.10** | Unary array → array/scalar (`ARRAY_DISTINCT`, `ARRAY_COMPACT`, `ARRAY_SIZE`, `ARRAY_SORT`, `ARRAY_MAX`, `ARRAY_MIN`, `ARRAY_REVERSE`, `ARRAY_SUM`) | D2.6 matrices complete; final audit/gates pending | D2.3/D2.4 expanded matrices are retained. `ARRAY_DISTINCT`, `ARRAY_COMPACT`, and `ARRAY_SIZE` now have 31 independent cases each, with full outputs/exact diagnostics; the current focused host passes 452/452. Final D-SIG/D-AUDIT/sign-off remain open. |
 | **4.11** | Conversion/predicate/split/range/position/zip (`SPLIT_TO_ARRAY`, `STRTOK_TO_ARRAY`, `ARRAY_GENERATE_RANGE`, `ARRAY_POSITION`, `ARRAYS_ZIP`, `ARRAYS_TO_OBJECT`, `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, `SPLIT`) | D3.8 approved implementation / D3.9 remediation required after D0 | `ARRAYS_TO_OBJECT` has its expanded D3.6 matrix. The other five original names have matrix gaps despite D3.7's historical 256/256 pass. Implement the four approved additions independently; preserve existing `SPLIT_TO_ARRAY` behavior rather than silently renaming/reclassifying it. |
 | **4.12** | `FILTER` / `TRANSFORM` / `REDUCE` higher-order | Not started | Higher-order syntax and lambda-style argument handling still open. |
 
@@ -3009,8 +3014,28 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
   implementation; no artificial red phase. One full focused run:
   `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home PATH=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin:$PATH mvn -f parse/pom.xml -Pisolated-build -Dtest=SqlEventWalkerSnowflakeArrayTransformTests -Dpss.walker.test.verbose=false -Dpss.test.slow=false -Dpss.test.diagnostics=false test`
   passed **377/377**, zero failures/errors/skips, exit 0.
-- Next: D2.6.1 `ARRAY_DISTINCT`; eight older matrices, four D3.8 implementations,
+- Next at that checkpoint: D2.6.1 `ARRAY_DISTINCT`; eight older matrices, four D3.8 implementations,
   D-SIG/D-AUDIT and broad final gates remain open.
+
+**Slice D D2.6 unary completion record (2026-11-18):**
+- T009/T010/T011 complete: `ARRAY_DISTINCT`, `ARRAY_COMPACT` and `ARRAY_SIZE`
+  each have 31 independent cases, including 29 six-output cases and two exact
+  parser-only syntax controls. Generated missing cells from one signature
+  catalog, reviewed new scope/lineage/diagnostic expectations, and preserved all
+  original extractor goldens plus 359 unrelated methods.
+- All twelve placements, operand resolution/variables, nested/derived/set-op,
+  SCRIPT reset, neutral UDF/column, case/mixed-dialect and NULL/empty/literal
+  controls are mapped by generated method-level evidence in the reconciliation.
+  Arrays are parsed, not executed; global arity/type policy stays under D-SIG.
+- Coverage passed against existing production code; no artificial red phase,
+  production changes, lexer changes or token-ID migration. One shared focused
+  run passed **452/452**, zero failures/errors/skips, exit 0. Host totals:
+  435 six-output cases and 17 parser-only controls.
+- Extended the existing toolkit to the approved three-function batch; its
+  three regression tests pass. Generated task/checkpoint reports from the case
+  catalog and actual fresh Surefire results.
+- Next: T012 / D3.8.1 `TO_ARRAY`. Five older matrices, four D3.8 implementations,
+  D-SIG/D-AUDIT and final gates remain open; this is not whole-release sign-off.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

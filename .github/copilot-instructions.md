@@ -25,7 +25,7 @@ See [test suite selection](../README.md#test-suite-selection).
 - Use [the reusable matrix tooling](../tools/array-matrix/README.md), not a new
   capture program per function. Describe the signature and actual legacy
   coverage; generate missing argument-isolation/placement cases from templates.
-- Related functions may share an approved batch, one capture and one full
+- Up to three related functions may share an approved batch, one capture and one full
   focused-host run. Preserve independent matrices, task status and evidence;
   do not expand beyond the user's requested scope or bypass task prerequisites.
 - Review new goldens and unexpected results. Keep full extractor goldens,

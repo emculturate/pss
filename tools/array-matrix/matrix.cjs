@@ -207,7 +207,7 @@ function finish() {
         changes: [{ change_type: 'modified', description: 'Completed matrix and recorded named-method evidence.' }] })) },
       verification: { build_passed: true, test_results: tests }, upstream_trace: traces[i] })),
     pending_tasks: [], untracked_changes: [],
-    traceability_chain: traces.map(trace => ({ ...trace, files, status: 'complete' })),
+    traceability_chain: traces.map((trace, i) => ({ ...trace, files: files(functions[i]), status: 'complete' })),
     validation: { passed: true, errors: [], warnings: [], blocking_issues: [] } };
   const yaml = (object, indent = '') => Object.entries(object).map(([key, value]) => indent + key + ':'
     + (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length
