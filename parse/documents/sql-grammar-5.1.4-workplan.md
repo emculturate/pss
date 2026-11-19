@@ -146,13 +146,17 @@ does not itself authorize publication.
    manifest identity, filtered bootstrap links, and ZIP integrity passed.
    The parser JAR and its release-test evidence above are unchanged.
    The table below records the current handoff checksums, including the
-   refreshed documentation JAR.
+   refreshed documentation JAR. A subsequent docs-only rebuild at
+   **11:58:54 -05:00** renamed the kit bootstrap to
+   `PSS-PARSER-AGENT-KIT.md` to avoid collisions with other libraries' kits;
+   the updated instruction pointer, all eight guides, and ZIP integrity
+   were verified again without changing the parser candidate.
 
    | Handoff artifact | SHA-256 |
    |------------------|---------|
    | `pss-parse-5.1.4-1-fat.jar` | `4b7cde697d03cc5fc80189ab3797ff87ff13a46cd91e3890a09b0da0fa6ce3cf` |
-   | `pss-parse-docs-5.1.4-1.jar` | `2634ec58287d42d292b08d8d6dd76aee12e4b2ef398a708052c092ba1595625e` |
-   | `pss-parse-docs-5.1.4-1-agent-kit.zip` | `781103ef2e9c68aa1959776aed5b77e9d8eb8c3cd460c957390b95a89eff7fcb` |
+   | `pss-parse-docs-5.1.4-1.jar` | `0bce15cc616f71d2bc469a420effbf071af5867921c693cd43e3a5ef990197d1` |
+   | `pss-parse-docs-5.1.4-1-agent-kit.zip` | `5012eadf8bc8290d916312efacd9fe817cd6638049527df6f91e7836680b48f0` |
 
    The standard parser and test JARs were also generated locally. No Maven
    install, deploy or repository upload was performed. This completes the

@@ -42,17 +42,20 @@ Building also refreshes `docs/vendor/pss-parse/<api-version>/` for Option D (sub
 
 ### Agent kit (manual / non-Maven consumers)
 
-The ZIP contains `AGENT-KIT.md`, the eight consumer guides, and a
+The ZIP contains `PSS-PARSER-AGENT-KIT.md`, the eight consumer guides, and a
 `pss-parse-docs.manifest.json` whose paths are relative to the extracted
-directory. Extract into an empty staging directory, open `AGENT-KIT.md`, and
+directory. Extract into an empty staging directory, open `PSS-PARSER-AGENT-KIT.md`, and
 follow its installation instructions. Copy the complete kit into the dependent
 project's versioned vendor directory, then merge its small instruction block
 into the project's enabled agent configuration. Existing instructions are
 never automatically overwritten.
 
+The PSS-specific guide name avoids collisions with other libraries' agent-kit
+instructions; keep each kit's supporting documents in its own vendor directory.
+
 The ZIP reuses the documentation JAR's staged guides and the generated vendor
 manifest. Maven filters artifact/API versions into the
-[maintained bootstrap](src/agent-kit/AGENT-KIT.md); no separate ZIP guide
+[maintained bootstrap](src/agent-kit/PSS-PARSER-AGENT-KIT.md); no separate ZIP guide
 allowlist or hand-maintained copy of the consumer docs is needed.
 Changing a bundled canonical guide and running `package` refreshes both
 formats. Version changes follow the parent POM properties.

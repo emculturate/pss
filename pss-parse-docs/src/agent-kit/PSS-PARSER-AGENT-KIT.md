@@ -33,7 +33,7 @@ each guide's `id`, `role`, and relative `path`.
 Before changing or explaining code that calls pss-parse, reads its parse
 results, walks symbol tables or dictionaries, traces lineage, or validates
 parser payloads, read:
-docs/vendor/pss-parse/${pss.parse.api.version}/AGENT-KIT.md
+docs/vendor/pss-parse/${pss.parse.api.version}/PSS-PARSER-AGENT-KIT.md
 
 Verify the installed parser matches the kit's manifest. Read the primary
 symbol-table guide and the task-relevant guides selected from that manifest.
