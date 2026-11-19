@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D — all-array closure, amended after T022:** account for **42 canonical function names**: the original 21 audited names, 14 previously completed A/B/C names, and seven outstanding names. **Next: T025 / `ARRAY_CONSTRUCT_STRUCTURED` (GC1), including its official lexer snapshot/manual-repair gate.** Then complete `ARRAY_CONTAINS`, `ARRAY_FLATTEN`, advanced `FLATTEN` / `LATERAL FLATTEN`, `FILTER`, `TRANSFORM`, and `REDUCE` under T026..T031. T032 verifies the 14 carried-forward completions; T033/T034 extend signature and cell-level audits to all 42; only then run T023 and T024. The original T021/T022 result (854/854 cells, 1,033 focused tests) remains valid for its **21-name baseline only**, not the expanded scope. See the [complete inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory).
+  - **Slice D — all-array closure, amended after T022:** account for **42 canonical function names**: the original 21 audited names, 14 previously completed A/B/C names, and seven outstanding names. **Next: finish T025 / `ARRAY_CONSTRUCT_STRUCTURED` (GC1) implementation and matrix; its official lexer snapshot/manual-repair gate is complete.** Then complete `ARRAY_CONTAINS`, `ARRAY_FLATTEN`, advanced `FLATTEN` / `LATERAL FLATTEN`, `FILTER`, `TRANSFORM`, and `REDUCE` under T026..T031. T032 verifies the 14 carried-forward completions; T033/T034 extend signature and cell-level audits to all 42; only then run T023 and T024. The original T021/T022 result (854/854 cells, 1,033 focused tests) remains valid for its **21-name baseline only**, not the expanded scope. See the [complete inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory).
   - **Former Slice E function work:** `4.5` and `4.12` are now Slice D prerequisites, owned by T027..T031, not a second deferred array-function backlog. Preserve table-function and higher-order acceptance requirements; changing ownership does not complete them.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2317,7 +2317,8 @@ moving to the next. All rows edit the same focused host; do not parallel-edit it
 The original D-SIG and D-AUDIT are complete for their 21-name scope. Current
 execution order is **T025 -> T026 -> T027 -> T028 -> T029 -> T030 -> T031 ->
 T032 -> T033 -> T034 -> T023 -> T024**. T025 includes a hard developer
-manual-token-repair gate before new matrices can be completed. T033 depends
+manual-token-repair gate before new matrices can be completed; that gate is
+developer-confirmed complete as of 2026-11-19. T033 depends
 on all seven function tasks and carried-forward evidence; T034 depends on
 T033; T023 depends on T034; T024 depends on successful T023 results.
 
@@ -2373,7 +2374,7 @@ only for a proved defect. Do not commit unless requested.
 
 **Complete every outstanding array function, starting here**
 
-18. [ ] **D5.1 / T025 / GC1 — NEXT:** `Complete ARRAY_CONSTRUCT_STRUCTURED, starting with the expanded lexical inventory and official token-ID/manual-repair gate.`
+18. [ ] **D5.1 / T025 / GC1 — NEXT:** `Complete ARRAY_CONSTRUCT_STRUCTURED routing, affinity, signature reconciliation and strict matrix; the lexical inventory and developer-confirmed manual-repair gate are complete.`
 19. [ ] **D5.2 / T026:** `Complete ARRAY_CONTAINS, including independent VARIANT/operand and placement matrices.`
 20. [ ] **D5.3 / T027:** `Complete ARRAY_FLATTEN as a scalar function, not as credit from table FLATTEN tests.`
 21. [ ] **D5.4 / T028:** `Complete advanced FLATTEN and LATERAL FLATTEN, including the existing LATERAL_FLATTEN compatibility spelling.`
@@ -2592,12 +2593,16 @@ new shapes, not by pretending scalar templates prove table/lambda semantics.
 Preserve old expectations except developer-controlled token-ID repairs.
 
 - [ ] T025 [Plan:D5.1] **NEXT: implement `ARRAY_CONSTRUCT_STRUCTURED` / GC1** in `parse/src/main/antlr4/sql/SQLSelectParser.g4`, `parse/src/main/java/sql/grammar/SnowflakeRoutineDialectRegistry.java` and, only where needed, `parse/src/main/java/sql/walker/SqlParseEventWalker.java`; add its independent constructor matrix to `parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayConstructTests.java`.
+  - **Lexer step complete, including developer-confirmed manual repairs and
+    a successful sidebar test run (2026-11-19).** See the
+    [official token worklist and sign-off](#slice-d-d5-lexer-preparation-checkpoint-complete).
+    This does not complete the function's routing, affinity, signature or matrix.
   - Before editing the lexer, freeze recognition/routing needs for **all 42
     names**, existing `LATERAL_FLATTEN` compatibility, and any required lambda
-    punctuation. Existing FILTER/TRANSFORM/REDUCE/ARRAY_FLATTEN tokens are not
-    new additions; FLATTEN's existing identifier-based recognition is not an
-    excuse to invent a duplicate keyword. Record genuinely missing entries
-    and resolve the intended constructor signature against documentation.
+    punctuation. Existing FILTER/TRANSFORM/REDUCE/ARRAY_FLATTEN/FLATTEN tokens
+    are not new additions; `LATERAL_FLATTEN` retains its existing identifier
+    spelling. Do not invent duplicate keywords. Record genuinely missing
+    entries and resolve the intended constructor signature against documentation.
   - Generate and retain the official
     `parse/target-maven/generated-sources/antlr4/sql/SQLSelectParserLexer.java`
     before image and the last developer-repaired baseline. Append approved
@@ -2680,6 +2685,8 @@ Requirements are defined in the [reconciliation](slice-d-array-function-reconcil
 - **Per substep/batch (including the expanded sequence):** run focused family suites only after the D0 manual-repair gate; no automatic existing-golden rewrites.
 - The new T025 lexical/manual-repair gate supersedes the earlier D0 clearance
   for subsequent lexer changes; it cannot be skipped because D0 once passed.
+  The current two-token addition and manual repairs are developer-confirmed
+  complete as of 2026-11-19; any later lexer addition requires a fresh gate.
 - **Single Slice D final sign-off (once, after Slice D implementation is complete):**
   - `sql.walker.Phase15DerivedColumnGateTestSuite`
   - `sql.walker.SmoketestQualityGateTestSuite`
@@ -2919,7 +2926,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | Sub | Construction | Current status / closure owner | Notes / remaining decision |
 |-----|--------------|---------------------|-----------------------------|
 | **4.1** | `ARRAY_CONTAINS` + VARIANT syntax | Partial; D5.2 / T026 | Existing token/affinity and baseline tests are not full closure. T026 closes independent VARIANT/operand, placement, resolution and substitution matrices before D sign-off. |
-| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Prior A evidence carried forward; GC1 is NEXT in D5.1 / T025 | `ARRAY_CONSTRUCT_STRUCTURED` is the next implementation and lexical/manual-repair gate. T032 verifies existing constructor/compact and snippet evidence; old A completion does not close GC1. |
+| **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | Prior A evidence carried forward; GC1 is NEXT in D5.1 / T025 | `ARRAY_CONSTRUCT_STRUCTURED` implementation/matrix is next; its lexical/manual-repair gate is complete. T032 verifies existing constructor/compact and snippet evidence; old A completion does not close GC1. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
 | **4.5** | Scalar `ARRAY_FLATTEN`; table `FLATTEN` / `LATERAL FLATTEN` | D5.3 / T027 and D5.4 / T028 pending | Scalar function coverage/affinity is separate from advanced table-function scope, option, alias and lineage parity. Include existing `LATERAL_FLATTEN` compatibility; all close before D sign-off. |
@@ -3335,6 +3342,96 @@ matrix cell remains pending.
 - Next: **T023 / D4.1**, then **T024 / D4.2**. The scoped matrix audit passes;
   final Slice D, GC2/GC3, other Entry 4 slices, whole-project build/smoke and
   release sign-off are not asserted by T022.
+
+### Slice D D5 lexer preparation checkpoint (complete)
+
+**2026-11-18 preparation; 2026-11-19 manual-repair sign-off. T025 lexical
+portion complete.** The user requested the needed lexer
+changes now, before the remaining function implementations. All **42** canonical
+names were checked against official generated Java constants: only the planned
+`ARRAY_CONSTRUCT_STRUCTURED` spelling lacked a function-name token.
+
+| Outstanding function | Existing name token before this batch | Required lexer addition |
+|---|---:|---|
+| `ARRAY_CONSTRUCT_STRUCTURED` | None | New keyword, now 457; also added to `nonreserved_keywords` |
+| `ARRAY_CONTAINS` | 350 | None |
+| `ARRAY_FLATTEN` | 365 | None |
+| `FLATTEN` / `LATERAL FLATTEN` | FLATTEN 339; LATERAL 385 | None; retain `LATERAL_FLATTEN` identifier compatibility |
+| `FILTER` | 87 | Shared `LAMBDA_ARROW` for contiguous `->`, now 458 |
+| `TRANSFORM` | 379 | Same shared `LAMBDA_ARROW`, not another token |
+| `REDUCE` | 380 | Same shared `LAMBDA_ARROW`, not another token |
+
+The official [FILTER](https://docs.snowflake.com/en/sql-reference/functions/filter),
+[TRANSFORM](https://docs.snowflake.com/en/sql-reference/functions/transform) and
+[REDUCE](https://docs.snowflake.com/en/sql-reference/functions/reduce) syntax
+requires `->`. It previously lexed as separate MINUS/GTH tokens. Both new
+entries were appended after SPLIT, immediately before Identifier; no existing
+lexer entry moved. LAMBDA_ARROW deliberately stays in this append-only block,
+not the earlier operator block, to avoid renumbering hundreds of earlier tokens.
+
+Official images and generated incremental/cumulative maps are retained under
+session `97c6686f-0dcd-4f49-8c59-51885ff75f2f`, `files/d5-lexer/`:
+`SQLSelectParserLexer.before.java`, `SQLSelectParserLexer.after.java`,
+`SQLSelectParserLexer.last-repaired.java`, `incremental-token-map.txt` and
+`cumulative-token-map.txt`. Before and last-repaired images both have SHA-256
+`55bce4bc7ec702db4c7c2a9c9cc0cec1fad8c86ced39a848b9b93bd5070cdf5c`;
+after is `0ad82dbaf1ef656cca37b8f43f488e9139b15fa113348d2d9112fc1705ea958c`.
+The repaired baseline is the retained post-SPLIT image associated with developer
+repairs in `641ded6`. It matches the fresh before image byte-for-byte, so the
+incremental and cumulative replacement maps are **identical**.
+
+**Two additions => expected +2.** All **456 earlier IDs** are unchanged; all
+**21 following IDs**, including skipped/comment tokens, shift exactly +2.
+`tools/token_id_worklist_from_vocab.py` produced this complete manual IDE
+worklist from both official Java baselines, highest new ID first:
+
+| Token | Before | After | Delta |
+|---|---:|---:|---:|
+| BAD | 477 | 479 | +2 |
+| RIGHT_BRACKET | 476 | 478 | +2 |
+| Bracket_Identifier | 475 | 477 | +2 |
+| JINJA_CLOSE | 474 | 476 | +2 |
+| JINJA_OPEN | 473 | 475 | +2 |
+| NOTHING | 472 | 474 | +2 |
+| DO | 471 | 473 | +2 |
+| CONSTRAINT | 470 | 472 | +2 |
+| CONFLICT | 469 | 471 | +2 |
+| White_Space | 468 | 470 | +2 |
+| Space | 467 | 469 | +2 |
+| Pivot_Identifier | 466 | 468 | +2 |
+| Character_String_Literal | 465 | 467 | +2 |
+| LineComment | 464 | 466 | +2 |
+| BlockComment | 463 | 465 | +2 |
+| Dollar_Sign_Identifier | 462 | 464 | +2 |
+| Double_Quoted_Numeric_Identifier | 461 | 463 | +2 |
+| Numeric_Identifier | 460 | 462 | +2 |
+| Scientific_Numeric_Literal | 459 | 461 | +2 |
+| EXPONEN | 458 | 460 | +2 |
+| Identifier | 457 | 459 | +2 |
+
+Validation: six new lexical regression cases failed on the before image and
+all pass after the additions. The focused run of `SqlArrayLexerBaselineTest`
+and the existing `SqlDatetimeLexerBaselineTest` passes **14/14**, zero
+failures/errors/skips; generation, main compilation and test compilation pass.
+The tests compare complete symbolic token streams, exercise case-insensitive
+constructor recognition and nonreserved column/qualified-UDF compatibility,
+and distinguish `->` from subtraction, comparisons and named-argument `=>`.
+The higher-order cases are **lexer-only**, not evidence of lambda parser/walker
+support. That initial lexical-only batch did not change existing tests/goldens,
+walker, registry or consumer payloads.
+
+**Lexer/manual-repair gate COMPLETE (2026-11-19).** The developer manually
+repaired the affected test goldens, ran tests from the VS Code sidebar, and
+confirmed that everything passed. This is developer-reported validation; no
+exact sidebar test count was supplied, and no new full Maven run is claimed.
+The checkpoint inspection verifies +2 token-marker-only repairs in 36 existing
+test classes and the three canonical/vendor bucket-guide copies, except for
+removal of one unused `access.Snippet` import in the array-transform host.
+The official token maps remain unchanged.
+
+Resume T025's constructor routing/affinity, documented-signature reconciliation
+and full strict matrix next; **T025 as a whole and T029..T031 remain unchecked**.
+The successful lexer checkpoint is not a full function-matrix or release PASS.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan
 

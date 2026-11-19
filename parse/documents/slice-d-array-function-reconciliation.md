@@ -28,6 +28,20 @@ matrix cells, with nine genuine gaps repaired. Maven and VS Code each pass all
 are complete; they do not certify the expanded 42-name scope. T025..T034 and
 T023's sequential accuracy ladder / T024's final accounting remain open.
 
+**Latest execution update — lexer step complete (2026-11-19):** T025 adds
+`ARRAY_CONSTRUCT_STRUCTURED=457` and shared `LAMBDA_ARROW=458` immediately
+before Identifier. All 456 earlier IDs are unchanged; all 21 following IDs
+shift +2. The official before and last-repaired images match, so incremental
+and cumulative maps are identical. See the
+[complete descending manual worklist and sign-off](sql-grammar-5.1.4-workplan.md#slice-d-d5-lexer-preparation-checkpoint-complete).
+The 14 focused lexical/parser controls passed during lexical preparation.
+The developer has now manually repaired the existing goldens and reports that
+all tests run from the sidebar passed; no exact sidebar count was supplied.
+**The lexical/manual-repair gate is complete; full T025 and higher-order
+function completion are not claimed.** The original 21-name audit below remains
+historical cell-level evidence; the post-shift sidebar run is recorded as
+developer-reported validation, not a new assistant-run Maven audit.
+
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
 
@@ -119,7 +133,7 @@ expanded-scope sign-off.
 
 | Canonical function | Original subsection / slice | Current disposition | Slice D implementation/evidence owner |
 |---|---|---|---|
-| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | **NEXT; implementation and lexical/manual-repair gate pending** | T025 |
+| `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | **NEXT; constructor implementation/matrix pending; lexical/manual-repair gate complete** | T025 |
 | `ARRAY_CONTAINS` | 4.1 | Partial; VARIANT/operand and broader matrix closure pending | T026 |
 | `ARRAY_FLATTEN` | 4.5 / E | Existing keyword; scalar routing/affinity/matrix closure pending | T027 |
 | `FLATTEN` | 4.5 / E | Baseline delivered; advanced table/lateral scope and lineage parity pending | T028 |
