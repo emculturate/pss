@@ -629,4 +629,33 @@ public class SqlEventWalkerWithinGroupOrderedAggregateTests extends AbstractSqlP
 				compound.getSymbolTable().toString().contains("{name=sort_order, table_ref=t}"));
 	}
 
+
+	@Test
+	public void orderedAggregateEmptyArgumentsCompatibilityEntry11Test() {
+		final String query = "SELECT t.region, LISTAGG() WITHIN GROUP (ORDER BY t.name) AS names FROM teams t WHERE t.active = 1 GROUP BY t.region";
+		final sql.SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals("Syntax errors are wrong", 0, parser.getNumberOfSyntaxErrors());
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("Diagnostics are wrong", java.util.List.<ParseDiagnostic>of(), extractor.getSnippet().getParserDiagnosticList());
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=region, table_ref=t}}, 2={ordered_aggregate={within_group={orderby={1={null_order=null, predicand={column={name=name, table_ref=t}}, sort_order=ASC}}}, function={function_name=LISTAGG, parameters=null}}, alias=names}}, from={table={alias=t, table=teams}}, where={condition={left={column={name=active, table_ref=t}}, right={literal=1}, operator==}}, groupby={1={column={name=region, table_ref=t}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[names, region]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{teams={name=[[@13,50:50='t',<459>,1:50]], active=[[@23,86:86='t',<459>,1:86]], region=[[@1,7:7='t',<459>,1:7], [@30,108:108='t',<459>,1:108]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={region=[[@3,9:14='region',<459>,1:9]], names=[[@18,61:65='names',<459>,1:61]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={within_group_ordered_by=[{name=name, table_ref=t}], query_dictionary={names=[[@18,61:65='names',<459>,1:61]], region=[[@3,9:14='region',<459>,1:9]]}, table_dictionary={teams={name=[[@13,50:50='t',<459>,1:50]], active=[[@23,86:86='t',<459>,1:86]], region=[[@1,7:7='t',<459>,1:7], [@30,108:108='t',<459>,1:108]]}}, grouped_by=[{name=region, table_ref=t}], filters=[{name=active, table_ref=t}], interface={names=[{name=name, table_ref=t}], region=[{name=region, table_ref=t}]}, table_alias={t=teams}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

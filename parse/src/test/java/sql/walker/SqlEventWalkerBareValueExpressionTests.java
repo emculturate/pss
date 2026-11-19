@@ -668,4 +668,33 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 
 	}
 
+
+	@Test
+	public void qualifiedVariableJsonSuffixEntry11Test() {
+		final String query = "SELECT t.id, t.<Payload>:customer AS customer FROM events t WHERE t.active = 1";
+		final sql.SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals("Syntax errors are wrong", 0, parser.getNumberOfSyntaxErrors());
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("Diagnostics are wrong", java.util.List.<ParseDiagnostic>of(), extractor.getSnippet().getParserDiagnosticList());
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=t}}, 2={1={column={substitution={name=<Payload>, type=column}, json_path=customer, table_ref=t}}, alias=customer}}, from={table={alias=t, table=events}}, where={condition={left={column={name=active, table_ref=t}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[id, customer]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{<Payload>=column}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{events={<Payload>=[[@5,13:13='t',<459>,1:13]], active=[[@16,66:66='t',<459>,1:66]], id=[[@1,7:7='t',<459>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={id=[[@3,9:10='id',<459>,1:9]], customer=[[@11,37:44='customer',<459>,1:37]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]], customer=[[@11,37:44='customer',<459>,1:37]]}, table_dictionary={events={<Payload>=[[@5,13:13='t',<459>,1:13]], active=[[@16,66:66='t',<459>,1:66]], id=[[@1,7:7='t',<459>,1:7]]}}, filters=[{name=active, table_ref=t}], interface={id=[{name=id, table_ref=t}], customer=[{substitution={name=<Payload>, type=column}, json_path=customer, table_ref=t}]}, table_alias={t=events}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

@@ -6946,4 +6946,73 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						&& symbolTable.contains("form_response_MAX"));
 	}
 
+
+	@Test
+	public void unpivotQualifiedColumnVariableEntry11Test() {
+		final String query = "SELECT t.id, amount, month_name FROM sales t UNPIVOT (amount FOR month_name IN (t.<MonthColumn>, t.feb)) WHERE t.id > 0";
+		final sql.SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals("Syntax errors are wrong", 0, parser.getNumberOfSyntaxErrors());
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("Diagnostics are wrong", java.util.List.of(
+				new errorhandling.ParseDiagnostic(errorhandling.ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"unpivot_clause at (l:1 c:45) is recognized as Snowflake-specific grammar.",
+						1, 45, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new errorhandling.ParseDiagnostic(errorhandling.ParseDiagnostic.Severity.WARNING,
+						"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
+						"Qualified UNPIVOT operand 't.feb' at (l:1 c:97) is redundant; operands are resolved against the immediate UNPIVOT source 't'.",
+						1, 97, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), extractor.getSnippet().getParserDiagnosticList());
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=amount, table_ref=null}}, 3={column={name=month_name, table_ref=null}}}, from={unpivot={value={column={name=amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={substitution={name=<MonthColumn>, type=column}, table_ref=t}, 2={name=feb, table_ref=t}}}, table={alias=t, table=sales}}, where={condition={left={column={name=id, table_ref=t}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[month_name, amount, id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{<MonthColumn>=column}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{sales={feb=[[@24,99:101='feb',<459>,1:99], [@22,97:97='t',<459>,1:97]], <MonthColumn>=[[@18,80:80='t',<459>,1:80]], id=[[@1,7:7='t',<459>,1:7], [@28,111:111='t',<459>,1:111]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={month_name=[[@7,21:30='month_name',<459>,1:21], [@15,65:74='month_name',<459>,1:65]], amount=[[@5,13:18='amount',<459>,1:13], [@13,54:59='amount',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9], [@30,113:114='id',<459>,1:113]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={month_name=[[@7,21:30='month_name',<459>,1:21], [@15,65:74='month_name',<459>,1:65]], amount=[[@5,13:18='amount',<459>,1:13], [@13,54:59='amount',<459>,1:54]], id=[[@3,9:10='id',<459>,1:9], [@30,113:114='id',<459>,1:113]]}, table_dictionary={sales={feb=[[@24,99:101='feb',<459>,1:99], [@22,97:97='t',<459>,1:97]], <MonthColumn>=[[@18,80:80='t',<459>,1:80]], id=[[@1,7:7='t',<459>,1:7], [@28,111:111='t',<459>,1:111]]}}, derivation={source_columns={tuple_0=[{name=feb, table_ref=t}]}, derived_columns={tuple_0={amount=[[@13,54:59='amount',<459>,1:54]], month_name=[[@15,65:74='month_name',<459>,1:65]]}}}, filters=[{name=id, table_ref=t}], interface={month_name=[{name=month_name, table_ref=tuple_0}, {name=feb, table_ref=t}], amount=[{name=feb, table_ref=t}], id=[{name=id, table_ref=t}]}, table_alias={t=sales, tuple_0=t}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unpivotLambdaReferenceCollectorEntry11Test() {
+		final String query = "SELECT TRANSFORM(t.items, x -> (SELECT MAX(val) FROM metrics UNPIVOT (val FOR month_name IN (feb, x)))) AS totals, t.id FROM events t WHERE t.active = 1";
+		final sql.SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals("Syntax errors are wrong", 0, parser.getNumberOfSyntaxErrors());
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("Diagnostics are wrong", java.util.List.of(
+				new errorhandling.ParseDiagnostic(errorhandling.ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"unpivot_clause at (l:1 c:61) is recognized as Snowflake-specific grammar.",
+						1, 61, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null)), extractor.getSnippet().getParserDiagnosticList());
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={function={function_name=TRANSFORM, parameters={1={column={name=items, table_ref=t}}, 2={lambda={parameters={1={name=x}}, body={lookup={from={unpivot={value={column={name=val, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=feb, table_ref=null}, 2={lambda_reference={name=x, depth=0}}}}, table={alias=null, table=metrics}}, select={1={function={function_name=MAX, qualifier=null, parameters={column={name=val, table_ref=null}}}}}}}}}}}, alias=totals}, 2={column={name=id, table_ref=t}}}, from={table={alias=t, table=events}}, where={condition={left={column={name=active, table_ref=t}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[totals, id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{metrics={feb=[[@24,93:95='feb',<459>,1:93]]}, events={active=[[@41,140:140='t',<459>,1:140]], id=[[@34,115:115='t',<459>,1:115]], items=[[@3,17:17='t',<459>,1:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={unnamed_0=[[@14,46:46=')',<288>,1:46]]}, query2={totals=[[@32,107:112='totals',<459>,1:107]], id=[[@36,117:118='id',<459>,1:117]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={totals=[[@32,107:112='totals',<459>,1:107]], id=[[@36,117:118='id',<459>,1:117]]}, table_dictionary={events={active=[[@41,140:140='t',<459>,1:140]], id=[[@34,115:115='t',<459>,1:115]], items=[[@3,17:17='t',<459>,1:17]]}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@14,46:46=')',<288>,1:46]]}, table_dictionary={metrics={feb=[[@24,93:95='feb',<459>,1:93]]}}, derivation={source_columns={tuple_0=[{name=feb, table_ref=metrics}]}, derived_columns={tuple_0={val=[[@19,70:72='val',<459>,1:70]], month_name=[[@21,78:87='month_name',<459>,1:78]]}}}, interface={unnamed_0=[{name=val, table_ref=tuple_0}, {name=feb, table_ref=metrics}]}, table_alias={tuple_0=metrics}}, filters=[{name=active, table_ref=t}], interface={totals=[{name=items, table_ref=t}], id=[{name=id, table_ref=t}]}, table_alias={t=events}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

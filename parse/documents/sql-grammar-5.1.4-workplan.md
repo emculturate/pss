@@ -42,7 +42,7 @@ Link to those records rather than copying their inventories or measurements.
 | **8** | Panto cardinality & grammar-safe dynamic AST expansion (9.x) | Enhancement (exploratory) | **Not started** |
 | **9** | DDL structured options (`IF NOT EXISTS`, `OR REPLACE`, …) | Enhancement | **Not started** |
 | **10** | SQL statement generator — post-milestone completion | Enhancement | **Not started** (milestone ✅) |
-| **11** | Walker `exit*` JaCoCo coverage — Tier 2 / 3 residuals | Test / hygiene | **Open for 5.1.4** — approved Tier 2 coverage work remains; Tier 3 excluded |
+| **11** | Walker `exit*` JaCoCo coverage — Tier 2 / 3 residuals | Test / hygiene | **Complete** (2026-11-19) — focused tests and source-backed residual dispositions; Tier 3 excluded |
 | **12** | Helper dead-code hygiene — Phases C–D | Hygiene | **Complete** (closed 2026-11-16) |
 | **13** | SELECT-list subquery alias scope (false `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`) + operand `lookup` wrapper | Defect | **Complete** (2026-11-10) |
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
@@ -84,8 +84,9 @@ gates listed below, and is not whole-release certification.
     [Entry 4](#entry-4--snowflake-array-syntax-and-functions).
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
 
-- **Entry 11 — partial coverage scope (required for 5.1.4; still open)**
-  - Close the approved Tier 2 targets recorded in the
+- **Entry 11 — scoped coverage COMPLETE (2026-11-19)**
+  - Focused strict tests and source-backed residual dispositions close the
+    approved targets recorded in the
     [current coverage inventory](coverage/sql_walker_exit_method_gaps.md).
     Scope is limited to that approved twelve-method set, not a new broad audit.
   - **Tier 3 is explicitly out of 5.1.4 scope.**
@@ -3767,21 +3768,29 @@ deferred here (Entry 10) per release-scoping decision.
 
 ## Entry 11 — Walker `exit*` coverage (JaCoCo)
 
-**Status:** Open — the green default suite does not close the approved Tier 2
-coverage requirement. Tier 1 is complete; Tier 3 residuals are outside 5.1.4 scope.
+**Status:** Complete (2026-11-19) within the approved release scope. Tier 1
+remains complete; reachable missed paths were covered by focused strict
+tests, and retained defensive/legacy paths received source-backed
+dispositions. This is not a claim of 100% line coverage. Tier 3 residuals
+remain outside 5.1.4 scope.
 
 **Scope and evidence:** the
 [current coverage inventory](./coverage/sql_walker_exit_method_gaps.md)
 owns the approved twelve-method set, its latest measurements, evidence source
 and refresh command. Do not copy its method rows or counters into this workplan.
 
-**Remaining action:** add focused coverage tests or establish a justified
-unreachable-path disposition. Production changes require an actual defect
-or justified dead path, not merely a coverage percentage.
+**Closeout:** five one-input tests preserve full extractor goldens and exact
+diagnostics. Matching full-default execution data was retained and augmented
+by successful affected-host tests; no new full suite or release certification
+was run. No production changes, coverage exclusions or synthetic collector
+maps were needed. The inventory records the measured residuals and their
+individual grammar/producer proofs.
 
-**Done criterion:** the approved targets have no missed lines or only accepted
-Tier 3 residuals. Reuse valid existing execution data for accounting; test
-changes require new execution evidence, not a duplicate run solely for sign-off.
+**Done criterion (met):** approved valid-input gaps are covered or have an
+explicit source-backed unreachable-path disposition; only excluded Tier 3
+work and the documented defensive/legacy residuals remain. Reuse valid
+existing execution data for accounting; test changes require new execution
+evidence, not a duplicate run solely for sign-off.
 
 **Detail:** git — former `coverage/sql_walker_exit_method_coverage-workplan.md`.
 

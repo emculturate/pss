@@ -3066,4 +3066,33 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 					extractor.getSymbolTable().toString());
 	}
 
+
+	@Test
+	public void unaryPlusPredicandEndpointEntry11Test() {
+		final String query = "+(t.score + COALESCE(t.backup, 0))";
+		final sql.SQLSelectParserParser parser = parse(query);
+		final SqlParseEventWalker extractor = runPredicandParsertest(query, parser);
+		Assert.assertEquals("Syntax errors are wrong", 0, parser.getNumberOfSyntaxErrors());
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("Diagnostics are wrong", java.util.List.<ParseDiagnostic>of(), extractor.getSnippet().getParserDiagnosticList());
+		Assert.assertEquals("AST is wrong",
+				"{PREDICAND={parentheses={calc={left={column={name=score, table_ref=t}}, right={function={parameters={1={column={name=backup, table_ref=t}}, 2={literal=0}}, function_name=COALESCE}}, operator=+}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{table_dictionary={unresolved_column={t.backup=[[@8,21:21='t',<459>,1:21]], t.score=[[@2,2:2='t',<459>,1:2]]}}, unresolved_column={t.backup={column={name=backup, table_ref=t}, locations=[[@8,21:21='t',<459>,1:21]]}, t.score={column={name=score, table_ref=t}, locations=[[@2,2:2='t',<459>,1:2]]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }
