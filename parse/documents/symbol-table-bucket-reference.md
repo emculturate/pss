@@ -5,7 +5,7 @@
 **Audience and version**
 
 - Consumer guide for services that read and interpret PSS symbol tables.
-- Applies to symbol tables produced by the PSS SQL Parser JAR **version 5.1.3 or greater**.
+- Applies to symbol tables produced by the PSS SQL Parser JAR **version 5.1.4 or greater**.
 
 **What it is**
 

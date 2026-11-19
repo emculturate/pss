@@ -9,7 +9,7 @@ August grammar inventory is retained below and supplemented by the dated review.
 
 **Version boundary:** This is a cumulative feature inventory, not evidence that
 every listed feature was absent in 5.0.0. Changes explicitly compared with
-5.0.0-3 are identified below. The 5.1.3 symbol-table contracts remain applicable
+5.0.0-3 are identified below. The 5.1.4 symbol-table contracts remain applicable
 in 5.1.4. Planned work is not shipped functionality.
 
 **Consumer actions:** [Panto 5.1.4 upgrade checks](https://github.com/emculturate/pss/blob/Fall-2026-Extensions/parse/documents/panto-template-remediation-5.1.4.md#dependent-application-upgrade-checks-delivered-behavior-through-2026-11-11)
@@ -40,7 +40,7 @@ coverage. IDs U01-U27 are shared with the consumer checklist.
 | U02 | DDL object coverage and verbatim option tails | Preserve opaque source text; structured DDL option semantics remain backlog |
 | U03 | INSERT / UPDATE / DELETE, RETURNING, ON CONFLICT | DML roots, target/assignment buckets, returning interfaces, and nested update scopes must be understood |
 | U04 | CTE bodies including DML/VALUES and substitutions; ordered visibility | Nested scopes and explicit alias bindings replace assumptions of one flat query namespace |
-| U05 | Global physical/tuple dictionary policy (5.1.3+) | CTE and local alias keys formerly promoted by 5.0.0-3 are intentionally absent |
+| U05 | Global physical/tuple dictionary policy (5.1.4+) | CTE and local alias keys formerly promoted by 5.0.0-3 are intentionally absent |
 | U06 | Published `def_*`, scope interfaces, clause archives, `dependent_queries` | Trace each scope boundary; query dictionaries are not flattened physical-column inventories |
 | U07 | Grounded, earlier SELECT-list aliases | Same-scope lineage can use `table_ref=queryN`; forward/cyclic aliases are not valid resolved sources |
 | U08 | Window dependency isolation and archive policy | Read `window_partition_by` / `window_ordered_by`; window-only names need not be query-dictionary outputs |

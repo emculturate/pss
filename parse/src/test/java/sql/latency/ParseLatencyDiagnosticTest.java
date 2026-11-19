@@ -320,8 +320,8 @@ public class ParseLatencyDiagnosticTest {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // Query fixtures — trimmed from parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md
-    // Frozen handoff fixtures: parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-<n>.sql
+    // Query fixtures — trimmed from parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md
+    // Frozen handoff fixtures: parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-<n>.sql
     // ═════════════════════════════════════════════════════════════════════════
 
     // Row 28 — PDP_Acquia_Export (full text)

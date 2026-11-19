@@ -13,14 +13,14 @@
 Phase 2.7 is **closed**. Characterization goldens in `SqlEventWalkerWithCteTupleSubstitutionTests` show that:
 
 1. **Physical tables and tuple substitution sources** referenced in the final `WITH` query — including columns introduced only in trailing clauses (`WHERE`, `GROUP BY`, `HAVING`, `QUALIFY`, `ORDER BY`, scalar subqueries) after conditionless or conditioned joins — are recorded on the correct keys in **global** `tableDictionary`.
-2. **CTE aliases are not global `tableDictionary` keys** in 5.1.3. That is intentional; restoring 5.0.0-3-style CTE names in the physical dictionary is **out of scope and obsolete**.
+2. **CTE aliases are not global `tableDictionary` keys** in 5.1.4. That is intentional; restoring 5.0.0-3-style CTE names in the physical dictionary is **out of scope and obsolete**.
 3. CTE row sources remain available through **`query_dictionary`**, **`context_list`**, **`table_alias`**, **`interface`**, **`filters`**, and nested `def_*` scopes — as locked by the test goldens.
 
-The original investigation opened because a live Panto query appeared to lose tuple-substitution evidence after `CROSS JOIN last_delivered_cte`. Compact fixtures confirmed the tuple column (`<Contact Deleted Dt>`) is present on the fulfillment tuple key across join and final-clause variants. The apparent “missing `last_delivered_cte` / `amount_cte`” delta vs 5.0.0-3 was a **comparison-rule mismatch**, not a functional defect under the 5.1.3 consumer contract.
+The original investigation opened because a live Panto query appeared to lose tuple-substitution evidence after `CROSS JOIN last_delivered_cte`. Compact fixtures confirmed the tuple column (`<Contact Deleted Dt>`) is present on the fulfillment tuple key across join and final-clause variants. The apparent “missing `last_delivered_cte` / `amount_cte`” delta vs 5.0.0-3 was a **comparison-rule mismatch**, not a functional defect under the 5.1.4 consumer contract.
 
 ---
 
-## 5.1.3 consumer contract — CTE vs physical sources
+## 5.1.4 consumer contract — CTE vs physical sources
 
 | Bucket | What belongs there | CTE aliases |
 |--------|-------------------|-------------|
@@ -30,7 +30,7 @@ The original investigation opened because a live Panto query appeared to lose tu
 
 **Policy (2026-09-01):** CTE names or aliases must **not** appear in global `tableDictionary`. The queries they represent are documented in `query_dictionary` and symbol-table substructures. 5.0.0-3 behavior that promoted CTE aliases into the physical table dictionary is **obsolete** and must not be restored.
 
-Dual-parse reports that list “missing” CTE keys in global `tableDictionary` are **not** 2.7 defects when equivalent CTE evidence exists in the symbol tree — especially when the CTE is registered on **`table_alias` as `{cte_name=queryN}`** (an intentional 5.1.3 enhancement over 5.0.0-3’s practice of promoting CTE names into the physical dictionary). Re-score those rows under **2.9** only when source or column evidence is functionally absent everywhere.
+Dual-parse reports that list “missing” CTE keys in global `tableDictionary` are **not** 2.7 defects when equivalent CTE evidence exists in the symbol tree — especially when the CTE is registered on **`table_alias` as `{cte_name=queryN}`** (an intentional 5.1.4 enhancement over 5.0.0-3’s practice of promoting CTE names into the physical dictionary). Re-score those rows under **2.9** only when source or column evidence is functionally absent everywhere.
 
 ---
 
@@ -72,7 +72,7 @@ WHERE CASE
 
 ## Characterization matrix (locked in test class)
 
-| Evidence | Join / source form | Trailing clause | Assertion under 5.1.3 |
+| Evidence | Join / source form | Trailing clause | Assertion under 5.1.4 |
 |----------|-------------------|-----------------|------------------------|
 | Observed reproduction | `CROSS JOIN cte_name` | `WHERE` / `CASE` | Tuple or physical outer source + CTE base table in global `tableDictionary`; CTE via `table_alias` / `filters` / `query_dictionary` |
 | Characterized (2026-09) | All join variants in test class | `WHERE` | Same; `withFinalQuery*` goldens lock **no** CTE key in global `tableDictionary` |

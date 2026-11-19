@@ -81,7 +81,7 @@ disposition:
 This section translates the cumulative
 [grammar/AST/validation overview](./sql-grammar-extensions-since-2026-01-01.md#summerfall-review-and-consumer-impact-index)
 into application work. IDs U01-U27 match that overview. Some features predate
-5.1.4 and are inherited from 5.1.3; do not assume every feature was absent in
+5.1.4 and are inherited from 5.1.4; do not assume every feature was absent in
 5.0.0. Use the actual parser build and endpoint in regression fixtures, not a
 raw text diff of complete ASTs or dictionaries as the sole compatibility test.
 

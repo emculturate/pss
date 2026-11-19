@@ -11,16 +11,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CSV = (
     ROOT
-    / "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv"
+    / "parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto_513_outstanding_issues.csv"
 )
 DEFAULT_OUT = ROOT / "parse/target/panto-timeout-batch-manifest.json"
 DEFAULT_SKIP_LIST = (
     ROOT
-    / "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json"
+    / "parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto-submap-walker-skip-list.json"
 )
 DEFAULT_EXCLUSION_LIST = (
     ROOT
-    / "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-corpus-exclusion-list.json"
+    / "parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto-corpus-exclusion-list.json"
 )
 
 

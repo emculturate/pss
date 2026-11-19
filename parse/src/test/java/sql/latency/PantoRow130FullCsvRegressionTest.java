@@ -80,8 +80,8 @@ public class PantoRow130FullCsvRegressionTest {
 
     private static Path resolveAuthoritativeSqlFile() {
         for (Path root : new Path[] {
-                Path.of("docs/rmcp-handoff/5.1.3-panto-outstanding/sql"),
-                Path.of("parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql"),
+                Path.of("docs/rmcp-handoff/5.1.4-panto-outstanding/sql"),
+                Path.of("parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql"),
         }) {
             Path file = root.resolve("csv-row-" + CSV_ROW + ".sql");
             if (Files.isRegularFile(file)) {

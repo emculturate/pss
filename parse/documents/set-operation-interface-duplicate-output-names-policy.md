@@ -1,6 +1,6 @@
 # Set-operation branch interface distinctness (duplicate output names)
 
-**API version:** 5.1.3  
+**API version:** 5.1.4  
 **Status:** Policy (author guidance) — canonical parser behavior  
 **Related diagnostics:** `DUPLICATE_INTERFACE_COLUMNS`, `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`, `DUPLICATE_INTERFACE_COLUMN_FIRST`, `DUPLICATE_INTERFACE_COLUMN`  
 **Adjudication:** Phase 2.9 clusters D and F (Panto CSV rows **3150**, **5410**) — **closed** 2026-09-01
@@ -9,7 +9,7 @@
 
 ## Purpose
 
-PSS **5.1.3** validates **set-operation** queries (`UNION`, `UNION ALL`, `INTERSECT`, `EXCEPT`) by aligning the **output interface** of each branch. The interface is keyed by **output column name** — one key per distinct name in the branch select list.
+PSS **5.1.4** validates **set-operation** queries (`UNION`, `UNION ALL`, `INTERSECT`, `EXCEPT`) by aligning the **output interface** of each branch. The interface is keyed by **output column name** — one key per distinct name in the branch select list.
 
 This document explains:
 
@@ -22,7 +22,7 @@ This document explains:
 
 ## Decision (canonical behavior)
 
-**5.1.3 behavior is canonical.** When a set-operation participant’s select list assigns the **same output column name** to more than one position, the walker emits **FATAL** diagnostics. **5.0.0-3** accepted some of these shapes silently.
+**5.1.4 behavior is canonical.** When a set-operation participant’s select list assigns the **same output column name** to more than one position, the walker emits **FATAL** diagnostics. **5.0.0-3** accepted some of these shapes silently.
 
 **No parser change is planned** to accommodate live patterns in rows 3150 and 5410. Relaxing interface construction would weaken duplicate-column detection across the entire symbol-table pipeline.
 
@@ -69,7 +69,7 @@ Treat `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` that accompanies duplicate
 
 **Separate issue:** `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` when one side uses wildcard `SELECT *` is a different known defect (parser workplan Phase 2.1). The patterns in this document apply when **both** sides use explicit column lists (or inferred names from explicit references).
 
-### What 5.1.3 is telling you
+### What 5.1.4 is telling you
 
 The SQL may execute on some engines, but the **symbol table cannot assign a stable, distinct output name** to every select position without explicit aliases. The parser is rejecting ambiguous interface shape before lineage and dictionary consumers run.
 
@@ -223,7 +223,7 @@ After this change, each branch exposes `(primary_student_id, race, eab_race, int
 
 ### Branch-wide checklist
 
-Before submitting set-op SQL to PSS 5.1.3:
+Before submitting set-op SQL to PSS 5.1.4:
 
 1. List each branch’s select items.
 2. Confirm **no output name repeats** within a branch.
@@ -232,7 +232,7 @@ Before submitting set-op SQL to PSS 5.1.3:
 
 ### When an agent assists the author
 
-1. Run parse with endpoint `SQL` (or `QUERY` for a single branch fragment) on profile **5.1.3**.
+1. Run parse with endpoint `SQL` (or `QUERY` for a single branch fragment) on profile **5.1.4**.
 2. Collect `DUPLICATE_INTERFACE_COLUMNS` and any `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` diagnostics.
 3. Explain the cascade (duplicate names → collapsed interface → miscount).
 4. **Propose concrete `AS alias` edits** on every duplicate occurrence after the first, preserving commas and branch structure.
@@ -244,8 +244,8 @@ Before submitting set-op SQL to PSS 5.1.3:
 
 | Cluster | Row | Pattern | Fixture |
 |---------|-----|---------|---------|
-| D | 3150 | Outer `UNION ALL` unpivot; duplicate inferred names in branches 2–3 | `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-3150.sql` (outer `UNION ALL` lines **239–331**) |
-| F | 5410 | Wide `UNION ALL`; branch 2 duplicates at **201/215** (`interested_institutions_list`) and **224/232** (`desired_completion_timeframe`) | `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-5410.sql` (`UNION ALL` at line **190**) |
+| D | 3150 | Outer `UNION ALL` unpivot; duplicate inferred names in branches 2–3 | `parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-3150.sql` (outer `UNION ALL` lines **239–331**) |
+| F | 5410 | Wide `UNION ALL`; branch 2 duplicates at **201/215** (`interested_institutions_list`) and **224/232** (`desired_completion_timeframe`) | `parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-5410.sql` (`UNION ALL` at line **190**) |
 
 `REGEXP` / `UUID_STRING()` at lines 34–35 of row 5410 do not FATAL; the set-op interface issues are independent.
 
@@ -253,10 +253,10 @@ Before submitting set-op SQL to PSS 5.1.3:
 
 ## Consumer guidance (RMCP / migration compare)
 
-When comparing **5.0.0-3** (silent) to **5.1.3**:
+When comparing **5.0.0-3** (silent) to **5.1.4**:
 
 - New `DUPLICATE_INTERFACE_COLUMNS` fatals indicate **latent SQL ambiguity** now surfaced — score as **author action**, not parser regression.
-- Rows **3150** and **5410** are **not** 5.1.3 regressions; document as **improved validation**.
+- Rows **3150** and **5410** are **not** 5.1.4 regressions; document as **improved validation**.
 - Do not strip or relax `interface` duplicate detection to absorb these constructions.
 - Do not request 5.0.0-3 parity for retained FATALs on this pattern.
 

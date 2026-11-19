@@ -54,6 +54,8 @@
                     <include>sql-grammar-extensions-since-2026-01-01.md</include>
                     <include>phase-17.6.9-window-query-dictionary-policy.md</include>
                     <include>ordered-select-list-output-alias-policy.md</include>
+                    <include>global-table-dictionary-cte-alias-policy.md</include>
+                    <include>set-operation-interface-duplicate-output-names-policy.md</include>
                   </includes>
                 </resource>
               </resources>

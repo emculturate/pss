@@ -3,7 +3,7 @@ name: parse-and-explain
 description: >-
   Parse SQL with pss-parse and explain or trace symbol-table lineage. Use when
   implementing explainSymbolTable, traceLineage, column tracing, source impact
-  analysis, or enhancing RMCP cli-parse-and-explain for 5.1.3 (513) output.
+  analysis, or enhancing RMCP cli-parse-and-explain for 5.1.4 (513) output.
 ---
 
 # Parse and explain (PSS symbol tables)
@@ -26,7 +26,7 @@ Always load `.cursor/skills/pss-parse-consumer-docs/SKILL.md` and read at least:
 
 The shipped starter lives in RMCP `symbolTableExplainer.ts` (`traceLineage`):
 
-1. Detect format: **`5.1.3`** if top-level keys match `def_queryN` / `def_unionN` / …
+1. Detect format: **`5.1.4`** if top-level keys match `def_queryN` / `def_unionN` / …
 2. For each output layer, read **`interface`** (output column → list of `{name, table_ref}`)
 3. Resolve **`table_ref`** via **`table_alias`** (and CTE maps: `context_list` / `CTE_LIST`)
 4. If alias points at nested layer (`query0` / `def_query0`), open child scope and repeat
@@ -77,7 +77,7 @@ node rmcp/tools/cli-parse-and-explain.js --file query.sql --explain-only
 node <extension-root>/tools/cli-parse-and-explain.js --yaml query.sql.yaml --explain-only
 ```
 
-Route explain logic by **`rmcpParserMeta.versionTag`** (`5.1.2` vs `5.1.3`). Do not run 5.1.2 lineage on `def_query0` trees.
+Route explain logic by **`rmcpParserMeta.versionTag`** (`5.1.2` vs `5.1.4`). Do not run 5.1.2 lineage on `def_query0` trees.
 
 ## Implementation checklist when enhancing traceLineage
 

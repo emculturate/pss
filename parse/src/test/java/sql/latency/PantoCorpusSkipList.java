@@ -19,12 +19,12 @@ import com.google.gson.annotations.SerializedName;
  * generation, SqlParserAccess safety sweeps) because they throw walker fatals from
  * {@code subMap} null after parse-error recovery.
  *
- * <p>Canonical list: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json}
+ * <p>Canonical list: {@code parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto-submap-walker-skip-list.json}
  */
 final class PantoCorpusSkipList {
 
     private static final Path DEFAULT_SKIP_LIST = Path.of(
-            "docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json");
+            "docs/rmcp-handoff/5.1.4-panto-outstanding/panto-submap-walker-skip-list.json");
 
     private PantoCorpusSkipList() {
     }

@@ -24,7 +24,7 @@
     },
     {
       "id": "sql-grammar-extensions-since-2026-01-01",
-      "role": "Parse coverage and grammar extensions available in pss-parse 5.1.3 and later",
+      "role": "Parse coverage and grammar extensions available in pss-parse 5.1.4 and later",
       "path": "META-INF/pss-parse/${pss.parse.api.version}/sql-grammar-extensions-since-2026-01-01.md",
       "parserVersionMin": "${pss.parse.api.version}"
     },
@@ -36,7 +36,7 @@
     },
     {
       "id": "global-table-dictionary-cte-alias-policy",
-      "role": "5.1.3 global tableDictionary contract: physical and tuple sources only; CTE and query aliases via symbol table table_alias",
+      "role": "5.1.4 global tableDictionary contract: physical and tuple sources only; CTE and query aliases via symbol table table_alias",
       "path": "META-INF/pss-parse/${pss.parse.api.version}/global-table-dictionary-cte-alias-policy.md",
       "parserVersionMin": "${pss.parse.api.version}"
     },

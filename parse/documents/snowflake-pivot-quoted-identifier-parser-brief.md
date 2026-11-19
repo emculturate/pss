@@ -55,7 +55,7 @@ Support both. Do not “fix” this by requiring authors to migrate to the newer
 
 ## Minimal reproducing query
 
-Use this exact text as the primary fixture (SQL endpoint, parser 5.1.3, and also 5.1.2 if the grammar change is shared):
+Use this exact text as the primary fixture (SQL endpoint, parser 5.1.4, and also 5.1.2 if the grammar change is shared):
 
 ```sql
 SELECT contact_initiated_activity_key
@@ -110,7 +110,7 @@ Concretely, for the reproducing query:
 
 ## Suggested implementation approach
 
-1. Read PSS parse-consumer docs before changing PIVOT resolution (`relational-modifier-resolution-policy`, plus identifier/lexer rules). Align with `versionTag` 5.1.3 (and 5.1.2 if the grammar is shared).
+1. Read PSS parse-consumer docs before changing PIVOT resolution (`relational-modifier-resolution-policy`, plus identifier/lexer rules). Align with `versionTag` 5.1.4 (and 5.1.2 if the grammar is shared).
 2. Fix tokenization of double-quoted identifiers whose body contains single quotes (and spaces). Verify whether `"`-delimited identifiers are missing entirely from the SELECT-item path, or only fail when `'` appears inside.
 3. Teach PIVOT output-column naming for unaliased string IN-list values to match Snowflake: name = the literal including quotes.
 4. Confirm `derivation.source_columns` records those unaliased IN-list values as the source columns of the pivot outputs, then run the normal location-reference and column-resolution logic against the resulting identifiers.

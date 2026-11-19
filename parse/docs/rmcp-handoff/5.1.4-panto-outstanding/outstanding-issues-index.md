@@ -1,8 +1,8 @@
-# PSS 5.1.3 outstanding issues — compact index
+# PSS 5.1.4 outstanding issues — compact index
 
 Companion to `panto_513_outstanding_issues.csv` (82 rows: 74 timeouts + 8 degradations). Full SQL is in that CSV (`query_sql`). Do **not** copy the 6,680-row Panto extract.
 
-Compare baseline **5.0.0-3** vs **5.1.3**, `SQL` endpoint, 90s per-parser abort.
+Compare baseline **5.0.0-3** vs **5.1.4**, `SQL` endpoint, 90s per-parser abort.
 
 ## Degradations (8) — **all closed** (2026-09-01, Phase 2.9)
 
@@ -19,13 +19,13 @@ Compare baseline **5.0.0-3** vs **5.1.3**, `SQL` endpoint, 90s per-parser abort.
 
 Policy: [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md), [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md).
 
-## 5.1.3 timeouts (74)
+## 5.1.4 timeouts (74)
 
-5.0.0-3 finished; 5.1.3 was killed at ~90s with no payload.
+5.0.0-3 finished; 5.1.4 was killed at ~90s with no payload.
 
 Construction clustering and per-bucket progress: [parser-defects-enhancements-workplan.md](../../../documents/parser-defects-enhancements-workplan.md) §2.8 (buckets **2.8-1 … 2.8-18**).
 
-| CSV row | Domain | Entity | Query name | 5.0.0-3 ms | 5.1.3 ms (aborted) |
+| CSV row | Domain | Entity | Query name | 5.0.0-3 ms | 5.1.4 ms (aborted) |
 | --- | --- | --- | --- | --- | --- |
 | 28 | Acquia | PDP_Acquia_Contact | PDP_Acquia_Export | 1750 | 90002 |
 | 30 | Acquia | PDP_Acquia_Contact | PDP_Acquia_Export | 1448 | 90001 |

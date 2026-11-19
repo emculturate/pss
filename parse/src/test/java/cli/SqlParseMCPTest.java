@@ -590,9 +590,9 @@ public class SqlParseMCPTest {
     @Test
     public void parseSqlWithNbsp_returnsJsonRpcIdAndParsesRow28Fixture() throws Exception {
         assumeSlowTestsEnabled();
-        Path row28 = Path.of("docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
+        Path row28 = Path.of("docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-28.sql");
         if (!Files.isRegularFile(row28)) {
-            row28 = Path.of("parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
+            row28 = Path.of("parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-28.sql");
         }
         String sql = Files.readString(row28, StandardCharsets.UTF_8);
         assertTrue(sql.indexOf('\u00a0') >= 0);

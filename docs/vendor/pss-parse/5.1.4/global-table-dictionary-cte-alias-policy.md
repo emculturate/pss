@@ -1,6 +1,6 @@
-# Global table dictionary — CTE and query-backed alias policy (5.1.3+)
+# Global table dictionary — CTE and query-backed alias policy (5.1.4+)
 
-**API version:** 5.1.3  
+**API version:** 5.1.4  
 **Status:** Canonical consumer contract  
 **Related:** Phase 2.7 (complete), Phase 2.9 adjudication (closed 2026-09-01)  
 **See also:** [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md), [symbol-table-bucket-reference.md](symbol-table-bucket-reference.md) (`table_alias`, `def_queryN`, `interface`)
@@ -9,11 +9,11 @@
 
 ## Decision
 
-Under **5.1.3**, the **global** `tableDictionary` (access object `parse.tableDictionary`) indexes **physical tables**, **schema-qualified tables**, and **tuple substitution sources** (`<[…]>`) only.
+Under **5.1.4**, the **global** `tableDictionary` (access object `parse.tableDictionary`) indexes **physical tables**, **schema-qualified tables**, and **tuple substitution sources** (`<[…]>`) only.
 
 The following must **not** appear as keys in global `tableDictionary`:
 
-| Key type | Examples | Where it lives in 5.1.3 |
+| Key type | Examples | Where it lives in 5.1.4 |
 |----------|----------|-------------------------|
 | **WITH CTE names** | `latest_applications`, `race_data`, `student_term_crm` | `def_queryN.table_alias` as `{cte_name=queryM}` |
 | **Subquery / derived-table aliases** | `agg`, `sub` | `table_alias` → `queryN` on the enclosing scope |
@@ -100,14 +100,14 @@ FROM <[Partner_Data_Platform].[Contact].{combined_common_format}> AS comb_common
 |--------------------------|---------|
 | CTE name missing from global `tableDictionary` | **Not a regression** if `table_alias` → `queryN` exists |
 | Local tuple alias missing from global `tableDictionary` | **Not a regression** if tuple substitution key retains token sites |
-| Physical/tuple key missing from 5.1.3 `tableDictionary` | **Regression** — investigate collection |
-| Extra `def_*` / `query_dictionary` layers in 5.1.3 | **Improvement** |
+| Physical/tuple key missing from 5.1.4 `tableDictionary` | **Regression** — investigate collection |
+| Extra `def_*` / `query_dictionary` layers in 5.1.4 | **Improvement** |
 
 ---
 
 ## Live fixture index (Panto 2.9 — closed)
 
-| Cluster | Rows | `table_alias` evidence (5.1.3) |
+| Cluster | Rows | `table_alias` evidence (5.1.4) |
 |---------|------|--------------------------------|
 | A | 583, 2139 | `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3` |
 | B | 3870 | `student_term_crm=query7` |
@@ -120,7 +120,7 @@ Clusters **D** and **F** (rows 3150, 5410) are separate: set-op interface FATALs
 
 ## Author / tool migration checklist
 
-- [ ] Stop asserting CTE names in global `tableDictionary` for 5.1.3+.
+- [ ] Stop asserting CTE names in global `tableDictionary` for 5.1.4+.
 - [ ] Resolve CTEs via `symbolTable` → `table_alias` → `def_queryN`.
 - [ ] Keep asserting physical and tuple substitution keys on global `tableDictionary`.
 - [ ] Update dual-parse diff tools to use this scoring table.

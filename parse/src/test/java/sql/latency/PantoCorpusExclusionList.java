@@ -19,12 +19,12 @@ import com.google.gson.annotations.SerializedName;
  * multi-statement scripts, etc.). Distinct from {@link PantoCorpusSkipList} (walker
  * subMap fatals).
  *
- * <p>Canonical list: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-corpus-exclusion-list.json}
+ * <p>Canonical list: {@code parse/docs/rmcp-handoff/5.1.4-panto-outstanding/panto-corpus-exclusion-list.json}
  */
 final class PantoCorpusExclusionList {
 
     private static final Path DEFAULT_EXCLUSION_LIST = Path.of(
-            "docs/rmcp-handoff/5.1.3-panto-outstanding/panto-corpus-exclusion-list.json");
+            "docs/rmcp-handoff/5.1.4-panto-outstanding/panto-corpus-exclusion-list.json");
 
     private PantoCorpusExclusionList() {
     }

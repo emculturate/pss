@@ -1,13 +1,13 @@
-# Defect: subquery aliases resolved in the outer scope when the subquery is inside a SELECT-list expression (PSS 5.1.3)
+# Defect: subquery aliases resolved in the outer scope when the subquery is inside a SELECT-list expression (PSS 5.1.4)
 
-**Parser:** `pss-parse-5.1.3-1-fat.jar` (`symbolTableFormat: "5.1.3"`). Reproduced through the direct API (`access.SqlParserAccess` / `access.Snippet`) and through `cli.SqlParseMCP`; both return the same diagnostics.
+**Parser:** `pss-parse-5.1.4-1-fat.jar` (`symbolTableFormat: "5.1.4"`). Reproduced through the direct API (`access.SqlParserAccess` / `access.Snippet`) and through `cli.SqlParseMCP`; both return the same diagnostics.
 **Baseline:** `pss-parse-5.0.0-3.jar` parses every example below with 0 FATALs.
 **Diagnostic:** `FATAL` `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`, phase `ast-walk`, source `SqlASTWalkerHelper`, `recoverable: false`.
 **Severity:** blocking. Valid SQL is rejected with a FATAL, so any consumer that gates on `getFatalErrorCount() > 0` will refuse production queries and snippets that work today.
 
 ## Summary
 
-When a subquery (scalar, `IN (subquery)`, `NOT IN (subquery)`, or `EXISTS (subquery)`) appears **inside an expression in a SELECT list**, 5.1.3 resolves the qualified column references *inside* that subquery against the **outer** query block's aliases. The aliases are defined only inside the subquery, so resolution fails and 5.1.3 raises:
+When a subquery (scalar, `IN (subquery)`, `NOT IN (subquery)`, or `EXISTS (subquery)`) appears **inside an expression in a SELECT list**, 5.1.4 resolves the qualified column references *inside* that subquery against the **outer** query block's aliases. The aliases are defined only inside the subquery, so resolution fails and 5.1.4 raises:
 
 ```text
 Source Table not found for Column '<col>' at (l:L c:C). No alias or table called '<inner alias>'.
@@ -58,13 +58,13 @@ FROM <[AMS].[donor].{fulfillment}> as d
 | Parser | FATALs |
 |---|---|
 | 5.0.0-3 | 0 |
-| 5.1.3 | 2: `Source Table not found for Column 'calculated_field_8' at (l:20 c:8). No alias or table called 'g'.` and the same for `calculated_field_2` |
+| 5.1.4 | 2: `Source Table not found for Column 'calculated_field_8' at (l:20 c:8). No alias or table called 'g'.` and the same for `calculated_field_2` |
 
-Line 20, column 8 is the outer alias `contact_optout_ind`. Renaming the two inner aliases to distinct names (`g1`, `g2`) does **not** help. 5.1.3 then reports `g1` and `g2`, so this is not an alias-collision problem.
+Line 20, column 8 is the outer alias `contact_optout_ind`. Renaming the two inner aliases to distinct names (`g1`, `g2`) does **not** help. 5.1.4 then reports `g1` and `g2`, so this is not an alias-collision problem.
 
 ## Earlier examples of the same defect
 
-These were found first, during the 5.0.0-3 vs 5.1.3 snippet comparison. They use scalar subqueries as arithmetic or comparison operands.
+These were found first, during the 5.0.0-3 vs 5.1.4 snippet comparison. They use scalar subqueries as arithmetic or comparison operands.
 
 ### Snippet 8520 (`tuple` snippet, percentage check)
 
@@ -83,7 +83,7 @@ where ifnull(pr.partner_value,'') <>''
 )
 ```
 
-5.0.0-3: 0 FATALs. 5.1.3: 4 FATALs, all at `(l:9 c:8)`, the outer alias `missing_pct`:
+5.0.0-3: 0 FATALs. 5.1.4: 4 FATALs, all at `(l:9 c:8)`, the outer alias `missing_pct`:
 
 ```text
 Source Table not found for Column 'record_count' at (l:9 c:8). No alias or table called 'pp'.
@@ -96,14 +96,14 @@ This percentage/threshold tuple pattern (aliases `pp`, `pq`, `bt`) is repeated a
 
 ### Isolated reproductions from that investigation
 
-| SQL | 5.1.3 FATALs |
+| SQL | 5.1.4 FATALs |
 |---|---|
 | `select (select sum(pp.x) as a from t as pp) as r from t as pr` | 0 |
 | `select (select sum(pp.x) as a from t as pp) / (select sum(pq.x) as b from t as pq) as r from t as pr` | 2 (`pp`, `pq`) |
 | `select ((select sum(pp.x) as a from t as pp) / (select sum(pq.x) as b from t as pq)) as r from t as pr` | 2 (`pp`, `pq`) |
 | `select case when (select sum(pp.x) as a from t as pp) > 0 then 1 end as r from t as pr` | 1 (`pp`) |
 
-## Boundary of the defect (5.1.3, `SQL` endpoint, all 0 FATALs on 5.0.0-3)
+## Boundary of the defect (5.1.4, `SQL` endpoint, all 0 FATALs on 5.0.0-3)
 
 ### Fails
 
@@ -146,9 +146,9 @@ The same subquery is accepted in `WHERE`, `ON`, `HAVING`, and `ORDER BY`, and ac
 
 ## Diagnosis evidence
 
-5.1.3 flattens each outer interface item into a list of source columns, and that flattening descends into nested subqueries and keeps their **inner-scope** `table_ref` values.
+5.1.4 flattens each outer interface item into a list of source columns, and that flattening descends into nested subqueries and keeps their **inner-scope** `table_ref` values.
 
-For `select case when d.id in (select x from t as g where g.y = 1) then 1 else 0 end as r from t as d`, 5.1.3 emits:
+For `select case when d.id in (select x from t as g where g.y = 1) then 1 else 0 end as r from t as d`, 5.1.4 emits:
 
 ```json
 {
@@ -175,10 +175,10 @@ The subquery block `def_query0` resolves `g` correctly (`table_alias: { "g": "t"
 
 Two more observations narrow down the code path:
 
-- For the bare select item `select (select sum(pp.x) as a from t as pp) as r from t as pr`, 5.1.3 also emits `"r": [{ "name": "x", "table_ref": "pp" }]` with an inner alias, but raises **no** FATAL. The bare-subquery path appears to skip the outer-scope check, or resolves it through `dependent_queries`. The expression path does not.
+- For the bare select item `select (select sum(pp.x) as a from t as pp) as r from t as pr`, 5.1.4 also emits `"r": [{ "name": "x", "table_ref": "pp" }]` with an inner alias, but raises **no** FATAL. The bare-subquery path appears to skip the outer-scope check, or resolves it through `dependent_queries`. The expression path does not.
 - 5.0.0-3 kept the subquery as a nested `lookup` / `in_list` node in the interface, so its aliases were never resolved in the outer scope.
 
-A related tree-shape inconsistency points to where the problem starts. A bare scalar-subquery select item keeps its `lookup` wrapper in the sqlTree (`"select":{"1":{"lookup":{...},"alias":"r"}}`). When the same subquery is an operand, 5.1.3 drops the wrapper and inlines its `select`/`from` into the expression (`"calc":{"left":{"select":{...},"from":{...}}}`). 5.0.0-3 kept `lookup` in both positions. Without the wrapper, the outer item's column collection has no subquery boundary to stop at.
+A related tree-shape inconsistency points to where the problem starts. A bare scalar-subquery select item keeps its `lookup` wrapper in the sqlTree (`"select":{"1":{"lookup":{...},"alias":"r"}}`). When the same subquery is an operand, 5.1.4 drops the wrapper and inlines its `select`/`from` into the expression (`"calc":{"left":{"select":{...},"from":{...}}}`). 5.0.0-3 kept `lookup` in both positions. Without the wrapper, the outer item's column collection has no subquery boundary to stop at.
 
 ## Suspected cause and suggested fix direction
 
@@ -192,15 +192,15 @@ The outer-scope check of qualified column references runs over the flattened col
 
 ## Acceptance tests
 
-Every SQL in the "Fails" table, snippet 9530 and snippet 8520 should parse with **0 FATALs** on the fixed 5.1.3 build. Every SQL in the "Passes" table should stay at 0 FATALs. Genuine outer-scope errors must still be reported. For example, this must still FATAL on `zz`:
+Every SQL in the "Fails" table, snippet 9530 and snippet 8520 should parse with **0 FATALs** on the fixed 5.1.4 build. Every SQL in the "Passes" table should stay at 0 FATALs. Genuine outer-scope errors must still be reported. For example, this must still FATAL on `zz`:
 
 ```sql
 select case when d.id in (select x from t as g where zz.y = 1) then 1 else 0 end as r from t as d
 ```
 
-Current 5.1.3 correctly reports `No alias or table called 'zz'` for this case, and for the same subquery in `WHERE`. 5.0.0-3 reports nothing for either, so the fix should narrow the outer-scope check rather than revert to 5.0.0-3 behavior.
+Current 5.1.4 correctly reports `No alias or table called 'zz'` for this case, and for the same subquery in `WHERE`. 5.0.0-3 reports nothing for either, so the fix should narrow the outer-scope check rather than revert to 5.0.0-3 behavior.
 
-Not caused by this defect (correct 5.1.3 FATALs on real authoring errors, kept here so they are not "fixed" by accident):
+Not caused by this defect (correct 5.1.4 FATALs on real authoring errors, kept here so they are not "fixed" by accident):
 
 - Query row 3994: `calc_grants.ti_grant` references an alias that is never defined.
 - Query row 3577: `pcm_deferral_prev_ind` and `pcm_deferral_future_ind` are only defined in a commented-out join.
@@ -209,7 +209,7 @@ Not caused by this defect (correct 5.1.3 FATALs on real authoring errors, kept h
 
 ## How to reproduce
 
-All of the cases above, with machine-checkable expectations, are in `rmcp/docs/workplans/pss-5.1.3-parser-fix/acceptance-cases.json` (tasks `T1` and `T5`). Run them with `node run-acceptance.js <jar> --task T1,T5` from that folder. This defect is task T1 in `pss-5.1.3-parser-fix-workplan.md`.
+All of the cases above, with machine-checkable expectations, are in `rmcp/docs/workplans/pss-5.1.4-parser-fix/acceptance-cases.json` (tasks `T1` and `T5`). Run them with `node run-acceptance.js <jar> --task T1,T5` from that folder. This defect is task T1 in `pss-5.1.4-parser-fix-workplan.md`.
 
 
 Run with any harness that calls the direct API:

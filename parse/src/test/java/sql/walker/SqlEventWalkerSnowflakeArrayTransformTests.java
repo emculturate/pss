@@ -18543,4 +18543,4870 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 				"{query0={result_value=[[@14,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}}",
 				"{def_query0={query_dictionary={result_value=[[@14,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
 	}
+
+	@Test
+	public void arC56_signaturePolicyArrayToStringRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_to_string(a.tags, a.separator) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_to_string' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_to_string, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=separator, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], separator=[[@11,37:37='a',<457>,1:37]], tags=[[@7,29:29='a',<457>,1:29]]}}",
+				"{query0={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], separator=[[@11,37:37='a',<457>,1:37]], tags=[[@7,29:29='a',<457>,1:29]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=separator, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayToStringEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_to_string() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_to_string}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayToStringBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, array_to_string(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_to_string' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}}, function_name=array_to_string}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,29:29='a',<457>,1:29]]}}",
+				"{query0={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,29:29='a',<457>,1:29]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayToStringAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_to_string(a.tags, a.separator, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_to_string' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_to_string, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=separator, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], separator=[[@11,37:37='a',<457>,1:37]], tags=[[@7,29:29='a',<457>,1:29]]}}",
+				"{query0={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], separator=[[@11,37:37='a',<457>,1:37]], tags=[[@7,29:29='a',<457>,1:29]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=separator, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayToStringRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_to_string(42, 0) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_to_string' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_to_string, parameters={1={literal=42}, 2={literal=0}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySliceRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_slice(a.tags, a.start_idx, a.end_idx) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_slice' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_slice, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=start_idx, table_ref=a}}, 3={column={name=end_idx, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={end_idx=[[@15,46:46='a',<457>,1:46]], active=[[@25,93:93='a',<457>,1:93]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}",
+				"{query0={result_value=[[@20,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,60:71='result_value',<457>,1:60]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={end_idx=[[@15,46:46='a',<457>,1:46]], active=[[@25,93:93='a',<457>,1:93]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=start_idx, table_ref=a}, {name=end_idx, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySliceEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_slice() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_slice}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySliceBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, array_slice(a.tags, a.start_idx) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_slice' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_slice, parameters={1={column={name=tags, table_ref=a}}, 2={column={name=start_idx, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<457>,1:82]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<457>,1:82]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=start_idx, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySliceAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_slice(a.tags, a.start_idx, a.end_idx, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_slice' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=start_idx, table_ref=a}}, 3={column={name=end_idx, table_ref=a}}, 4={column={name=extra_value, table_ref=a}}}, function_name=array_slice}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={end_idx=[[@15,46:46='a',<457>,1:46]], extra_value=[[@19,57:57='a',<457>,1:57]], active=[[@29,108:108='a',<457>,1:108]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}",
+				"{query0={result_value=[[@24,75:86='result_value',<457>,1:75]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@24,75:86='result_value',<457>,1:75]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={end_idx=[[@15,46:46='a',<457>,1:46]], extra_value=[[@19,57:57='a',<457>,1:57]], active=[[@29,108:108='a',<457>,1:108]], start_idx=[[@11,33:33='a',<457>,1:33]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,25:25='a',<457>,1:25]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=start_idx, table_ref=a}, {name=end_idx, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySliceRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_slice('not-array', 'start', 'stop') AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_slice' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_slice, parameters={1={literal='not-array'}, 2={literal='start'}, 3={literal='stop'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,91:91='a',<457>,1:91]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,58:69='result_value',<457>,1:58]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,58:69='result_value',<457>,1:58]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@19,91:91='a',<457>,1:91]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_repeat(a.element, a.repeat_count) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_repeat' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_repeat, parameters={1={column={name=element, table_ref=a}}, 2={column={name=repeat_count, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]], repeat_count=[[@11,37:37='a',<457>,1:37]], element=[[@7,26:26='a',<457>,1:26]]}}",
+				"{query0={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]], repeat_count=[[@11,37:37='a',<457>,1:37]], element=[[@7,26:26='a',<457>,1:26]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=element, table_ref=a}, {name=repeat_count, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_repeat() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_repeat}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, array_repeat(a.element) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_repeat' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=element, table_ref=a}}}, function_name=array_repeat}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]], element=[[@7,26:26='a',<457>,1:26]]}}",
+				"{query0={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,40:51='result_value',<457>,1:40]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,73:73='a',<457>,1:73]], id=[[@1,7:7='a',<457>,1:7]], element=[[@7,26:26='a',<457>,1:26]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=element, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_repeat(a.element, a.repeat_count, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_repeat' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_repeat, parameters={1={column={name=element, table_ref=a}}, 2={column={name=repeat_count, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@15,53:53='a',<457>,1:53]], active=[[@25,104:104='a',<457>,1:104]], id=[[@1,7:7='a',<457>,1:7]], repeat_count=[[@11,37:37='a',<457>,1:37]], element=[[@7,26:26='a',<457>,1:26]]}}",
+				"{query0={result_value=[[@20,71:82='result_value',<457>,1:71]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,71:82='result_value',<457>,1:71]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@15,53:53='a',<457>,1:53]], active=[[@25,104:104='a',<457>,1:104]], id=[[@1,7:7='a',<457>,1:7]], repeat_count=[[@11,37:37='a',<457>,1:37]], element=[[@7,26:26='a',<457>,1:26]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=element, table_ref=a}, {name=repeat_count, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_repeat('x', 'count') AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_repeat' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_repeat, parameters={1={literal='x'}, 2={literal='count'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayDistinctRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_distinct(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_distinct' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_distinct, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,28:28='a',<457>,1:28]]}}",
+				"{query0={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,28:28='a',<457>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayDistinctEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_distinct() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_distinct}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayDistinctAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_distinct(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_distinct' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_distinct}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,36:36='a',<457>,1:36]], active=[[@21,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,28:28='a',<457>,1:28]]}}",
+				"{query0={result_value=[[@16,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,54:65='result_value',<457>,1:54]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,36:36='a',<457>,1:36]], active=[[@21,87:87='a',<457>,1:87]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,28:28='a',<457>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayDistinctRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_distinct(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_distinct' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_distinct, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayCompactRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_compact(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_compact' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_compact, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}",
+				"{query0={result_value=[[@12,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayCompactEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_compact() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_compact}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayCompactAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_compact(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_compact' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_compact}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,35:35='a',<457>,1:35]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}",
+				"{query0={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,35:35='a',<457>,1:35]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayCompactRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_compact(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_compact' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_compact, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_size(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_size' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_size, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_size() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_size}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_size(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_size' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_size}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,32:32='a',<457>,1:32]], active=[[@21,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@16,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,32:32='a',<457>,1:32]], active=[[@21,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_size('not-array'::variant) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_size' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_size, parameters={1={function={function_name=cast, data_type={type=VARIANT}, type=CAST, value={literal=not-array}}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_sort, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_sort() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, a.nulls_first, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=a}}, 4={column={name=extra_value, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:50='a',<457>,1:50]], extra_value=[[@19,65:65='a',<457>,1:65]], active=[[@29,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@24,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@24,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:50='a',<457>,1:50]], extra_value=[[@19,65:65='a',<457>,1:65]], active=[[@29,116:116='a',<457>,1:116]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_sort(42, 'ascending', 'first') AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=42}, 2={literal='ascending'}, 3={literal='first'}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@19,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_max(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_max' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_max, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_max() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_max}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_max(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_max' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_max}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_max(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_max' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_max, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_min(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_min' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_min, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_min() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_min}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_min(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_min' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_min}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_min(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_min' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_min, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_reverse(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_reverse' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_reverse, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}",
+				"{query0={result_value=[[@12,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,38:49='result_value',<457>,1:38]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,71:71='a',<457>,1:71]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_reverse() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_reverse}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_reverse(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_reverse' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_reverse}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,35:35='a',<457>,1:35]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}",
+				"{query0={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,35:35='a',<457>,1:35]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,27:27='a',<457>,1:27]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_reverse(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_reverse' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_reverse, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_sum(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sum' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_sum, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_sum() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_sum}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_sum(a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sum' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}, function_name=array_sum}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@11,31:31='a',<457>,1:31]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,23:23='a',<457>,1:23]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_sum(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sum' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_sum, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,30:41='result_value',<457>,1:30]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,63:63='a',<457>,1:63]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitToArrayRequiredFormV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitToArrayEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, split_to_array() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=split_to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitToArrayAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, a.delimiter, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], extra_value=[[@15,52:52='a',<457>,1:52]], active=[[@25,103:103='a',<457>,1:103]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@20,70:81='result_value',<457>,1:70]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,70:81='result_value',<457>,1:70]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], extra_value=[[@15,52:52='a',<457>,1:52]], active=[[@25,103:103='a',<457>,1:103]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitToArrayRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, split_to_array(42, TRUE) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={literal=42}, 2={literal=TRUE}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyStrtokToArrayRequiredFormV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], active=[[@17,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyStrtokToArrayEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, strtok_to_array() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=strtok_to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyStrtokToArrayAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, a.delimiter, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], extra_value=[[@15,53:53='a',<457>,1:53]], active=[[@25,104:104='a',<457>,1:104]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@20,71:82='result_value',<457>,1:71]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,71:82='result_value',<457>,1:71]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], extra_value=[[@15,53:53='a',<457>,1:53]], active=[[@25,104:104='a',<457>,1:104]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyStrtokToArrayRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, strtok_to_array(42, TRUE) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={literal=42}, 2={literal=TRUE}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_generate_range(a.start_value, a.stop_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_generate_range' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_generate_range, parameters={1={column={name=start_value, table_ref=a}}, 2={column={name=stop_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], active=[[@21,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], active=[[@21,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=start_value, table_ref=a}, {name=stop_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_generate_range() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_generate_range}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, array_generate_range(a.start_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_generate_range' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_generate_range, parameters={1={column={name=start_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={start_value=[[@7,34:34='a',<457>,1:34]], active=[[@17,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={start_value=[[@7,34:34='a',<457>,1:34]], active=[[@17,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=start_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_generate_range(a.start_value, a.stop_value, a.step_value, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_generate_range' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_generate_range, parameters={1={column={name=start_value, table_ref=a}}, 2={column={name=stop_value, table_ref=a}}, 3={column={name=step_value, table_ref=a}}, 4={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], extra_value=[[@19,77:77='a',<457>,1:77]], step_value=[[@15,63:63='a',<457>,1:63]], active=[[@29,128:128='a',<457>,1:128]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@24,95:106='result_value',<457>,1:95]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@24,95:106='result_value',<457>,1:95]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], extra_value=[[@19,77:77='a',<457>,1:77]], step_value=[[@15,63:63='a',<457>,1:63]], active=[[@29,128:128='a',<457>,1:128]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=start_value, table_ref=a}, {name=stop_value, table_ref=a}, {name=step_value, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_generate_range('start', 'stop', 'step') AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_generate_range' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_generate_range, parameters={1={literal='start'}, 2={literal='stop'}, 3={literal='step'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,62:73='result_value',<457>,1:62]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@19,95:95='a',<457>,1:95]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionRequiredFormV0Test() {
+		final String query = "SELECT a.id, array_position(a.needle, a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_position' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]], tags=[[@11,38:38='a',<457>,1:38]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]], tags=[[@11,38:38='a',<457>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, array_position() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=array_position}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, array_position(a.needle) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_position' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]]}}",
+				"{query0={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, array_position(a.needle, a.tags, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_position' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_position, parameters={1={column={name=needle, table_ref=a}}, 2={column={name=tags, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={extra_value=[[@15,46:46='a',<457>,1:46]], active=[[@25,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]], tags=[[@11,38:38='a',<457>,1:38]]}}",
+				"{query0={result_value=[[@20,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={extra_value=[[@15,46:46='a',<457>,1:46]], active=[[@25,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]], needle=[[@7,28:28='a',<457>,1:28]], tags=[[@11,38:38='a',<457>,1:38]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=needle, table_ref=a}, {name=tags, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, array_position(42, 42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_position' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_position, parameters={1={literal=42}, 2={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,39:50='result_value',<457>,1:39]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,72:72='a',<457>,1:72]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysZipRequiredFormV0Test() {
+		final String query = "SELECT a.id, arrays_zip(a.tags) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_zip' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_zip, parameters={1={column={name=tags, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysZipEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, arrays_zip() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=arrays_zip}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysZipRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, arrays_zip(42, 'not-array', TRUE) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_zip' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_zip, parameters={1={literal=42}, 2={literal='not-array'}, 3={literal=TRUE}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@19,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,50:61='result_value',<457>,1:50]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@19,83:83='a',<457>,1:83]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysToObjectRequiredFormV0Test() {
+		final String query = "SELECT a.id, arrays_to_object(a.keys, a.vals) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_to_object' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={column={name=keys, table_ref=a}}, 2={column={name=vals, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={vals=[[@11,38:38='a',<457>,1:38]], keys=[[@7,30:30='a',<457>,1:30]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,49:60='result_value',<457>,1:49]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={vals=[[@11,38:38='a',<457>,1:38]], keys=[[@7,30:30='a',<457>,1:30]], active=[[@21,82:82='a',<457>,1:82]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=keys, table_ref=a}, {name=vals, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysToObjectEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, arrays_to_object() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=arrays_to_object}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,35:46='result_value',<457>,1:35]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,68:68='a',<457>,1:68]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysToObjectBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, arrays_to_object(a.keys) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_to_object' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={column={name=keys, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={keys=[[@7,30:30='a',<457>,1:30]], active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={keys=[[@7,30:30='a',<457>,1:30]], active=[[@17,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=keys, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysToObjectAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, arrays_to_object(a.keys, a.vals, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_to_object' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={column={name=keys, table_ref=a}}, 2={column={name=vals, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={vals=[[@11,38:38='a',<457>,1:38]], keys=[[@7,30:30='a',<457>,1:30]], extra_value=[[@15,46:46='a',<457>,1:46]], active=[[@25,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@20,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={vals=[[@11,38:38='a',<457>,1:38]], keys=[[@7,30:30='a',<457>,1:30]], extra_value=[[@15,46:46='a',<457>,1:46]], active=[[@25,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=keys, table_ref=a}, {name=vals, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysToObjectRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, arrays_to_object([1, 2], ['value']) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:30) is recognized as Snowflake-specific grammar.",
+						1, 30, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={function={function_name=array_construct, parameters={1={literal=1}, 2={literal=2}}}}, 2={function={function_name=array_construct, parameters={1={literal='value'}}}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@23,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@18,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,52:63='result_value',<457>,1:52]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@23,85:85='a',<457>,1:85]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyToArrayRequiredFormV0Test() {
+		final String query = "SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyToArrayEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, to_array() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyToArrayAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, to_array(a.payload, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyToArrayRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, to_array(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyAsArrayRequiredFormV0Test() {
+		final String query = "SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyAsArrayEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, as_array() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=as_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyAsArrayAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, as_array(a.payload, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyAsArrayRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, as_array(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyIsArrayRequiredFormV0Test() {
+		final String query = "SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyIsArrayEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, is_array() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=is_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,27:38='result_value',<457>,1:27]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyIsArrayAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, is_array(a.payload, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], extra_value=[[@11,33:33='a',<457>,1:33]], active=[[@21,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyIsArrayRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, is_array(42) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={literal=42}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,29:40='result_value',<457>,1:29]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitRequiredFormV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,46:57='result_value',<457>,1:46]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], active=[[@21,79:79='a',<457>,1:79]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitEmptyArgumentsCompatibilityV0Test() {
+		final String query = "SELECT a.id, split() AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={1={function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@14,57:57='a',<457>,1:57]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@9,24:35='result_value',<457>,1:24]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@9,24:35='result_value',<457>,1:24]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@14,57:57='a',<457>,1:57]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitBelowDocumentedMinimumV0Test() {
+		final String query = "SELECT a.id, split(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@17,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], active=[[@17,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitAboveDocumentedMaximumV0Test() {
+		final String query = "SELECT a.id, split(a.payload, a.delimiter, a.extra_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}, 3={column={name=extra_value, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], extra_value=[[@15,43:43='a',<457>,1:43]], active=[[@25,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@20,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,61:72='result_value',<457>,1:61]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,19:19='a',<457>,1:19]], delimiter=[[@11,30:30='a',<457>,1:30]], extra_value=[[@15,43:43='a',<457>,1:43]], active=[[@25,94:94='a',<457>,1:94]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}, {name=extra_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitRuntimeShapeBoundaryV0Test() {
+		final String query = "SELECT a.id, split(42, TRUE) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={literal=42}, 2={literal=TRUE}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArity2V0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,53:64='result_value',<457>,1:53]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@21,86:86='a',<457>,1:86]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArity3V0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitToArrayOptionalArity2V0Test() {
+		final String query = "SELECT a.id, split_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'split_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=split_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,55:66='result_value',<457>,1:55]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,28:28='a',<457>,1:28]], delimiter=[[@11,39:39='a',<457>,1:39]], active=[[@21,88:88='a',<457>,1:88]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyStrtokToArrayOptionalArity2V0Test() {
+		final String query = "SELECT a.id, strtok_to_array(a.payload, a.delimiter) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'strtok_to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=strtok_to_array, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=delimiter, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@16,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,29:29='a',<457>,1:29]], delimiter=[[@11,40:40='a',<457>,1:40]], active=[[@21,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=delimiter, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeOptionalArity3V0Test() {
+		final String query = "SELECT a.id, array_generate_range(a.start_value, a.stop_value, a.step_value) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_generate_range' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_generate_range, parameters={1={column={name=start_value, table_ref=a}}, 2={column={name=stop_value, table_ref=a}}, 3={column={name=step_value, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], step_value=[[@15,63:63='a',<457>,1:63]], active=[[@25,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@20,80:91='result_value',<457>,1:80]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,80:91='result_value',<457>,1:80]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={stop_value=[[@11,49:49='a',<457>,1:49]], start_value=[[@7,34:34='a',<457>,1:34]], step_value=[[@15,63:63='a',<457>,1:63]], active=[[@25,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=start_value, table_ref=a}, {name=stop_value, table_ref=a}, {name=step_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, sort_ascending, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=null}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:45='sort_ascending',<457>,1:32]], nulls_first=[[@13,48:48='a',<457>,1:48]], active=[[@23,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:45='sort_ascending',<457>,1:32]], nulls_first=[[@13,48:48='a',<457>,1:48]], active=[[@23,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=events}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, array_sort(['x', NULL, 'y'], sort_ascending, FALSE) AS result_value";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:31) is recognized as Snowflake-specific grammar.",
+						1, 31, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [sort_ascending [(l:1 c:49)]]",
+						1, 49, "SqlASTWalkerHelper", null, "sort_ascending", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={function={function_name=array_construct, parameters={1={literal='x'}, 2={null_literal=null}, 3={literal='y'}}}}, 2={column={name=sort_ascending, table_ref=null}}, 3={literal=FALSE}}, function_name=array_sort}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@20,75:86='result_value',<457>,1:75]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@20,75:86='result_value',<457>,1:75]]}, interface={marker=[], result_value=[{name=sort_ascending, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2AmbiguousV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, sort_ascending, a.nulls_first) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'sort_ascending' at (l:1 c:32). Possible sources: [events, labels]",
+						1, 32, "SqlASTWalkerHelper", null, "sort_ascending", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [sort_ascending [(l:1 c:32)]]",
+						1, 32, "SqlASTWalkerHelper", null, "sort_ascending", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=null}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={nulls_first=[[@13,48:48='a',<457>,1:48]], id=[[@1,7:7='a',<457>,1:7], [@26,110:110='a',<457>,1:110]], tags=[[@7,24:24='a',<457>,1:24]]}, labels={event_id=[[@30,117:117='b',<457>,1:117]], active=[[@34,134:134='b',<457>,1:134]]}}",
+				"{query0={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={nulls_first=[[@13,48:48='a',<457>,1:48]], id=[[@1,7:7='a',<457>,1:7], [@26,110:110='a',<457>,1:110]], tags=[[@7,24:24='a',<457>,1:24]]}, labels={event_id=[[@30,117:117='b',<457>,1:117]], active=[[@34,134:134='b',<457>,1:134]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=null}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2MissingAliasV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, z.sort_ascending, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'sort_ascending' at (l:1 c:68). No alias or table called 'z'.",
+						1, 68, "SqlASTWalkerHelper", null, "sort_ascending", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=z}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={nulls_first=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={nulls_first=[[@15,50:50='a',<457>,1:50]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=z}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2HiddenAliasV0Test() {
+		final String query = "SELECT q.id, array_sort(q.tags, a.sort_ascending, q.nulls_first) AS result_value FROM (SELECT a.id, a.tags, a.sort_ascending, a.nulls_first FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'sort_ascending' at (l:1 c:68). No alias or table called 'a'.",
+						1, 68, "SqlASTWalkerHelper", null, "sort_ascending", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=tags, table_ref=q}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=q}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=tags, table_ref=a}}, 3={column={name=sort_ascending, table_ref=a}}, 4={column={name=nulls_first, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@32,108:108='a',<457>,1:108]], nulls_first=[[@36,126:126='a',<457>,1:126]], active=[[@43,160:160='a',<457>,1:160]], id=[[@24,94:94='a',<457>,1:94]], tags=[[@28,100:100='a',<457>,1:100]]}}",
+				"{query0={id=[[@26,96:97='id',<457>,1:96], [@1,7:7='q',<457>,1:7], [@51,182:182='q',<457>,1:182]], sort_ascending=[[@34,110:123='sort_ascending',<457>,1:110]], nulls_first=[[@38,128:138='nulls_first',<457>,1:128], [@15,50:50='q',<457>,1:50]], tags=[[@30,102:105='tags',<457>,1:102], [@7,24:24='q',<457>,1:24]]}, query1={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={sort_ascending=[[@34,110:123='sort_ascending',<457>,1:110]], nulls_first=[[@38,128:138='nulls_first',<457>,1:128], [@15,50:50='q',<457>,1:50]], id=[[@26,96:97='id',<457>,1:96], [@1,7:7='q',<457>,1:7], [@51,182:182='q',<457>,1:182]], tags=[[@30,102:105='tags',<457>,1:102], [@7,24:24='q',<457>,1:24]]}, table_dictionary={events={sort_ascending=[[@32,108:108='a',<457>,1:108]], nulls_first=[[@36,126:126='a',<457>,1:126]], active=[[@43,160:160='a',<457>,1:160]], id=[[@24,94:94='a',<457>,1:94]], tags=[[@28,100:100='a',<457>,1:100]]}}, filters=[{name=active, table_ref=a}], interface={sort_ascending=[{name=sort_ascending, table_ref=a}], nulls_first=[{name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}], tags=[{name=tags, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=tags, table_ref=q}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2PredicandVariableV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, <sort_ascending_expr>, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={substitution={name=<sort_ascending_expr>, type=predicand}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<sort_ascending_expr>=predicand}",
+				"{events={nulls_first=[[@13,55:55='a',<457>,1:55]], active=[[@23,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={nulls_first=[[@13,55:55='a',<457>,1:55]], active=[[@23,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=<sort_ascending_expr>, type=predicand}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2ColumnVariableV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.<sort_ascending_col>, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={substitution={name=<sort_ascending_col>, type=column}, table_ref=a}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<sort_ascending_col>=column}",
+				"{events={nulls_first=[[@15,56:56='a',<457>,1:56]], active=[[@25,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]], <sort_ascending_col>=[[@11,32:32='a',<457>,1:32]]}}",
+				"{query0={result_value=[[@20,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={nulls_first=[[@15,56:56='a',<457>,1:56]], active=[[@25,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]], <sort_ascending_col>=[[@11,32:32='a',<457>,1:32]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {substitution={name=<sort_ascending_col>, type=column}, table_ref=a}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg2NullV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, NULL, a.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={null_literal=null}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={nulls_first=[[@13,38:38='a',<457>,1:38]], active=[[@23,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,56:67='result_value',<457>,1:56]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={nulls_first=[[@13,38:38='a',<457>,1:38]], active=[[@23,89:89='a',<457>,1:89]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3UnqualifiedV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=null}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:60='nulls_first',<457>,1:50]], active=[[@23,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], nulls_first=[[@15,50:60='nulls_first',<457>,1:50]], active=[[@23,99:99='a',<457>,1:99]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, array_sort(['x', NULL, 'y'], TRUE, nulls_first) AS result_value";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"array literal at (l:1 c:31) is recognized as Snowflake-specific grammar.",
+						1, 31, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [nulls_first [(l:1 c:55)]]",
+						1, 55, "SqlASTWalkerHelper", null, "nulls_first", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={parameters={1={function={function_name=array_construct, parameters={1={literal='x'}, 2={null_literal=null}, 3={literal='y'}}}}, 2={literal=TRUE}, 3={column={name=nulls_first, table_ref=null}}}, function_name=array_sort}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@20,71:82='result_value',<457>,1:71]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@20,71:82='result_value',<457>,1:71]]}, interface={marker=[], result_value=[{name=nulls_first, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3AmbiguousV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, nulls_first) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'nulls_first' at (l:1 c:50). Possible sources: [events, labels]",
+						1, 50, "SqlASTWalkerHelper", null, "nulls_first", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [nulls_first [(l:1 c:50)]]",
+						1, 50, "SqlASTWalkerHelper", null, "nulls_first", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=null}}}, function_name=array_sort}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@26,110:110='a',<457>,1:110]], tags=[[@7,24:24='a',<457>,1:24]]}, labels={event_id=[[@30,117:117='b',<457>,1:117]], active=[[@34,134:134='b',<457>,1:134]]}}",
+				"{query0={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,66:77='result_value',<457>,1:66]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@26,110:110='a',<457>,1:110]], tags=[[@7,24:24='a',<457>,1:24]]}, labels={event_id=[[@30,117:117='b',<457>,1:117]], active=[[@34,134:134='b',<457>,1:134]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3MissingAliasV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, z.nulls_first) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'nulls_first' at (l:1 c:68). No alias or table called 'z'.",
+						1, 68, "SqlASTWalkerHelper", null, "nulls_first", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={name=nulls_first, table_ref=z}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@25,101:101='a',<457>,1:101]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=nulls_first, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3HiddenAliasV0Test() {
+		final String query = "SELECT q.id, array_sort(q.tags, q.sort_ascending, a.nulls_first) AS result_value FROM (SELECT a.id, a.tags, a.sort_ascending, a.nulls_first FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'nulls_first' at (l:1 c:68). No alias or table called 'a'.",
+						1, 68, "SqlASTWalkerHelper", null, "nulls_first", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={parameters={1={column={name=tags, table_ref=q}}, 2={column={name=sort_ascending, table_ref=q}}, 3={column={name=nulls_first, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=tags, table_ref=a}}, 3={column={name=sort_ascending, table_ref=a}}, 4={column={name=nulls_first, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@32,108:108='a',<457>,1:108]], nulls_first=[[@36,126:126='a',<457>,1:126]], active=[[@43,160:160='a',<457>,1:160]], id=[[@24,94:94='a',<457>,1:94]], tags=[[@28,100:100='a',<457>,1:100]]}}",
+				"{query0={id=[[@26,96:97='id',<457>,1:96], [@1,7:7='q',<457>,1:7], [@51,182:182='q',<457>,1:182]], sort_ascending=[[@34,110:123='sort_ascending',<457>,1:110], [@11,32:32='q',<457>,1:32]], nulls_first=[[@38,128:138='nulls_first',<457>,1:128]], tags=[[@30,102:105='tags',<457>,1:102], [@7,24:24='q',<457>,1:24]]}, query1={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@20,68:79='result_value',<457>,1:68]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={sort_ascending=[[@34,110:123='sort_ascending',<457>,1:110], [@11,32:32='q',<457>,1:32]], nulls_first=[[@38,128:138='nulls_first',<457>,1:128]], id=[[@26,96:97='id',<457>,1:96], [@1,7:7='q',<457>,1:7], [@51,182:182='q',<457>,1:182]], tags=[[@30,102:105='tags',<457>,1:102], [@7,24:24='q',<457>,1:24]]}, table_dictionary={events={sort_ascending=[[@32,108:108='a',<457>,1:108]], nulls_first=[[@36,126:126='a',<457>,1:126]], active=[[@43,160:160='a',<457>,1:160]], id=[[@24,94:94='a',<457>,1:94]], tags=[[@28,100:100='a',<457>,1:100]]}}, filters=[{name=active, table_ref=a}], interface={sort_ascending=[{name=sort_ascending, table_ref=a}], nulls_first=[{name=nulls_first, table_ref=a}], id=[{name=id, table_ref=a}], tags=[{name=tags, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=tags, table_ref=q}, {name=sort_ascending, table_ref=q}, {name=nulls_first, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3PredicandVariableV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, <nulls_first_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={substitution={name=<nulls_first_expr>, type=predicand}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<nulls_first_expr>=predicand}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@23,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,73:84='result_value',<457>,1:73]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@23,106:106='a',<457>,1:106]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {name=<nulls_first_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3ColumnVariableV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, a.<nulls_first_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={column={substitution={name=<nulls_first_col>, type=column}, table_ref=a}}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<nulls_first_col>=column}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], <nulls_first_col>=[[@15,50:50='a',<457>,1:50]], active=[[@25,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@20,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@20,74:85='result_value',<457>,1:74]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], <nulls_first_col>=[[@15,50:50='a',<457>,1:50]], active=[[@25,107:107='a',<457>,1:107]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}, {substitution={name=<nulls_first_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortOptionalArg3NullV0Test() {
+		final String query = "SELECT a.id, array_sort(a.tags, a.sort_ascending, NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={column={name=tags, table_ref=a}}, 2={column={name=sort_ascending, table_ref=a}}, 3={null_literal=null}}, function_name=array_sort}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@23,92:92='a',<457>,1:92]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}",
+				"{query0={result_value=[[@18,59:70='result_value',<457>,1:59]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@18,59:70='result_value',<457>,1:59]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={sort_ascending=[[@11,32:32='a',<457>,1:32]], active=[[@23,92:92='a',<457>,1:92]], id=[[@1,7:7='a',<457>,1:7]], tags=[[@7,24:24='a',<457>,1:24]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=tags, table_ref=a}, {name=sort_ascending, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:58 - unexpected input: ')' in rule value_expression: SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first,) AS result_value FROM events a",
+						1, 58, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:58 - Syntax error, attempting recovery",
+						1, 58, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '('",
+						1, 17, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:58 - unexpected input: 'AS' in rule value_expression: SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first AS result_value FROM events a",
+						1, 58, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_sort(a.tags, a.sort_ascending, a.nulls_first AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:58 - Syntax error, attempting recovery",
+						1, 58, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '('",
+						1, 17, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySortMissingCommaSyntaxV0Test() {
+		final String query = "SELECT array_sort(a.tags a.sort_ascending, a.nulls_first) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:25 - unexpected input: 'a' in rule value_expression: SELECT array_sort(a.tags a.sort_ascending, a.nulls_first) AS result_value FROM events a",
+						1, 25, "ParseErrorCollector", "value_expression", "a", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_sort(a.tags a.sort_ascending, a.nulls_first) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:25 - Syntax error, attempting recovery",
+						1, 25, "ParseErrorCollector", null, "a", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '('",
+						1, 17, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_max(a.tags,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: ')' in rule value_expression: SELECT array_max(a.tags,) AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_max(a.tags,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMaxMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_max(a.tags AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: 'AS' in rule value_expression: SELECT array_max(a.tags AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_max(a.tags AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_min(a.tags,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: ')' in rule value_expression: SELECT array_min(a.tags,) AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_min(a.tags,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayMinMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_min(a.tags AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: 'AS' in rule value_expression: SELECT array_min(a.tags AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_min(a.tags AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_reverse(a.tags,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:28 - unexpected input: ')' in rule value_expression: SELECT array_reverse(a.tags,) AS result_value FROM events a",
+						1, 28, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_reverse(a.tags,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:28 - Syntax error, attempting recovery",
+						1, 28, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:20 - Invalid syntax near '('",
+						1, 20, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayReverseMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_reverse(a.tags AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:28 - unexpected input: 'AS' in rule value_expression: SELECT array_reverse(a.tags AS result_value FROM events a",
+						1, 28, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_reverse(a.tags AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:28 - Syntax error, attempting recovery",
+						1, 28, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:20 - Invalid syntax near '('",
+						1, 20, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT array_sum(a.tags,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: ')' in rule value_expression: SELECT array_sum(a.tags,) AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_sum(a.tags,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySumMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT array_sum(a.tags AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:24 - unexpected input: 'AS' in rule value_expression: SELECT array_sum(a.tags AS result_value FROM events a",
+						1, 24, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT array_sum(a.tags AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:24 - Syntax error, attempting recovery",
+						1, 24, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:16 - Invalid syntax near '('",
+						1, 16, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.array_repeat(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=array_repeat}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,31:31='a',<457>,1:31]], extra2=[[@17,52:52='a',<457>,1:52]], active=[[@35,118:118='a',<457>,1:118]], extra3=[[@21,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,42:42='a',<457>,1:42]], extra4=[[@25,72:72='a',<457>,1:72]]}}",
+				"{query0={result_value=[[@30,85:96='result_value',<457>,1:85]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,85:96='result_value',<457>,1:85]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,31:31='a',<457>,1:31]], extra2=[[@17,52:52='a',<457>,1:52]], active=[[@35,118:118='a',<457>,1:118]], extra3=[[@21,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,42:42='a',<457>,1:42]], extra4=[[@25,72:72='a',<457>,1:72]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayRepeatQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.array_repeat(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:41 - unexpected input: ')' in rule value_expression: SELECT a.id, util.array_repeat(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 41, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.array_repeat(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:41 - Syntax error, attempting recovery",
+						1, 41, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.array_size(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=array_size}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,29:29='a',<457>,1:29]], extra2=[[@17,50:50='a',<457>,1:50]], active=[[@35,116:116='a',<457>,1:116]], extra3=[[@21,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,40:40='a',<457>,1:40]], extra4=[[@25,70:70='a',<457>,1:70]]}}",
+				"{query0={result_value=[[@30,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,29:29='a',<457>,1:29]], extra2=[[@17,50:50='a',<457>,1:50]], active=[[@35,116:116='a',<457>,1:116]], extra3=[[@21,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,40:40='a',<457>,1:40]], extra4=[[@25,70:70='a',<457>,1:70]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraySizeQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.array_size(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:39 - unexpected input: ')' in rule value_expression: SELECT a.id, util.array_size(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 39, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.array_size(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:39 - Syntax error, attempting recovery",
+						1, 39, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.split(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=split}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,24:24='a',<457>,1:24]], extra2=[[@17,45:45='a',<457>,1:45]], active=[[@35,111:111='a',<457>,1:111]], extra3=[[@21,55:55='a',<457>,1:55]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,35:35='a',<457>,1:35]], extra4=[[@25,65:65='a',<457>,1:65]]}}",
+				"{query0={result_value=[[@30,78:89='result_value',<457>,1:78]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,78:89='result_value',<457>,1:78]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,24:24='a',<457>,1:24]], extra2=[[@17,45:45='a',<457>,1:45]], active=[[@35,111:111='a',<457>,1:111]], extra3=[[@21,55:55='a',<457>,1:55]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,35:35='a',<457>,1:35]], extra4=[[@25,65:65='a',<457>,1:65]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicySplitQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.split(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:34 - unexpected input: ')' in rule value_expression: SELECT a.id, util.split(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 34, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.split(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:34 - Syntax error, attempting recovery",
+						1, 34, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.array_generate_range(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=array_generate_range}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,39:39='a',<457>,1:39]], extra2=[[@17,60:60='a',<457>,1:60]], active=[[@35,126:126='a',<457>,1:126]], extra3=[[@21,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,50:50='a',<457>,1:50]], extra4=[[@25,80:80='a',<457>,1:80]]}}",
+				"{query0={result_value=[[@30,93:104='result_value',<457>,1:93]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,93:104='result_value',<457>,1:93]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,39:39='a',<457>,1:39]], extra2=[[@17,60:60='a',<457>,1:60]], active=[[@35,126:126='a',<457>,1:126]], extra3=[[@21,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,50:50='a',<457>,1:50]], extra4=[[@25,80:80='a',<457>,1:80]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayGenerateRangeQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.array_generate_range(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:49 - unexpected input: ')' in rule value_expression: SELECT a.id, util.array_generate_range(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 49, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.array_generate_range(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:49 - Syntax error, attempting recovery",
+						1, 49, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.array_position(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=array_position}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,33:33='a',<457>,1:33]], extra2=[[@17,54:54='a',<457>,1:54]], active=[[@35,120:120='a',<457>,1:120]], extra3=[[@21,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,44:44='a',<457>,1:44]], extra4=[[@25,74:74='a',<457>,1:74]]}}",
+				"{query0={result_value=[[@30,87:98='result_value',<457>,1:87]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,87:98='result_value',<457>,1:87]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,33:33='a',<457>,1:33]], extra2=[[@17,54:54='a',<457>,1:54]], active=[[@35,120:120='a',<457>,1:120]], extra3=[[@21,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,44:44='a',<457>,1:44]], extra4=[[@25,74:74='a',<457>,1:74]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArrayPositionQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.array_position(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:43 - unexpected input: ')' in rule value_expression: SELECT a.id, util.array_position(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 43, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.array_position(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:43 - Syntax error, attempting recovery",
+						1, 43, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysZipQualifiedArityCompatibilityV0Test() {
+		final String query = "SELECT a.id, util.arrays_zip(a.payload, a.extra1, a.extra2, a.extra3, a.extra4) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}, 2={column={name=extra1, table_ref=a}}, 3={column={name=extra2, table_ref=a}}, 4={column={name=extra3, table_ref=a}}, 5={column={name=extra4, table_ref=a}}}, function_name=arrays_zip}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,29:29='a',<457>,1:29]], extra2=[[@17,50:50='a',<457>,1:50]], active=[[@35,116:116='a',<457>,1:116]], extra3=[[@21,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,40:40='a',<457>,1:40]], extra4=[[@25,70:70='a',<457>,1:70]]}}",
+				"{query0={result_value=[[@30,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@30,83:94='result_value',<457>,1:83]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,29:29='a',<457>,1:29]], extra2=[[@17,50:50='a',<457>,1:50]], active=[[@35,116:116='a',<457>,1:116]], extra3=[[@21,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], extra1=[[@13,40:40='a',<457>,1:40]], extra4=[[@25,70:70='a',<457>,1:70]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=extra1, table_ref=a}, {name=extra2, table_ref=a}, {name=extra3, table_ref=a}, {name=extra4, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC56_signaturePolicyArraysZipQualifiedTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT a.id, util.arrays_zip(a.payload,) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:39 - unexpected input: ')' in rule value_expression: SELECT a.id, util.arrays_zip(a.payload,) AS result_value FROM events a WHERE a.active = 1",
+						1, 39, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT a.id, util.arrays_zip(a.payload,) AS result_value FROM events a WHERE a.active = 1", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:39 - Syntax error, attempting recovery",
+						1, 39, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:17 - Invalid syntax near '.'",
+						1, 17, "ParseErrorCollector", null, ".", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC57_matrixAuditArraySortArg1NullV0Test() {
+		final String query = "SELECT a.id, array_sort(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_sort' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_sort, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,33:44='result_value',<457>,1:33]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,66:66='a',<457>,1:66]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArraySortSameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.array_sort AS stored_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=array_sort, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]], array_sort=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,29:40='stored_value',<457>,1:29]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,29:40='stored_value',<457>,1:29]]}, table_dictionary={events={active=[[@14,62:62='a',<457>,1:62]], id=[[@1,7:7='a',<457>,1:7]], array_sort=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=array_sort, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArrayMaxArg1NullV0Test() {
+		final String query = "SELECT a.id, array_max(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_max' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_max, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArrayMaxSameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.array_max AS stored_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=array_max, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={array_max=[[@5,13:13='a',<457>,1:13]], active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,28:39='stored_value',<457>,1:28]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,28:39='stored_value',<457>,1:28]]}, table_dictionary={events={array_max=[[@5,13:13='a',<457>,1:13]], active=[[@14,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=array_max, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArrayMinArg1NullV0Test() {
+		final String query = "SELECT a.id, array_min(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'array_min' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=array_min, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArrayMinSameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.array_min AS stored_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_conversion_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=array_min, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={active=[[@14,61:61='a',<457>,1:61]], array_min=[[@5,13:13='a',<457>,1:13]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,28:39='stored_value',<457>,1:28]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,28:39='stored_value',<457>,1:28]]}, table_dictionary={events={active=[[@14,61:61='a',<457>,1:61]], array_min=[[@5,13:13='a',<457>,1:13]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=array_min, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArraysToObjectArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, arrays_to_object(keys_arr, a.values_arr) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_to_object' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={column={name=keys_arr, table_ref=null}}, 2={column={name=values_arr, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={keys_arr=[[@7,30:37='keys_arr',<457>,1:30]], active=[[@19,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]], values_arr=[[@9,40:40='a',<457>,1:40]]}}",
+				"{query0={result_value=[[@14,57:68='result_value',<457>,1:57]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,57:68='result_value',<457>,1:57]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={keys_arr=[[@7,30:37='keys_arr',<457>,1:30]], active=[[@19,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]], values_arr=[[@9,40:40='a',<457>,1:40]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=keys_arr, table_ref=events}, {name=values_arr, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArraysToObjectArg2UnqualifiedV0Test() {
+		final String query = "SELECT a.id, arrays_to_object(a.keys_arr, values_arr) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.SqlContext tree = parser.sql();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Unexpected primary array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		Assert.assertEquals("Unexpected array_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_transform_function).size());
+		Assert.assertEquals("Unexpected array_unary_transform_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_unary_transform_function).size());
+		Assert.assertEquals("Unexpected array_range_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_range_seed_function).size());
+		Assert.assertEquals("Unexpected array_position_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_position_seed_function).size());
+		Assert.assertEquals("Unexpected array_zip_seed_function routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_zip_seed_function).size());
+		Assert.assertEquals("Unexpected routine_invocation routing", 0,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'arrays_to_object' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=arrays_to_object, parameters={1={column={name=keys_arr, table_ref=a}}, 2={column={name=values_arr, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={keys_arr=[[@7,30:30='a',<457>,1:30]], active=[[@19,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]], values_arr=[[@11,42:51='values_arr',<457>,1:42]]}}",
+				"{query0={result_value=[[@14,57:68='result_value',<457>,1:57]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,57:68='result_value',<457>,1:57]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={keys_arr=[[@7,30:30='a',<457>,1:30]], active=[[@19,90:90='a',<457>,1:90]], id=[[@1,7:7='a',<457>,1:7]], values_arr=[[@11,42:51='values_arr',<457>,1:42]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=keys_arr, table_ref=a}, {name=values_arr, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC57_matrixAuditArraysToObjectMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT arrays_to_object(a.keys_arr, a.values_arr AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:49 - unexpected input: 'AS' in rule value_expression: SELECT arrays_to_object(a.keys_arr, a.values_arr AS result_value FROM events a",
+						1, 49, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT arrays_to_object(a.keys_arr, a.values_arr AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:49 - Syntax error, attempting recovery",
+						1, 49, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:23 - Invalid syntax near '('",
+						1, 23, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
 }

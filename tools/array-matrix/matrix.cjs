@@ -51,7 +51,7 @@ function prepare() {
       legacy: true, routes: 1, rule: f.rule, function: f.function,
       cells: f.legacyCoverage?.[m.name] };
     });
-    return [...legacy, ...f.cases.map(c => ({ runner: 'sql', routes: 1, ...c, rule: f.rule,
+    return [...legacy, ...f.cases.map(c => ({ runner: 'sql', routes: 1, ...c, rule: c.rule || f.rule,
       name: f.prefix + c.suffix + 'V0Test', function: f.function, legacy: false }))];
   });
   assert.equal(new Set(cases.map(c => c.name)).size, cases.length);
@@ -111,14 +111,17 @@ function emit() {
         + '\t\tdiagnostics.addAll(collectParserListenerDiagnostics(parser));\n'
         + '\t\tAssert.assertEquals("Parser diagnostics are wrong", Arrays.asList(\n\t\t\t\t' + diagnosticArgs(r) + '), diagnostics);\n';
     } else {
-      if (c.runner === 'ddl' || c.runner === 'script') {
-        const type = c.runner === 'ddl' ? 'Ddl' : 'Script';
+      if (c.runner === 'ddl' || c.runner === 'script' || c.route_checks) {
+        const type = c.runner === 'ddl' ? 'Ddl' : c.runner === 'script' ? 'Script' : 'Sql';
         text += '\t\tfinal SQLSelectParserParser parser = parse(query);\n'
-          + '\t\tfinal SQLSelectParserParser.' + type + 'Context tree = parser.' + c.runner + '();\n'
+          + '\t\tfinal SQLSelectParserParser.' + type + 'Context tree = parser.' + (c.runner || 'sql') + '();\n'
           + '\t\tAssert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());\n'
-          + '\t\tAssert.assertEquals("Expected dedicated array function routing", ' + c.routes + ',\n'
-          + '\t\t\t\tTrees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_' + c.rule + ').size());\n'
-          + '\t\tfinal SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);\n';
+          + '\t\tAssert.assertEquals("Unexpected primary array function routing", ' + c.routes + ',\n'
+          + '\t\t\t\tTrees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_' + c.rule + ').size());\n';
+        for (const check of c.route_checks || [])
+          text += '\t\tAssert.assertEquals("Unexpected ' + check.rule + ' routing", ' + check.count + ',\n'
+            + '\t\t\t\tTrees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_' + check.rule + ').size());\n';
+        text += '\t\tfinal SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);\n';
       } else text += '\t\tfinal SqlParseEventWalker extractor = ' + (c.routes === 0 ? 'runQuery(query)'
         : 'runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_' + c.rule + ')') + ';\n';
       if (!r.diagnostics.some(d => d.severity === 'FATAL')) text += '\t\tassertNoFatalErrors(extractor);\n';
@@ -200,7 +203,7 @@ function finish() {
     upstream_artifacts_consumed: [planPath, reconciliationPath],
     traceability: traces, coverage: counts, implementation: { production_changes: functions.some(f => f.production_changes),
       lexer_changes: false, existing_extractor_goldens_rewritten: false,
-      note: 'Runtime values/types and arity policy remain outside this batch; review any production fixes separately.' },
+      note: 'Runtime values/types are not evaluated; accepted arities and grammar routing do not certify database signatures. Review any production fixes separately.' },
     test_results: Object.fromEntries(functions.map(f => [f.task, tests])), errors: [], next_task: config.next_task };
   const checkpoint = { metadata: { generated: new Date().toISOString().slice(0, 10), source_tasks: planPath },
     summary: { total_tasks: functions.length, completed_tasks: functions.length, in_progress_tasks: 0, pending_tasks: 0, completion_percentage: 100 },

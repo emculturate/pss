@@ -1,28 +1,28 @@
-# PSS 5.1.3 parse timeouts vs 5.0.0-3 (Panto extracted queries)
+# PSS 5.1.4 parse timeouts vs 5.0.0-3 (Panto extracted queries)
 
 Date: 2026-08-19  
-Kind: Defect (hang / non-termination on **5.1.3**)  
-Audience: PSS parser agent — **5.1.3** must finish these queries in bounded time, comparable to **5.0.0-3**.
+Kind: Defect (hang / non-termination on **5.1.4**)  
+Audience: PSS parser agent — **5.1.4** must finish these queries in bounded time, comparable to **5.0.0-3**.
 
 ## How these were collected
 
-- Corpus: Panto extracted-queries CSV, dual-parse **5.0.0-3** vs **5.1.3**, `SQL` endpoint.
+- Corpus: Panto extracted-queries CSV, dual-parse **5.0.0-3** vs **5.1.4**, `SQL` endpoint.
 - Per-parser abort: **90 000 ms**. Dual parse is parallel; wall clock for a row is ~max of the two.
-- A row is listed here iff **5.1.3** was killed at that limit (`timedOutVersions` includes `5.1.3`). **5.0.0-3** finished on every row below.
+- A row is listed here iff **5.1.4** was killed at that limit (`timedOutVersions` includes `5.1.4`). **5.0.0-3** finished on every row below.
 - RMCP records these as **parse errors**, not table-dictionary degradations.
-- Compare JSON also notes: “Timed out in 5.1.3 (likely thrashing on unrecognized syntax)”. A few rows include a **5.1.2** trip-site diagnostic from an earlier probe — keep that as a hint only; this run’s baseline is **5.0.0-3**.
+- Compare JSON also notes: “Timed out in 5.1.4 (likely thrashing on unrecognized syntax)”. A few rows include a **5.1.2** trip-site diagnostic from an earlier probe — keep that as a hint only; this run’s baseline is **5.0.0-3**.
 
 **Count: 74 queries.**
 
 ## Acceptance
 
-- Each fixture parses on **5.1.3** without hitting a 90s abort.
+- Each fixture parses on **5.1.4** without hitting a 90s abort.
 - Elapsed time should be in the same order of magnitude as **5.0.0-3** on that fixture (typically hundreds of ms to a few seconds; row 130 is the slow **5.0.0-3** outlier at ~20s).
 - Do not “fix” by failing fast with a bogus FATAL unless the SQL is actually illegal; **5.0.0-3** produced a completed parse payload.
 
 ## Index
 
-| CSV row | Domain | Entity | Query name | 5.0.0-3 | 5.1.3 |
+| CSV row | Domain | Entity | Query name | 5.0.0-3 | 5.1.4 |
 |--------:|--------|--------|------------|--------:|------:|
 | 28 | Acquia | PDP_Acquia_Contact | PDP_Acquia_Export | 1750 ms (1.8 s) | aborted after 90002 ms (90.0 s) |
 | 30 | Acquia | PDP_Acquia_Contact | PDP_Acquia_Export | 1448 ms (1.4 s) | aborted after 90001 ms (90.0 s) |
@@ -108,8 +108,8 @@ Audience: PSS parser agent — **5.1.3** must finish these queries in bounded ti
 - **Entity:** PDP_Acquia_Contact
 - **Query name:** PDP_Acquia_Export
 - **5.0.0-3:** finished in **1750 ms (1.8 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -425,8 +425,8 @@ inner join <[Partner_Data_Platform].[Partner Details]> as PD  --) as  t  )
 - **Entity:** PDP_Acquia_Contact
 - **Query name:** PDP_Acquia_Export
 - **5.0.0-3:** finished in **1448 ms (1.4 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -662,8 +662,8 @@ inner join <[Partner_Data_Platform].[Partner Details]> as PD  --) as  t  )
 - **Entity:** PDP_Acquia_Contact
 - **Query name:** PDP_Acquia_Export
 - **5.0.0-3:** finished in **1733 ms (1.7 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -940,8 +940,8 @@ inner join <[Partner_Data_Platform].[Partner Details]> as PD  --) as  t  )
 - **Entity:** PDP_Acquia_Contact
 - **Query name:** PDP_Acquia_Export
 - **5.0.0-3:** finished in **1738 ms (1.7 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -1223,8 +1223,8 @@ inner join <[Partner_Data_Platform].[Partner Details]> as PD  --) as  t  )
 - **Entity:** PDP_Acquia_Contact
 - **Query name:** PDP_Acquia_Export_v2
 - **5.0.0-3:** finished in **1844 ms (1.8 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -1540,8 +1540,8 @@ inner join <[Partner_Data_Platform].[Partner Details]> as PD  --) as  t  )
 - **Entity:** Applicant
 - **Query name:** transformation_query_applicants
 - **5.0.0-3:** finished in **20107 ms (20.1 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -2703,8 +2703,8 @@ from
 - **Entity:** Inquiry
 - **Query name:** transformation_query_inquiry
 - **5.0.0-3:** finished in **1914 ms (1.9 s)**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -2885,8 +2885,8 @@ WHERE regexp_replace(GENERIC_STAGING_FIELD_01,'"','') = 'PGS' AND regexp_replace
 - **Entity:** Inquiry
 - **Query name:** transformation_query_inquiry
 - **5.0.0-3:** finished in **1825 ms (1.8 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -3065,8 +3065,8 @@ WHERE regexp_replace(GENERIC_STAGING_FIELD_02,'"','') = 'PGS' AND regexp_replace
 - **Entity:** Partner Code Mapping
 - **Query name:** EAB.Country
 - **5.0.0-3:** finished in **7416 ms (7.4 s)**
-- **5.1.3:** still running at **89997 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89997 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -3329,8 +3329,8 @@ select 'Åland Islands' as country, 'AX' as alpha_2_code, 'ALA' as alpha_3_code,
 - **Entity:** Partner Code Mapping
 - **Query name:** EAB.Country
 - **5.0.0-3:** finished in **7120 ms (7.1 s)**
-- **5.1.3:** still running at **89992 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89992 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -3602,8 +3602,8 @@ select 'Åland Islands' as country, 'AX' as alpha_2_code, 'ALA' as alpha_3_code,
 - **Entity:** Student Address
 - **Query name:** ALR.Student Address.final
 - **5.0.0-3:** finished in **948 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -3766,8 +3766,8 @@ and coalesce(agg2.primary_student_id,'') <> ''
 - **Entity:** Student Address
 - **Query name:** ALR.Student Address.final
 - **5.0.0-3:** finished in **878 ms**
-- **5.1.3:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -3927,8 +3927,8 @@ and coalesce(agg2.primary_student_id,'') <> ''
 - **Entity:** Student Address
 - **Query name:** ALR.Student Address.final.BryanCollege.ExcludeAdultHistorical
 - **5.0.0-3:** finished in **878 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -4093,8 +4093,8 @@ and coalesce(agg2.primary_student_id,'') <> ''
 - **Entity:** Student Address
 - **Query name:** EHC.ALR.Student Address.final
 - **5.0.0-3:** finished in **882 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -4257,8 +4257,8 @@ and coalesce(agg2.primary_student_id,'') <> ''
 - **Entity:** Student Address
 - **Query name:** Goshen_ALR.Student Address.final
 - **5.0.0-3:** finished in **1168 ms (1.2 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -4424,8 +4424,8 @@ and coalesce(agg2.primary_student_id,'') <> ''
 - **Entity:** student_attributes
 - **Query name:** ALR.Student Attributes.Final
 - **5.0.0-3:** finished in **420 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -4471,8 +4471,8 @@ WHERE
 - **Entity:** donor_attributes
 - **Query name:** par_intake_donor_attributes_AMS_V2.0
 - **5.0.0-3:** finished in **781 ms**
-- **5.1.3:** still running at **90004 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90004 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -5070,8 +5070,8 @@ select src_donor_id,
 - **Entity:** donor_attributes
 - **Query name:** par_intake_donor_attributes_AMS_V2.0
 - **5.0.0-3:** finished in **231 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -5128,8 +5128,8 @@ from <[AMS].[donor_attributes_segmentations].{fulfillment}> as donor_attributes_
 - **Entity:** donor_attributes
 - **Query name:** par_intake_donor_attributes_AMS_V2.0
 - **5.0.0-3:** finished in **548 ms**
-- **5.1.3:** still running at **90006 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90006 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -5251,8 +5251,8 @@ from <[AMS].[donor_attributes_segmentations].{fulfillment}> as donor_attributes_
 - **Entity:** Census Student Term Attributes
 - **Query name:** Enroll360.Partner Processed Census Student Term Attributes.final
 - **5.0.0-3:** finished in **2700 ms (2.7 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -5752,8 +5752,8 @@ INNER JOIN cte_campus_visit AS camp_vst
 - **Entity:** Partner Code Mapping
 - **Query name:** DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis
 - **5.0.0-3:** finished in **2417 ms (2.4 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -7172,8 +7172,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.tenant_v2
 - **5.0.0-3:** finished in **2296 ms (2.3 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -8606,8 +8606,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v2
 - **5.0.0-3:** finished in **2328 ms (2.3 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -10040,8 +10040,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** EAB.Country
 - **5.0.0-3:** finished in **7111 ms (7.1 s)**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -10304,8 +10304,8 @@ select 'Åland Islands' as country, 'AX' as alpha_2_code, 'ALA' as alpha_3_code,
 - **Entity:** Partner Code Mapping
 - **Query name:** EAB.Country
 - **5.0.0-3:** finished in **7106 ms (7.1 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -10568,8 +10568,8 @@ select 'Åland Islands' as country, 'AX' as alpha_2_code, 'ALA' as alpha_3_code,
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1684 ms (1.7 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -11547,8 +11547,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1604 ms (1.6 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -12528,8 +12528,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1635 ms (1.6 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -13508,8 +13508,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1691 ms (1.7 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -14506,8 +14506,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_CRM_pilot_v1
 - **5.0.0-3:** finished in **1890 ms (1.9 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -15535,8 +15535,8 @@ source_attribute_type
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_sis
 - **5.0.0-3:** finished in **2450 ms (2.5 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -16768,8 +16768,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_sis
 - **5.0.0-3:** finished in **2672 ms (2.7 s)**
-- **5.1.3:** still running at **89981 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89981 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -18034,8 +18034,8 @@ group by <eab_fund_date>, COALESCE(accept_date, offered_date, declined_date, can
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_tenant
 - **5.0.0-3:** finished in **1656 ms (1.7 s)**
-- **5.1.3:** still running at **89982 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89982 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -19015,8 +19015,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_ug_applicants
 - **5.0.0-3:** finished in **1912 ms (1.9 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -20007,8 +20007,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_ug_applicants_v2
 - **5.0.0-3:** finished in **1864 ms (1.9 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -21001,8 +21001,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** Enroll360.Partner Code Mapping.convert_ug_inquiries
 - **5.0.0-3:** finished in **1814 ms (1.8 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -21976,8 +21976,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v1
 - **5.0.0-3:** finished in **2336 ms (2.3 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -23358,8 +23358,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.wStudentType
 - **5.0.0-3:** finished in **2448 ms (2.4 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -24773,8 +24773,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1681 ms (1.7 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -25753,8 +25753,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_Enroll360.Partner Code Mapping.convert
 - **5.0.0-3:** finished in **1705 ms (1.7 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -26734,8 +26734,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_Enroll360.Partner Code Mapping.convert_sis_pilot_v1
 - **5.0.0-3:** finished in **2352 ms (2.4 s)**
-- **5.1.3:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -28102,8 +28102,8 @@ fund_type
 - **Entity:** Partner Code Mapping
 - **Query name:** INACTIVE_Enroll360.Partner Code Mapping.convert_ug_applicants
 - **5.0.0-3:** finished in **1697 ms (1.7 s)**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29107,8 +29107,8 @@ housing_deposit_paid_or_waived_indicator
 - **Entity:** Partner Configurations
 - **Query name:** Enroll360.Project Atlas Migration Checks.prelim_stud_data_sliced
 - **5.0.0-3:** finished in **296 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29173,8 +29173,8 @@ select
 - **Entity:** Partner Configurations
 - **Query name:** Enroll360.Project Atlas Migration Checks.st_sta_data
 - **5.0.0-3:** finished in **585 ms**
-- **5.1.3:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90000 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29265,8 +29265,8 @@ and eab_current_funnel_status_adj not in ('Prospect','Inquiry','Started Applican
 - **Entity:** Partner Configurations
 - **Query name:** Enroll360.Project Atlas Migration Checks.st_sta_data_undeduped_apps
 - **5.0.0-3:** finished in **563 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29368,8 +29368,8 @@ stud_term_app.rn
 - **Entity:** Partner Configurations
 - **Query name:** Enroll360.Project Atlas Migration Checks.stud_race_eth
 - **5.0.0-3:** finished in **503 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29504,8 +29504,8 @@ from (
 - **Entity:** Student
 - **Query name:** Enroll360.Student.final.multifile Bill test
 - **5.0.0-3:** finished in **3097 ms (3.1 s)**
-- **5.1.3:** still running at **90024 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90024 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -29969,8 +29969,8 @@ and coalesce(agg3.partner_system_name,'') <> ''
 - **Entity:** Student
 - **Query name:** INACTIVE_Enroll360.Student.final
 - **5.0.0-3:** finished in **2276 ms (2.3 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -30390,8 +30390,8 @@ where agg2.rn2 = 1
 - **Entity:** Student
 - **Query name:** INACTIVE_Enroll360.Student.final.multifile_v4
 - **5.0.0-3:** finished in **2899 ms (2.9 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -30854,8 +30854,8 @@ and coalesce(agg3.partner_system_name,'') <> ''
 - **Entity:** Student
 - **Query name:** XWALK_TEST_Enroll360.Student.final.multifile.tenant
 - **5.0.0-3:** finished in **2899 ms (2.9 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -31314,8 +31314,8 @@ and coalesce(agg3.partner_system_name,'') <> ''
 - **Entity:** Student Year Funds
 - **Query name:** DataOrgPilot.Enroll360.StudentYearFundsLogicTesting
 - **5.0.0-3:** finished in **958 ms**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -31520,8 +31520,8 @@ limit 5000*/
 - **Entity:** Student Year Funds
 - **Query name:** DataOrgPilot.Enroll360.StudentYearFundsLogicTesting
 - **5.0.0-3:** finished in **1149 ms (1.1 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -31781,8 +31781,8 @@ limit 5000*/
 - **Entity:** Student Year Funds
 - **Query name:** FundAmountLogicTesting_Enroll360.Student Year Funds.final
 - **5.0.0-3:** finished in **1456 ms (1.5 s)**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -32052,8 +32052,8 @@ limit 5000	*/
 - **Entity:** Student Year Funds
 - **Query name:** funds logic testing
 - **5.0.0-3:** finished in **915 ms**
-- **5.1.3:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **89999 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -32260,8 +32260,8 @@ limit 5000	*/
 - **Entity:** Student Year Funds
 - **Query name:** TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTesting
 - **5.0.0-3:** finished in **891 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -32467,8 +32467,8 @@ limit 5000*/
 - **Entity:** Student Year Funds
 - **Query name:** TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTestingDT
 - **5.0.0-3:** finished in **883 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -32677,8 +32677,8 @@ limit 5000
 - **Entity:** Test
 - **Query name:** MSUBozeman.ApplyResponder
 - **5.0.0-3:** finished in **3722 ms (3.7 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -32847,8 +32847,8 @@ and first_apply_email_engagement_date >= current_date - 10
 - **Entity:** Test
 - **Query name:** MSUBozeman.CultivateResponder
 - **5.0.0-3:** finished in **3326 ms (3.3 s)**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -33016,8 +33016,8 @@ and first_cultivate_ig_email_engagement_date >= current_date - 7
 - **Entity:** Entering Class
 - **Query name:** Migration checks fulfillment counts
 - **5.0.0-3:** finished in **719 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax). 5.1.2 first diagnostic (possible trip site): Line 85:0 - Invalid syntax near 'select'
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax). 5.1.2 first diagnostic (possible trip site): Line 85:0 - Invalid syntax near 'select'
 
 ### Full query text
 
@@ -33470,8 +33470,8 @@ coalesce(pd_test.entry_year_as_academic_year_eab,''))
 - **Entity:** Student Academic Summary Intermediate
 - **Query name:** Old STD
 - **5.0.0-3:** finished in **323 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -33597,8 +33597,8 @@ with AA0_student_term as (select <downfillcolmap.out_concentration_cd_3> as conc
 - **Entity:** Student Academic Summary Intermediate
 - **Query name:** Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query
 - **5.0.0-3:** finished in **303 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -33722,8 +33722,8 @@ with AA0_student_term as (select <downfillcolmap.out_graduated_ind> as graduated
 - **Entity:** COURSE
 - **Query name:** colleague_cat_course
 - **5.0.0-3:** finished in **537 ms**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -33830,8 +33830,8 @@ select  distinct
 - **Entity:** SECTION
 - **Query name:** colleague_cat_section
 - **5.0.0-3:** finished in **428 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -33911,8 +33911,8 @@ ORDER BY 1 DESC, 2
 - **Entity:** Contact
 - **Query name:** con_contact_assigned_cappex_common_format
 - **5.0.0-3:** finished in **805 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34004,8 +34004,8 @@ where UPPER(srctype.intake_type_label) = 'CAPPEX'
 - **Entity:** Contact
 - **Query name:** con_contact_assigned_cappex_common_format
 - **5.0.0-3:** finished in **560 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34097,8 +34097,8 @@ where UPPER(srctype.intake_type_label) = 'CAPPEX'
 - **Entity:** custom contacts
 - **Query name:** src_intake_custom_contacts_PDPv0.2
 - **5.0.0-3:** finished in **502 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34156,8 +34156,8 @@ FROM PDP.lsc__custom_contacts pdp__custom_contacts
 - **Entity:** custom contacts
 - **Query name:** src_intake_custom_contacts_PDPv0.2
 - **5.0.0-3:** finished in **502 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34215,8 +34215,8 @@ FROM PDP.lsc__custom_contacts pdp__custom_contacts
 - **Entity:** custom contacts
 - **Query name:** src_intake_custom_contacts_PDPv0.2_test
 - **5.0.0-3:** finished in **507 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34273,8 +34273,8 @@ FROM PDP.lsc__custom_contacts pdp__custom_contacts
 - **Entity:** par__student
 - **Query name:** par_intake_student_last_validated_PDP_ALR_V2_v2.0
 - **5.0.0-3:** finished in **767 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34461,8 +34461,8 @@ WHERE mdd.pdp_key is null
 - **Entity:** par__student
 - **Query name:** par_intake_student_PDP_ALR_V2_v2.0
 - **5.0.0-3:** finished in **505 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34587,8 +34587,8 @@ WHERE
 - **Entity:** par__student
 - **Query name:** par_intake_student_PDP_ALR_V2_v2.0
 - **5.0.0-3:** finished in **507 ms**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34712,8 +34712,8 @@ WHERE
 - **Entity:** par__student
 - **Query name:** par_intake_student_PDP_ALR_V2_v2.0
 - **5.0.0-3:** finished in **750 ms**
-- **5.1.3:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90001 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -34894,8 +34894,8 @@ WHERE mdd.pdp_key is null
 - **Entity:** rsc_partner_donors
 - **Query name:** pdp_ams_rsc_donor_intake
 - **5.0.0-3:** finished in **1354 ms (1.4 s)**
-- **5.1.3:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90002 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 
@@ -35134,8 +35134,8 @@ LEFT JOIN donor_email_CTE AS partner_contacts
 - **Entity:** Inquiry Pool Lead
 - **Query name:** Hofstra  YouVisit INQ International
 - **5.0.0-3:** finished in **420 ms**
-- **5.1.3:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.3 payload.
-- **Compare note:** Timed out in 5.1.3 (likely thrashing on unrecognized syntax)
+- **5.1.4:** still running at **90003 ms (90.0 s)**, then **killed** (90s timeout). No completed 5.1.4 payload.
+- **Compare note:** Timed out in 5.1.4 (likely thrashing on unrecognized syntax)
 
 ### Full query text
 

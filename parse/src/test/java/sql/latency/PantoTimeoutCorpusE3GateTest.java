@@ -28,7 +28,7 @@ import static testsupport.TestSuiteSelection.assumeDiagnosticsEnabled;
  * Use {@link ParseLatencyDiagnosticService#diagnoseWithSllProbe(String, String)} when
  * comparing SLL vs LL prediction cost — never to gate production behavior.
  *
- * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
+ * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.4-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
  *
  * <p><b>Manual only:</b> excluded from default {@code mvn test} / package builds (~80s).
  * Run: {@code mvn -pl parse -Pdiagnostic-tests -Dtest=PantoTimeoutCorpusE3GateTest test}

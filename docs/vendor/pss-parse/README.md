@@ -6,7 +6,7 @@ This directory holds **version-pinned** copies of the symbol-table consumer guid
 
 ```
 docs/vendor/pss-parse/
-  latest.version                 # current API version string (e.g. 5.1.3)
+  latest.version                 # current API version string (e.g. 5.1.4)
   <api-version>/
     symbol-table-bucket-reference.md
     symbol-table-bucket-reference-pss-parse-<api-version>.md
@@ -32,18 +32,18 @@ git submodule add -b Spring-2026-Extensions \
   https://github.com/emculturate/pss.git docs/vendor/pss
 ```
 
-Use the branch or tag that matches your `pss-parse` dependency. Prefer a release tag when available, for example `pss-parse-5.1.3`.
+Use the branch or tag that matches your `pss-parse` dependency. Prefer a release tag when available, for example `pss-parse-5.1.4`.
 
 ### 2. Point agents or docs at the versioned file
 
 ```text
-docs/vendor/pss/docs/vendor/pss-parse/5.1.3/symbol-table-bucket-reference.md
+docs/vendor/pss/docs/vendor/pss-parse/5.1.4/symbol-table-bucket-reference.md
 ```
 
 Or the versioned filename:
 
 ```text
-docs/vendor/pss/docs/vendor/pss-parse/5.1.3/symbol-table-bucket-reference-pss-parse-5.1.3.md
+docs/vendor/pss/docs/vendor/pss-parse/5.1.4/symbol-table-bucket-reference-pss-parse-5.1.4.md
 ```
 
 Read `pss-parse-docs.manifest.json` in that folder for machine-readable metadata (`parserVersion`, `parserVersionMin`, paths).
@@ -59,7 +59,7 @@ When you upgrade `pss-parse` in `pom.xml`:
 ```bash
 cd docs/vendor/pss
 git fetch --tags
-git checkout pss-parse-5.1.3   # example tag
+git checkout pss-parse-5.1.4   # example tag
 cd ../../..
 git add docs/vendor/pss
 ```
@@ -72,7 +72,7 @@ If the full pss tree is too large, use git sparse checkout in the submodule to k
 git clone --filter=blob:none --sparse https://github.com/emculturate/pss.git docs/vendor/pss
 cd docs/vendor/pss
 git sparse-checkout set docs/vendor/pss-parse
-git checkout pss-parse-5.1.3
+git checkout pss-parse-5.1.4
 ```
 
 ## Option D — git subtree (alternative)
@@ -92,15 +92,15 @@ git subtree pull --prefix docs/vendor/pss-parse \
   https://github.com/emculturate/pss.git Spring-2026-Extensions
 ```
 
-After a subtree pull, select the subdirectory for your API version (e.g. `docs/vendor/pss-parse/5.1.3/`).
+After a subtree pull, select the subdirectory for your API version (e.g. `docs/vendor/pss-parse/5.1.4/`).
 
 ## Release tags
 
 Tag parser + docs together when publishing:
 
 ```bash
-git tag -a pss-parse-5.1.3 -m "pss-parse 5.1.3 API / docs"
-git push origin pss-parse-5.1.3
+git tag -a pss-parse-5.1.4 -m "pss-parse 5.1.4 API / docs"
+git push origin pss-parse-5.1.4
 ```
 
 Consumer repos should pin submodules or subtree pulls to that tag.
@@ -108,7 +108,7 @@ Consumer repos should pin submodules or subtree pulls to that tag.
 ## Regenerate locally
 
 ```bash
-./scripts/sync-pss-parse-docs-vendor.sh 5.1.3 5.1.3-1
+./scripts/sync-pss-parse-docs-vendor.sh 5.1.4 5.1.4-1
 ```
 
 Or build the Maven docs artifact (also runs the sync script):

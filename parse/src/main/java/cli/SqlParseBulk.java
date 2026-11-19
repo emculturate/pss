@@ -39,7 +39,7 @@ public final class SqlParseBulk {
             JsonObject result = SqlParseMcpSupport.parseAndFormatWithTransport(
                     endPoint, sql, SqlParseMcpSupport.TRANSPORT_BULK);
             JsonObject meta = new JsonObject();
-            meta.addProperty("versionTag", "5.1.3");
+            meta.addProperty("versionTag", "5.1.4");
             result.add("rmcpParserMeta", meta);
             System.out.println(SqlParseMcpSupport.gson().toJson(result));
         } catch (RuntimeException e) {

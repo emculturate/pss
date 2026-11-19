@@ -1,7 +1,7 @@
-# Workplan: PSS 5.1.3 missing table-dictionary sources vs 5.0.0-3
+# Workplan: PSS 5.1.4 missing table-dictionary sources vs 5.0.0-3
 
 Date: 2026-08-19  
-Kind: Originally filed as a defect (regression vs **5.0.0-3**); **closed 2026-09-01 — not a defect.** CTE references moving out of global `tableDictionary` into the query/symbol structures (`table_alias` → `def_queryN`, `query_dictionary`) is an **intentional 5.1.3+ enhancement** and is **not** on any fix list. Re-confirmed on 5.1.4-1 (2026-11-10, 82-row dual-parse): no physical/tuple source loss on any bound query.  
+Kind: Originally filed as a defect (regression vs **5.0.0-3**); **closed 2026-09-01 — not a defect.** CTE references moving out of global `tableDictionary` into the query/symbol structures (`table_alias` → `def_queryN`, `query_dictionary`) is an **intentional 5.1.4+ enhancement** and is **not** on any fix list. Re-confirmed on 5.1.4-1 (2026-11-10, 82-row dual-parse): no physical/tuple source loss on any bound query.  
 Audience: Historical record of the RMCP scoring and its adjudication. Do **not** restore CTE names to global `tableDictionary`.  
 Corpus: Panto extracted-queries CSV dual-parse (`SQL` endpoint), RMCP compare after table-dict last-identifier scoring and outermost-only queryDictionary vs 5.0.0-3.
 
@@ -9,46 +9,46 @@ Corpus: Panto extracted-queries CSV dual-parse (`SQL` endpoint), RMCP compare af
 
 ## Goal
 
-For each listed query, **5.1.3** `tableDictionary` (and, where noted, diagnostics) must not be a functional regression vs **5.0.0-3**:
+For each listed query, **5.1.4** `tableDictionary` (and, where noted, diagnostics) must not be a functional regression vs **5.0.0-3**:
 
-1. Every **physical table or tuple substitution source** that **5.0.0-3** recorded in `tableDictionary` must still appear in **5.1.3** with equivalent token-site evidence (compare the last identifier after `.`; schema-only qualification is **not** this defect).
-2. **CTE aliases** must **not** be required in global `tableDictionary` (5.1.3 policy; Phase 2.7 closed). For CTE-centered rows, require equivalent evidence in `query_dictionary` and `def_*` symbol-tree structures — especially **`table_alias`** entries of the form **`{cte_name=queryN}`** on the enclosing scope (e.g. row 583: `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3`). That symbol-table registration is an **intentional 5.1.3 enhancement** over 5.0.0-3; it is not a downgrade because the CTE name left global `tableDictionary`.
-3. Do not “fix” a missing CTE name in `tableDictionary` by deleting the base tables / tuples that **5.1.3** already records.
-4. Nested **5.1.3** dictionary layers that **5.0.0-3** never emitted are improvements, not something to strip.
+1. Every **physical table or tuple substitution source** that **5.0.0-3** recorded in `tableDictionary` must still appear in **5.1.4** with equivalent token-site evidence (compare the last identifier after `.`; schema-only qualification is **not** this defect).
+2. **CTE aliases** must **not** be required in global `tableDictionary` (5.1.4 policy; Phase 2.7 closed). For CTE-centered rows, require equivalent evidence in `query_dictionary` and `def_*` symbol-tree structures — especially **`table_alias`** entries of the form **`{cte_name=queryN}`** on the enclosing scope (e.g. row 583: `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3`). That symbol-table registration is an **intentional 5.1.4 enhancement** over 5.0.0-3; it is not a downgrade because the CTE name left global `tableDictionary`.
+3. Do not “fix” a missing CTE name in `tableDictionary` by deleting the base tables / tuples that **5.1.4** already records.
+4. Nested **5.1.4** dictionary layers that **5.0.0-3** never emitted are improvements, not something to strip.
 
 ## How RMCP scored these eight
 
-Compare: `5.0.0-3` vs `5.1.3`. Verdict **degradation** only when **5.1.3** lost material information.
+Compare: `5.0.0-3` vs `5.1.4`. Verdict **degradation** only when **5.1.4** lost material information.
 
-| CSV row | Query key | Why scored as degradation | Keys extra in 5.0.0-3 (missing in 5.1.3) |
+| CSV row | Query key | Why scored as degradation | Keys extra in 5.0.0-3 (missing in 5.1.4) |
 |--------:|-----------|---------------------------|------------------------------------------|
 | 583 | `ALR/Student/ECRM.student` | `tableDictionary` missing CTE keys | `latest_applications`, `activity_prospect_map`, `campus_visit_activity` |
 | 2139 | `Enroll360/Student/ECRM.student` | same shape as 583 | same three CTEs |
-| 3150 | `Enroll360/Student Race/INACTIVE_Enroll360.Student Race.final_v2` | 20 **FATAL** in 5.1.3 (0 in 5.0.0-3) **and** missing CTE | `race_data` |
+| 3150 | `Enroll360/Student Race/INACTIVE_Enroll360.Student Race.final_v2` | 20 **FATAL** in 5.1.4 (0 in 5.0.0-3) **and** missing CTE | `race_data` |
 | 3870 | `Enroll360/Student Term PDP Delivery/Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020` | missing CTE | `student_term_crm` |
 | 4648 | `Foundation/Student Academic Summary Intermediate/old Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill_ Query` | missing CTE | `st_student_term_sweep` |
 | 4726 | `Foundation/Student Academic Summary Intermediate/Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query` | same as 4648 | `st_student_term_sweep` |
-| 5410 | `Partner_Data_Platform/Cappex Contacts/src_intake_cappex_contacts_PDPv0.2` | 3 **FATAL** in 5.1.3 (0 in 5.0.0-3); **no** table-dict miss | _(diagnostics only)_ |
+| 5410 | `Partner_Data_Platform/Cappex Contacts/src_intake_cappex_contacts_PDPv0.2` | 3 **FATAL** in 5.1.4 (0 in 5.0.0-3); **no** table-dict miss | _(diagnostics only)_ |
 | 5455 | `Partner_Data_Platform/Contact/con_contact_assigned_chosen_contacts` | missing CTE + tuple alias | `comb_common`, `chosencontact_combined` |
 
 Full SQL fixtures (copy into parser tests): `sql/csv-row-<N>.sql` in this folder.
 
-Re-parse each fixture with both fat JARs (`SQL` endpoint). RMCP corpus JSON does **not** include the 5.1.3 FATAL **message text** for 3150/5410 — capture `messages` on a fresh parse.
+Re-parse each fixture with both fat JARs (`SQL` endpoint). RMCP corpus JSON does **not** include the 5.1.4 FATAL **message text** for 3150/5410 — capture `messages` on a fresh parse.
 
 ### Re-scoring (2.9, post–Phase 2.7)
 
-August RMCP scoring flagged any `tableDictionary` key present in 5.0.0-3 but absent in 5.1.3. Updated scoring treats the following as **acceptable / improved**, not degradations:
+August RMCP scoring flagged any `tableDictionary` key present in 5.0.0-3 but absent in 5.1.4. Updated scoring treats the following as **acceptable / improved**, not degradations:
 
 | Delta vs 5.0.0-3 | Verdict | Why |
 |------------------|---------|-----|
 | CTE name missing from global `tableDictionary` | **Not a regression** | CTEs belong in symbol tree / `query_dictionary`, not the physical dictionary (Phase 2.7) |
-| Same CTE registered in **`table_alias` as `{name=queryN}`** on a `def_queryN` scope | **5.1.3 enhancement** | Documents each WITH member as an alias → nested query scope; 5.0.0-3 promoted the name into `tableDictionary` instead and did not emit this wiring |
+| Same CTE registered in **`table_alias` as `{name=queryN}`** on a `def_queryN` scope | **5.1.4 enhancement** | Documents each WITH member as an alias → nested query scope; 5.0.0-3 promoted the name into `tableDictionary` instead and did not emit this wiring |
 | Schema qualification of the same physical table | **Not a regression** | Last-identifier compare |
-| Extra nested `query_dictionary` / `def_*` layers in 5.1.3 | **Improvement** | Richer nested evidence |
+| Extra nested `query_dictionary` / `def_*` layers in 5.1.4 | **Improvement** | Richer nested evidence |
 
-**Example (cluster A, row 583):** 5.1.3 `def_query4.table_alias` includes `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3`. That is the canonical CTE registration — not evidence of source loss.
+**Example (cluster A, row 583):** 5.1.4 `def_query4.table_alias` includes `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3`. That is the canonical CTE registration — not evidence of source loss.
 
-Still score as **degradation** when: physical/tuple substitution keys are missing from 5.1.3 `tableDictionary`, or 5.1.3 emits new **FATAL** diagnostics (rows 3150, 5410).
+Still score as **degradation** when: physical/tuple substitution keys are missing from 5.1.4 `tableDictionary`, or 5.1.4 emits new **FATAL** diagnostics (rows 3150, 5410).
 
 ## Investigation order
 
@@ -59,22 +59,22 @@ Work **clusters**, not row order. Confirm one root cause per cluster before edit
 | A | 583, 2139 | Multi-CTE `WITH`; outer `FROM` tuple + `LEFT JOIN` later CTEs | **Complete (2026-09-01)** — CTEs on `table_alias` → `queryN`; physical tuples retained ([global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md)) |
 | B | 3870 | CTE `FULL OUTER JOIN` to a bound-query table | **Complete (2026-09-01)** — `student_term_crm=query7` on `table_alias` |
 | C | 4648, 4726 | Long `WITH` chain; last CTE body is query substitution | **Complete (2026-09-01)** — `ST_student_term_sweep=query0` on `table_alias` |
-| D | 3150 | CTE `race_data` is a **UNION** of two large mapped selects; outer query is **UNION ALL** of many `FROM race_data` branches | **Complete (2026-09-01)** — outer-branch duplicate output names; 5.1.3 FATALs canonical; see [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md) |
+| D | 3150 | CTE `race_data` is a **UNION** of two large mapped selects; outer query is **UNION ALL** of many `FROM race_data` branches | **Complete (2026-09-01)** — outer-branch duplicate output names; 5.1.4 FATALs canonical; see [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md) |
 | E | 5455 | Single CTE over PSS tuples; outer `FROM (SELECT … FROM ChosenContact_Combined)` | **Complete (2026-09-01)** — CTE on `table_alias`; tuple on `{combined_common_format}` key; local alias `comb_common` not in global `tableDictionary` by design |
-| F | 5410 | No WITH; `UNION ALL` of Cappex tuple vs `PDP.lsc__cappex_contacts`; nested subquery **reuses alias** `cc_pdp` | **Complete (2026-09-01)** — duplicate output names in UNION ALL branch 2 only; 5.1.3 FATALs canonical |
+| F | 5410 | No WITH; `UNION ALL` of Cappex tuple vs `PDP.lsc__cappex_contacts`; nested subquery **reuses alias** `cc_pdp` | **Complete (2026-09-01)** — duplicate output names in UNION ALL branch 2 only; 5.1.4 FATALs canonical |
 
 ## Acceptance (all clusters) — **met** (2026-09-01)
 
 Phase **2.9** closed. All eight Panto degradation fixtures adjudicated:
 
 - **Clusters A, B, C, E:** No parser change. Global `tableDictionary` omits CTE/local aliases by design; use `table_alias` → `def_queryN`. Policy: [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md).
-- **Clusters D, F (rows 3150, 5410):** 5.1.3 FATALs retained as canonical set-op interface validation. Policy: [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md).
+- **Clusters D, F (rows 3150, 5410):** 5.1.4 FATALs retained as canonical set-op interface validation. Policy: [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md).
 - Physical/tuple sources retained on correct global keys across all fixtures (dual-parse 2026-09-01).
 
 ## Out of scope
 
 - Schema qualification of the same table (`pdp.foo` vs `foo`).
-- Extra nested query-dictionary layers in 5.1.3.
+- Extra nested query-dictionary layers in 5.1.4.
 - Corpus **timeouts** and **5.0.0-3 walk crashes** (separate lists).
 - Rewriting partner SQL for style.
 
@@ -138,14 +138,14 @@ Outer query: `FROM ST_student_term_sweep AS sweep` with select-list substitution
 
 ## Cluster D — CSV 3150 (`race_data` + FATALs) — **Complete** (2026-09-01)
 
-**Status:** **Closed** — 5.1.3 FATALs retained as canonical improvement; no parser change.
+**Status:** **Closed** — 5.1.4 FATALs retained as canonical improvement; no parser change.
 
 | Field | Value |
 |-------|--------|
 | **5.0.0-3** | 0 FATALs; `race_data` in global `tableDictionary` |
-| **5.1.3** | 20 FATALs (`DUPLICATE_INTERFACE_COLUMNS` ×10, `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` ×10); `race_data` on `table_alias` as `race_data=union2` (enhancement, not `tableDictionary`) |
+| **5.1.4** | 20 FATALs (`DUPLICATE_INTERFACE_COLUMNS` ×10, `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` ×10); `race_data` on `table_alias` as `race_data=union2` (enhancement, not `tableDictionary`) |
 | **Root cause** | Outer derived-table `UNION ALL` (lines 239–331): branches 2–10 use the **same output name** in two select-list positions (e.g. `EAB_RACE_AMER_INDIAN` twice). First branch defines four distinct names (`primary_student_id`, `race`, `eab_race`, `intake_dt`). |
-| **Canonical behavior** | **5.1.3** — interface validation for set-op participants |
+| **Canonical behavior** | **5.1.4** — interface validation for set-op participants |
 | **Action** | **None in parser.** Authors add disambiguating aliases per [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md). |
 | **Decision** | Accommodating this construction would require weakening global `interface` / duplicate-column logic; not worth the cost. Difference vs 5.0.0-3 **stands intentionally**. |
 
@@ -172,10 +172,10 @@ Fixture: `sql/csv-row-5455.sql`.
 | Field | Value |
 |-------|--------|
 | **5.0.0-3** | 0 FATALs |
-| **5.1.3** | 3 FATALs: `DUPLICATE_INTERFACE_COLUMNS` ×2, `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` ×1 |
+| **5.1.4** | 3 FATALs: `DUPLICATE_INTERFACE_COLUMNS` ×2, `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` ×1 |
 | **Root cause** | `UNION ALL` inside `all_cappex` (lines 190–279): branch 2 lists `cc_pdp.interested_institutions_list` twice (lines **201** and **215**) and `cc_pdp.desired_completion_timeframe` twice (lines **224** and **232**). Branch 1 (lines 95–188) uses distinct output aliases for those slots (`all_colleges_of_interest` / `colleges`, `desired_completion_timeframe` / `expected_time_commitments`). |
 | **Not trip sites** | `REGEXP` / `UUID_STRING()` / `CONCAT` (line 34–35), reused `cc_pdp` join alias (lines 184–185) — parse cleanly; no FATALs |
-| **Canonical behavior** | **5.1.3** — see [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md) |
+| **Canonical behavior** | **5.1.4** — see [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md) |
 | **Action** | **None in parser.** Author adds disambiguating aliases on branch 2 select items (e.g. `… AS all_colleges_of_interest`, `… AS colleges`). |
 
 **Fixture:** `sql/csv-row-5410.sql`
@@ -184,4 +184,4 @@ Fixture: `sql/csv-row-5455.sql`.
 
 ## Comparing future corpora
 
-No parser work remains from this brief. When re-running a 5.0.0-3 dual-parse, score a CTE or local alias that is absent from 5.1.3+ `tableDictionary` as an **enhancement** when it is bound on `table_alias` (`{name=queryN}`) or otherwise present in the symbol tree. Score as a regression only when a physical or tuple source is missing from `tableDictionary`, or 5.1.3+ emits new FATALs that the set-op interface policy does not justify. The local evidence archive's `comparison/compare_panto_corpus.py` applies these rules; see [the 5.1.4 workplan, Entry 1](../../../documents/sql-grammar-5.1.4-workplan.md#local-corpus-evidence-and-replay-tools-archived-2026-11-11) for its location and replay requirements.
+No parser work remains from this brief. When re-running a 5.0.0-3 dual-parse, score a CTE or local alias that is absent from 5.1.4+ `tableDictionary` as an **enhancement** when it is bound on `table_alias` (`{name=queryN}`) or otherwise present in the symbol tree. Score as a regression only when a physical or tuple source is missing from `tableDictionary`, or 5.1.4+ emits new FATALs that the set-op interface policy does not justify. The local evidence archive's `comparison/compare_panto_corpus.py` applies these rules; see [the 5.1.4 workplan, Entry 1](../../../documents/sql-grammar-5.1.4-workplan.md#local-corpus-evidence-and-replay-tools-archived-2026-11-11) for its location and replay requirements.

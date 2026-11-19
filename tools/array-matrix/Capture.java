@@ -13,6 +13,7 @@ import org.junit.Assert;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -52,6 +53,16 @@ public class Capture extends AbstractSqlParseEventWalkerTest {
                 Assert.assertTrue(name + ": unknown rule", rule >= 0);
                 Assert.assertEquals(name + ": dedicated routes", input.get("routes").getAsInt(),
                         Trees.findAllRuleNodes(tree, rule).size());
+                if (input.has("route_checks")) {
+                    for (JsonElement check : input.getAsJsonArray("route_checks")) {
+                        JsonObject expected = check.getAsJsonObject();
+                        int checkedRule = Arrays.asList(SQLSelectParserParser.ruleNames)
+                                .indexOf(expected.get("rule").getAsString());
+                        Assert.assertTrue(name + ": unknown checked rule", checkedRule >= 0);
+                        Assert.assertEquals(name + ": " + expected.get("rule").getAsString(),
+                                expected.get("count").getAsInt(), Trees.findAllRuleNodes(tree, checkedRule).size());
+                    }
+                }
                 SqlParseEventWalker walker = runner.runAnyParsertest(query, parser, tree, true);
                 diagnostics = walker.getSnippet().getParserDiagnosticList();
                 if (!input.get("legacy").getAsBoolean()) {

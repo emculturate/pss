@@ -21,8 +21,8 @@ import com.google.gson.reflect.TypeToken;
 final class PantoOutstandingSqlFixtures {
 
     private static final Path[] HANDOFF_ROOT_CANDIDATES = {
-            Path.of("docs/rmcp-handoff/5.1.3-panto-outstanding"),
-            Path.of("parse/docs/rmcp-handoff/5.1.3-panto-outstanding"),
+            Path.of("docs/rmcp-handoff/5.1.4-panto-outstanding"),
+            Path.of("parse/docs/rmcp-handoff/5.1.4-panto-outstanding"),
     };
 
     private PantoOutstandingSqlFixtures() {

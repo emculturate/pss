@@ -1,6 +1,6 @@
 # Ordered select-list output alias policy
 
-**Status:** Locked (Aug 2026) — parser `5.1.3` / `513` symbol-table format  
+**Status:** Locked (Aug 2026) — parser `5.1.4` / `513` symbol-table format  
 **Audience:** Symbol-table consumers, lineage tracers, and parser maintainers  
 **Related:** [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md), [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md), Phase **13.4** in [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md)
 

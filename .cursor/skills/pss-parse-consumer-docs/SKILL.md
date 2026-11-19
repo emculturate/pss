@@ -4,7 +4,7 @@ description: >-
   Locate and read PSS parser consumer documentation from the pss-parse-docs JAR
   bundle or vendor mirror. Use when implementing or explaining code that calls
   pss-parse, consumes symbol tables, traces column lineage, walks dictionaries,
-  handles PIVOT/UNPIVOT derivation, window buckets, or grammar coverage for 5.1.3+.
+  handles PIVOT/UNPIVOT derivation, window buckets, or grammar coverage for 5.1.4+.
 ---
 
 # PSS parse consumer documentation
@@ -15,7 +15,7 @@ Apply this skill **before** implementing or modifying:
 
 - Symbol-table walkers, explainers, lineage tracers, or validators
 - Code that reads `parse.symbolTable`, `tableDictionary`, `queryDictionary`, or `interface`
-- RMCP / MCP parse-and-explain tooling for **`5.1.3`** / **`513`** output
+- RMCP / MCP parse-and-explain tooling for **`5.1.4`** / **`513`** output
 - Consumer tests that assert bucket shapes or tracing behavior
 - Parser or walker changes to **Panto substitution variables**, snippet endpoints, `substitutionsMap`, or template-to-SQL generation (read **Panto platform docs** below first)
 
@@ -25,9 +25,9 @@ Do not infer bucket semantics from test strings alone — read the bundled docs.
 
 | Field | Value (current) |
 |-------|-----------------|
-| Parser artifact | `pss-parse` @ `5.1.3-1` |
-| Docs artifact | `pss-parse-docs` @ `5.1.3-1` (JAR name: `pss-parse-docs-5.1.3-1.jar`) |
-| API / docs version | `5.1.3` |
+| Parser artifact | `pss-parse` @ `5.1.4-1` |
+| Docs artifact | `pss-parse-docs` @ `5.1.4-1` (JAR name: `pss-parse-docs-5.1.4-1.jar`) |
+| API / docs version | `5.1.4` |
 | Published scope prefix | `def_queryN`, `def_unionN`, … (`513` format) |
 
 ## Resolution order (pick the first that exists)
@@ -47,8 +47,8 @@ Open `pss-parse-docs.manifest.json` and choose documents by `id` and `role`:
 ```json
 {
   "parserArtifact": "pss-parse",
-  "parserVersion": "5.1.3-1",
-  "parserApiVersion": "5.1.3",
+  "parserVersion": "5.1.4-1",
+  "parserApiVersion": "5.1.4",
   "documents": [ { "id": "...", "role": "...", "path": "..." } ]
 }
 ```
@@ -64,7 +64,7 @@ Map tasks to docs:
 | Window PARTITION BY / ORDER BY buckets | `window-query-dictionary-policy` |
 | Ordered select-list output alias refs (`queryN` in `interface` / `window_*`) | `ordered-select-list-output-alias-policy` |
 | Set-op branches with duplicate select-list output names | `set-operation-interface-duplicate-output-names-policy` |
-| Global `tableDictionary` vs CTE / query aliases (5.1.3) | `global-table-dictionary-cte-alias-policy` |
+| Global `tableDictionary` vs CTE / query aliases (5.1.4) | `global-table-dictionary-cte-alias-policy` |
 
 ## Panto platform docs (repo-only — not in manifest)
 
@@ -80,8 +80,8 @@ These files are under `parse/documents/` only. They are **not** in `pss-parse-do
 ## Extract from the JAR (no vendor tree)
 
 ```bash
-API=5.1.3
-JAR="pss-parse-docs/target/pss-parse-docs-5.1.3-1.jar"
+API=5.1.4
+JAR="pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar"
 
 # List bundled docs
 jar tf "$JAR" 'META-INF/pss-parse/**'

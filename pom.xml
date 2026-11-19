@@ -19,7 +19,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- Public API / docs version (without Maven build suffix). -->
-    <pss.parse.api.version>5.1.3</pss.parse.api.version>
+    <pss.parse.api.version>5.1.4</pss.parse.api.version>
     <maven.resources.plugin.version>3.3.1</maven.resources.plugin.version>
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
     <maven.antrun.plugin.version>3.1.0</maven.antrun.plugin.version>

@@ -78,6 +78,9 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
     function: i % 2 ? 'B' : 'A', cells: [i < 2 ? 'legacy' : 'new'],
     rule: i % 2 ? 'array_unary_transform_function' : 'array_transform_function'
   }));
+  cases[2].rule = 'routine_invocation';
+  cases[2].routes = 1;
+  cases[2].route_checks = [{ rule: 'array_transform_function', count: 0 }];
   fs.writeFileSync(path.join(batch, 'cases.json'), JSON.stringify(cases));
   fs.writeFileSync(path.join(batch, 'captured.json'), JSON.stringify(cases.map(c => ({
     name: c.name, errors: 0, diagnostics: [], outputs: ['ast', 'interface', 'subs', 'table', 'query', 'symbols']
@@ -90,6 +93,9 @@ test('paired emission and accounting preserve isolation and reject unreviewed, s
   assert.ok(source.includes(method('unrelated')));
   assert.equal((source.match(/"ast", "interface", "subs", "table", "query", "symbols"/g) || []).length, 3);
   assert.ok(source.includes('runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_unary_transform_function)'));
+  assert.ok(source.includes('SQLSelectParserParser.SqlContext tree = parser.sql();'));
+  assert.ok(source.includes('Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_routine_invocation).size()'));
+  assert.ok(source.includes('Assert.assertEquals("Unexpected array_transform_function routing", 0,'));
   const xmlPath = path.join(root, 'parse/target-maven/surefire-reports/TEST-sql.walker.SqlEventWalkerSnowflakeArrayTransformTests.xml');
   fs.mkdirSync(path.dirname(xmlPath), { recursive: true });
   const writeSuite = failures => fs.writeFileSync(xmlPath, `<testsuite tests="5" failures="${failures}" errors="0" skipped="0">`

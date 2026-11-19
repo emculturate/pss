@@ -25,6 +25,12 @@ For directly dependent regression suites, set `test_selection` to the actual
 Maven `-Dtest` selection. Reported counts remain scoped to the named matrix host;
 record additional suite results separately.
 
+Cross-cutting signature audits may override `rule` per case and supply
+`route_checks: [{ rule: "routine_invocation", count: 0 }]` to distinguish
+dedicated routing from generic fallback. Capture and emitted tests assert
+every specified count, including zero; this does not relax the three-function
+limit for ordinary function-completion batches.
+
 Example function configuration (illustrative; fill the complete legacy inventory):
 
 ```js

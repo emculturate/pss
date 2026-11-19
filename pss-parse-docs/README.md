@@ -8,7 +8,7 @@ Maven JAR packaging the **pss-parse consumer documentation bundle** for a specif
 |-------|-------|
 | `groupId` | `pss` |
 | `artifactId` | `pss-parse-docs` |
-| `version` | Same as `pss-parse` (currently `5.1.3-1`) |
+| `version` | Same as `pss-parse` (currently `5.1.4-1`) |
 
 ## Bundled documents
 
@@ -19,10 +19,10 @@ See `META-INF/pss-parse/pss-parse-docs.manifest.json` for the machine-readable l
 | `symbol-table-bucket-reference.md` | Primary consumer guide for symbol-table buckets, tracing algorithms, and scope semantics |
 | `table-and-query-dictionary-design.md` | Design contract for global and per-scope `table_dictionary` and `query_dictionary` |
 | `relational-modifier-resolution-policy.md` | PIVOT/UNPIVOT semantics, `derivation` buckets, and modifier column lineage |
-| `sql-grammar-extensions-since-2026-01-01.md` | Parse coverage and grammar extensions for pss-parse 5.1.3+ |
+| `sql-grammar-extensions-since-2026-01-01.md` | Parse coverage and grammar extensions for pss-parse 5.1.4+ |
 | `phase-17.6.9-window-query-dictionary-policy.md` | Window clause policy: `window_partition_by` / `window_ordered_by` vs `query_dictionary` |
 | `set-operation-interface-duplicate-output-names-policy.md` | Set-op branch interface distinctness; duplicate output names, diagnostic cascade, author remediation |
-| `global-table-dictionary-cte-alias-policy.md` | 5.1.3 global `tableDictionary`: CTE/query aliases via `table_alias` |
+| `global-table-dictionary-cte-alias-policy.md` | 5.1.4 global `tableDictionary`: CTE/query aliases via `table_alias` |
 
 ## Build
 
@@ -32,7 +32,7 @@ From the repository root:
 mvn -pl pss-parse-docs package
 ```
 
-Output: `pss-parse-docs/target/pss-parse-docs-5.1.3-1.jar`
+Output: `pss-parse-docs/target/pss-parse-docs-5.1.4-1.jar`
 
 Building also refreshes `docs/vendor/pss-parse/<api-version>/` for Option D (submodule/subtree) consumers.
 
@@ -60,7 +60,7 @@ Add the dependency aligned with your `pss-parse` version:
 <dependency>
   <groupId>pss</groupId>
   <artifactId>pss-parse-docs</artifactId>
-  <version>5.1.3-1</version>
+  <version>5.1.4-1</version>
 </dependency>
 ```
 
@@ -98,7 +98,7 @@ Use the Maven dependency plugin during `generate-resources`:
 Point Cursor rules, agent prompts, or internal docs at the bundle directory:
 
 ```text
-target/pss-parse-docs/META-INF/pss-parse/5.1.3/
+target/pss-parse-docs/META-INF/pss-parse/5.1.4/
 ```
 
 ## Publish (GitHub Packages)
@@ -115,7 +115,7 @@ Consumers add the GitHub Packages repository and the same `pss-parse-docs` depen
 
 ## Version alignment
 
-- **Maven version** (`5.1.3-1`): artifact coordinates; must match `pss-parse`.
-- **API version** (`5.1.3`): docs path segment and `parserVersionMin` in the manifest.
+- **Maven version** (`5.1.4-1`): artifact coordinates; must match `pss-parse`.
+- **API version** (`5.1.4`): docs path segment and `parserVersionMin` in the manifest.
 
 When bumping the parser, update `pss.parse.api.version` in the root `pom.xml` if the public API version changes.
