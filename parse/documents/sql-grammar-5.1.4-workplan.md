@@ -62,26 +62,6 @@ Items not listed here are out of scope for this release.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
 
-- **Entry 7 — required for 5.1.4**
-  - **Endpoint parity slice**
-    - INSERT endpoint parity vs SQL endpoint
-    - DELETE endpoint parity expansion (beyond smoke)
-    - SCRIPT endpoint angle-bracket substitution coverage
-    - DDL endpoint substitution parity (only when product-required for this release)
-    - VALUES endpoint matrix/cell `<var>` parity
-  - **Type×grammar slice**
-    - `EXISTS <var>` coverage
-    - minimal `INSERT … <queryVar>` coverage
-    - VALUES matrix with `<var>` forms
-    - endpoint/type matrix traceability and closeout accounting
-  - **Explicit exclusion:** Jinja predicand work remains out of 5.1.4 scope (depends on Entry 5.2).
-
-- **Entry 15 — narrow characterization pre-slice only (required for 5.1.4)**
-  - **C1:** same-scope visibility characterization for join-extension deferral contexts.
-  - **C2:** non-visibility characterization for non-lateral derived tables / out-of-scope CTE bodies.
-  - **C3:** sibling set-operation branch isolation characterization.
-  - Remaining Entry 15 implementation scope is out of 5.1.4.
-
 - **Entry 11 — partial coverage scope (required for 5.1.4)**
   - Complete the remaining **Tier 2** `exit*` coverage set from
     `documents/coverage/sql_walker_exit_method_gaps.md`:
@@ -98,6 +78,16 @@ Items not listed here are out of scope for this release.
     - `exitJinja_function_call`
     - `exitUnpivot_clause`
   - **Tier 3 is explicitly out of 5.1.4 scope.**
+
+**Latest scope reduction — deferred beyond 5.1.4, not release prerequisites:**
+- **Entry 7, entirely:** endpoint parity, type×grammar coverage and their
+  traceability/accounting, including the formerly conditional DDL work.
+- **Entry 15, entirely:** C1/C2/C3 characterization as well as the broader
+  scope-aware diagnostic rework.
+
+Their detailed backlogs remain below for a later release. This reduction does
+not remove Entry 4's array-specific matrix requirements, the approved Entry 11
+Tier 2 work, or final corpus/documentation/release validation.
 
 ---
 
@@ -3509,7 +3499,9 @@ Further 7.x (`{% if %}`, macros, filters, dbt_utils) — add when phase activate
 
 ## Entry 7 — Panto variable types × parser endpoints (tests)
 
-**Status:** Not started — engineering backlog, not new grammar.
+**Status:** Not started — **entirely deferred beyond 5.1.4** by the latest
+release-scope reduction; engineering backlog, not new grammar. Neither endpoint
+parity nor type×grammar coverage/accounting is a 5.1.4 release prerequisite.
 
 **Theme:** Seven substitution `type=` values × sixteen parse endpoints — fill golden gaps.
 
@@ -3729,6 +3721,13 @@ The `join_extension` group is a separate 5.1.x behaviour, not part of this defec
 
 **Status:** Not started — follows **Entry 14**; requires a rework of walker diagnostic capture  
 **Kind:** Enhancement
+
+**Release scope:** **Entirely deferred beyond 5.1.4**, including the previously
+selected C1 same-scope join-extension visibility characterization, C2
+non-lateral derived/out-of-scope CTE non-visibility characterization, and C3
+sibling set-operation isolation characterization. Neither those tests nor the
+broader diagnostic-subsystem rework is a 5.1.4 release prerequisite. Entry 14's
+documented accepted release behavior remains unchanged.
 
 **Goal:** Defer a missing-table/column diagnostic to a join extension only when that join extension could actually make the reference valid, and attribute each deferred reference to the specific join extension variable(s) that could satisfy it.
 
