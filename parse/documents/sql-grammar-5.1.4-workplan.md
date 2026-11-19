@@ -57,7 +57,7 @@ This checklist is the release-scope subset selected for the 5.1.4 JAR closeout.
 Items not listed here are out of scope for this release.
 
 - **Entry 4 — required for 5.1.4**
-  - **Slice D — all-array closure, amended after T022:** account for **42 canonical function names**: the original 21 audited names, 14 previously completed A/B/C names, and seven added names. **T025–T027 scalar closure is complete:** structured constructor, contains and scalar flatten have independent 83/74/54-case matrices. **Next: T028, advanced `FLATTEN` / `LATERAL FLATTEN`**, then `FILTER`, `TRANSFORM`, and `REDUCE` under T029..T031. T032 verifies the 14 carried-forward completions; T033/T034 extend signature and cell-level audits to all 42; only then run T023 and T024. The original T021/T022 result (854/854 cells, 1,033 focused tests) remains valid for its **21-name baseline only**, not the expanded scope. See the [complete inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory).
+  - **Slice D — all-array closure, amended after T022:** account for **42 canonical function names**: the original 21 audited names, 14 previously completed A/B/C names, and seven added names. **T025–T028 are complete:** structured constructor, contains, scalar flatten and table FLATTEN have independent 83/74/54/56-case matrices. **Next: `FILTER`, `TRANSFORM`, and `REDUCE` under T029..T031.** `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4; new table-function examples use only `FLATTEN(...)`. T032 verifies the 14 carried-forward completions; T033/T034 extend signature and cell-level audits to all 42; only then run T023 and T024. The original T021/T022 result (854/854 cells, 1,033 focused tests) remains valid for its **21-name baseline only**, not the expanded scope. See the [complete inventory](slice-d-array-function-reconciliation.md#expanded-all-array-closure-inventory).
   - **Former Slice E function work:** `4.5` and `4.12` are now Slice D prerequisites, owned by T027..T031, not a second deferred array-function backlog. Preserve table-function and higher-order acceptance requirements; changing ownership does not complete them.
   - **Slice F (non-generator only):** run corpus/snippet replay and matrix/accounting closeout evidence for Entry 4.
     - Exclude any generator-expansion work from 5.1.4 (deferred to Entry 10).
@@ -2315,7 +2315,7 @@ chain. D0.5 blocks every matrix/implementation task below. After that gate,
 execute the per-function rows in the displayed order, validating each before
 moving to the next. All rows edit the same focused host; do not parallel-edit it.
 The original D-SIG and D-AUDIT are complete for their 21-name scope. Current
-remaining execution order after completed **T025/T026/T027** is **T028 -> T029 -> T030 -> T031 ->
+remaining execution order after completed **T025/T026/T027/T028** is **T029 -> T030 -> T031 ->
 T032 -> T033 -> T034 -> T023 -> T024**. T025 includes a hard developer
 manual-token-repair gate before new matrices can be completed; that gate is
 developer-confirmed complete as of 2026-11-19. T033 depends
@@ -2377,7 +2377,7 @@ only for a proved defect. Do not commit unless requested.
 18. [x] **D5.1 / T025 / GC1:** structured constructor routing/affinity/signature and independent 83-case matrix complete.
 19. [x] **D5.2 / T026:** contains VARIANT/operand and independent 74-case matrix complete; postfix-cast substitution loss repaired.
 20. [x] **D5.3 / T027:** scalar flatten routing/affinity and independent 54-case matrix complete; table FLATTEN remains T028.
-21. [ ] **D5.4 / T028:** `Complete advanced FLATTEN and LATERAL FLATTEN, including the existing LATERAL_FLATTEN compatibility spelling.`
+21. [x] **D5.4 / T028:** advanced FLATTEN complete with 56 independent cases and unchanged existing goldens. Only `FLATTEN(...)` examples; `LATERAL_FLATTEN` compatibility deferred beyond 5.1.4, no lexer changes or new explicit LATERAL examples.
 22. [ ] **D5.5 / T029:** `Complete FILTER, including lambda parsing, local bindings and outer-column lineage.`
 23. [ ] **D5.6 / T030:** `Complete TRANSFORM independently under the higher-order matrix.`
 24. [ ] **D5.7 / T031:** `Complete REDUCE, including independent array, initial-value and lambda controls.`
@@ -2626,7 +2626,7 @@ Preserve old expectations except developer-controlled token-ID repairs.
 
 - [x] T027 [Plan:D5.3] Complete scalar `ARRAY_FLATTEN` / 4.5: reuse `array_unary_transform_function` and its walker, register Snowflake affinity, and add 54 independent cases to `parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayTransformTests.java`. No keyword or token-ID changes. Nested arrays, empty/NULL shapes, independently resolved/substituted operands, composition, generic/UDF compatibility and malformed calls are covered. Table FLATTEN remains T028; flattening results and runtime element validity are not evaluated.
 
-- [ ] T028 [Plan:D5.4] Close advanced table `FLATTEN` / `LATERAL FLATTEN` / 4.5 in `parse/src/test/java/sql/walker/SqlEventWalkerTableFunctionTests.java`, retaining existing `LATERAL_FLATTEN` name compatibility. Verify named argument forms and options, output aliases/columns, correlated input and lateral visibility, nested/chained calls, joins, derived/CTE/set-op consumers, unresolved/ambiguous/hidden references, substitutions, dialect/SCRIPT controls and malformed syntax. Assert exported output versus input/option lineage at the correct scopes using the consumer docs; do not flatten child-private sources into parents. Fix only demonstrated grammar/walker defects.
+- [x] T028 [Plan:D5.4] Advanced table `FLATTEN` / 4.5 complete in `parse/src/test/java/sql/walker/SqlEventWalkerTableFunctionTests.java`: 56 independent cases (51 six-output goldens, five positioned syntax controls), including six AccessObject/direct-walker endpoint comparisons. Covers named options, six output columns and aliases, correlated input, chained calls, joins, derived/CTE/set-op consumers, unresolved/ambiguous/hidden/self/later references, substitutions and SCRIPT reset. Fixed input-source visibility, INSERT source resolution and bare argument substitution typing; retained UPDATE target-aware egress and existing goldens. Use only `FLATTEN(...)` examples; `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4 and explicit `LATERAL` examples are excluded from this batch. Existing modifier support and lexer IDs are unchanged. Focused regression selection: 304 passed, zero failures/errors/skips.
 
 - [ ] T029 [Plan:D5.5] Implement and complete higher-order `FILTER` / 4.12 in `parse/src/main/antlr4/sql/SQLSelectParser.g4` and `parse/src/main/java/sql/walker/SqlParseEventWalker.java`, registering affinity in `parse/src/main/java/sql/grammar/SnowflakeRoutineDialectRegistry.java` as required; add its matrix in the planned `parse/src/test/java/sql/walker/SqlEventWalkerSnowflakeArrayHigherOrderTests.java`. Verify documented lambda syntax, parameter bindings (including typed forms where documented), array/body argument handling, outer references, shadowing/nested-lambda isolation, substitution contexts and malformed syntax. Lambda parameters must not become fictitious physical columns. Preserve unrelated SQL FILTER syntax and generic/schema-qualified compatibility; no runtime lambda evaluation or Panto substitution redesign.
 
@@ -2929,7 +2929,7 @@ These baselines do **not** close the full Snowflake ARRAY family scope below.
 | **4.2** | `ARRAY_CONSTRUCT` (compact / structured) | GC1 / T025 complete; prior A evidence carried forward to T032 | Structured constructor has an independent 83-case matrix and completed lexical/manual gate. T032 still verifies existing constructor/compact evidence; T033/T034 and final gates remain open. |
 | **4.3** | `ARRAY_AGG` + `WITHIN GROUP` / `OVER` | Complete | `SqlEventWalkerWithinGroupOrderedAggregateTests` now includes full location/resolution matrix coverage plus set-op + compound-array integration controls (Entry 19.3 closure). |
 | **4.4** | Array literals and subscripts | Complete (Slice A) | `expr[n]` subscript is delivered. Array literal value-expression baseline is delivered (`[expr, ...]` parses as `array_construct`) with warning/resolution and malformed trailing-comma controls, and no regressions in subscript behavior under focused/full gates. |
-| **4.5** | Scalar `ARRAY_FLATTEN`; table `FLATTEN` / `LATERAL FLATTEN` | Scalar T027 complete; advanced table T028 NEXT | Scalar unary routing/affinity and 54-case matrix complete. Advanced table-function scope, option, alias and lineage parity, including `LATERAL_FLATTEN` compatibility, remain separate T028 requirements. |
+| **4.5** | Scalar `ARRAY_FLATTEN`; table `FLATTEN` | T027/T028 complete | Scalar 54-case and table 56-case matrices complete. `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4; no new explicit LATERAL examples or lexer changes. |
 | **4.6** | `ARRAY_UNION_AGG` / `ARRAY_UNIQUE_AGG` | Complete (Slice B) | Lexer tokens + aggregate grammar hook are active, walker records Snowflake statement-dialect affinity for set-aggregate usage, and strict placement/diagnostic/set-op/script controls are covered in `SqlEventWalkerSnowflakeArraySetAggregateTests`. |
 | **4.7** | Binary / set array operations | Complete (Slice C) | Grammar + walker routing for `ARRAY_CAT` / `ARRAY_EXCEPT` / `ARRAY_INTERSECTION` / `ARRAYS_OVERLAP` is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
 | **4.8** | `APPEND` / `PREPEND` / `INSERT` / `REMOVE` / `REMOVE_AT` | Complete (Slice C) | Grammar + walker mutator-family routing is live with strict full-golden matrix coverage, unresolved/missing-alias controls by eligible argument position, and substitution-variable coverage including qualified column-variable typing checks. |
@@ -3461,7 +3461,7 @@ lexer regressions. VS Code's selected-host run also passes (tool summary:
 1,727 passed, zero failed across registered controllers; not a disjoint count
 to add to Maven). Generator tooling checks pass **4/4**.
 
-**Next: T028 advanced table FLATTEN/lateral closure.** T029..T034 and
+**Updated next: T029/T030/T031 higher-order closure after completed T028.** T029..T034 and
 T023/T024 remain open. This batch does not close Slice D or release 5.1.4.
 
 ### 4.2 completion gate — ARRAY_CONSTRUCT parity test plan

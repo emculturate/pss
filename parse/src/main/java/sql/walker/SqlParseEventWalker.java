@@ -8462,6 +8462,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			subMap.putAll(item);
 		}
+		symbolTreeHelper.resolveFlattenArgumentColumns(
+				subMap, ctx.flatten_argument_list());
 	}
 
 	
@@ -8494,7 +8496,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object argumentValue = promoteTableFunctionKeywordArgumentValue(subMap.remove("1"));
+		Object argumentValue = subMap.remove("1");
+		if (argumentValue instanceof Map<?, ?> argumentMap) {
+			argumentValue = walker.stampSubstitutionVariableFromContext(
+					(Map<String, Object>) argumentMap, ctx);
+		}
+		argumentValue = promoteTableFunctionKeywordArgumentValue(argumentValue);
 		Map<String, Object> argument = new LinkedHashMap<String, Object>();
 
 		if (ctx.INPUT() != null) {

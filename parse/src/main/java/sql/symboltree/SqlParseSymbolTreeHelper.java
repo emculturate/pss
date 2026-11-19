@@ -17722,6 +17722,77 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	public void resolveFlattenArgumentColumns(
+			Map<String, Object> function,
+			SQLSelectParserParser.Flatten_argument_listContext arguments) {
+		if (SqlGrammarContextClassifier.hasAncestorRule(arguments, SQLSelectParserParser.RULE_update_expression)
+				&& !SqlGrammarContextClassifier.hasAncestorRule(arguments, SQLSelectParserParser.RULE_query_specification)) {
+			// UPDATE resolves target-table operands through its existing target-aware egress.
+			return;
+		}
+		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(unresolvedObj instanceof Map<?, ?> unresolvedMap)) {
+			return;
+		}
+
+		// Resolve against preceding FROM sources before this function registers its own output.
+		Set<String> argumentTokens = new HashSet<String>();
+		for (org.antlr.v4.runtime.tree.ParseTree node :
+				org.antlr.v4.runtime.tree.Trees.getDescendants(arguments)) {
+			if (node instanceof org.antlr.v4.runtime.tree.TerminalNode terminal) {
+				argumentTokens.add(terminal.getSymbol().toString());
+			}
+		}
+		HashMap<String, Object> pending = new HashMap<String, Object>();
+		Map<String, Object> unresolved = (Map<String, Object>) unresolvedMap;
+		for (String key : new ArrayList<String>(unresolved.keySet())) {
+			Object entryObj = unresolved.get(key);
+			if (!(entryObj instanceof Map<?, ?> entry)
+					|| !(entry.get("locations") instanceof List<?> locations)) {
+				continue;
+			}
+			ArrayList<Object> selected = new ArrayList<Object>();
+			ArrayList<Object> retained = new ArrayList<Object>();
+			for (Object location : locations) {
+				(argumentTokens.contains(location) ? selected : retained).add(location);
+			}
+			if (!selected.isEmpty()) {
+				HashMap<String, Object> inputEntry = new HashMap<String, Object>((Map<String, Object>) entry);
+				inputEntry.put("locations", selected);
+				pending.put(key, inputEntry);
+				if (retained.isEmpty()) {
+					unresolved.remove(key);
+				} else {
+					((Map<String, Object>) entry).put("locations", retained);
+				}
+			}
+		}
+		if (pending.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> tables = walker.getCurrentTableDictionary();
+		HashMap<String, Object> aliases = getCurrentTableAliasMap();
+		HashMap<String, Object> visibleAliases = buildEffectiveVisibleAliasMap(aliases);
+		HashMap<String, Object> visibleTables = buildEffectiveVisibleTableCollection(tables);
+		ArrayList<Object> columns = new ArrayList<Object>();
+		flattenSubTreeForClauseColumns(new HashMap<String, Object>(function), columns);
+		ArchivedClauseProbeContext context = new ArchivedClauseProbeContext(
+				new HashMap<String, Object>(), new HashMap<String, Object>(),
+				new HashMap<String, Object>(), pending, tables, tables,
+				collectVisibleQuerySourceCollection(visibleAliases),
+				visibleAliases, visibleTables, visibleAliases, new HashMap<String, Object>(),
+				null, null, false, null);
+		probeArchivedScopeClauseColumnList(columns, MUMBLE_FROM_KEY, context);
+
+		HashMap<String, Object> qualified = new HashMap<String, Object>();
+		HashMap<String, Object> unqualified = new HashMap<String, Object>();
+		splitUnresolvedEntriesByQualification(pending, qualified, unqualified);
+		emitUnqualifiedUnresolvedColumnsError(unqualified);
+		resolveQualifiedUnresolvedEntries(qualified, visibleAliases, visibleTables, true);
+	}
+
+	@SuppressWarnings("unchecked")
 	public void registerTableFunctionSourceReference(Map<String, Object> reference, String alias) {
 		if (reference == null || !reference.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
 			return;

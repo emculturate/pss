@@ -5,7 +5,7 @@ Original planning update: the user approved four omitted functions and
 requested lexer expansion first, establishing the **21-function audit baseline**.
 **Post-T022 scope amendment:** all remaining planned array functions must now
 close in Slice D, with the structured constructor required first. **T025–T027
-scalar closure is now complete; T028 advanced table FLATTEN is next.**
+scalar closure and T028 advanced table FLATTEN are complete; T029/T030/T031 are next.**
 The [expanded inventory](#expanded-all-array-closure-inventory) accounts for
 **42 canonical names**, including previously completed A/B/C work and all
 former E function work. Execute T025..T034 before the existing T023/T024 gates.
@@ -163,7 +163,7 @@ not a claim to have surveyed every function in Snowflake's evolving catalog.
 
 ## Expanded all-array closure inventory
 
-**Completed scalar batch:** T025/T026/T027. **Remaining execution order:** T028 -> T029 -> T030 ->
+**Completed scalar/table batches:** T025/T026/T027/T028. **Remaining execution order:** T029 -> T030 ->
 T031 -> T032 -> T033 -> T034 -> T023 -> T024. Task details and exact source
 paths live in the
 [master plan](sql-grammar-5.1.4-workplan.md#d5--exhaustive-array-closure-amendment-t025t034-before-t023t024).
@@ -180,7 +180,7 @@ expanded-scope sign-off.
 | `ARRAY_CONSTRUCT_STRUCTURED` | 4.2 / A / GC1 | Complete: lexical/manual gate, affinity and 83-case matrix | T025 complete; T033/T034 recheck |
 | `ARRAY_CONTAINS` | 4.1 | Complete: 74-case VARIANT/operand/full matrix; cast substitution loss repaired | T026 complete; T033/T034 recheck |
 | `ARRAY_FLATTEN` | 4.5 / E | Complete: unary routing/affinity and 54-case scalar matrix | T027 complete; T033/T034 recheck |
-| `FLATTEN` | 4.5 / E | Baseline delivered; advanced table/lateral scope and lineage parity pending | T028 |
+| `FLATTEN` | 4.5 / E | Complete: 56 new independent cases, 134 passing host tests; underscored compatibility deferred | T028 |
 | `FILTER` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T029 |
 | `TRANSFORM` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T030 |
 | `REDUCE` | 4.12 / E | Higher-order syntax, binding/lineage and independent matrix pending | T031 |
@@ -226,12 +226,11 @@ expanded-scope sign-off.
   Its GC list supplies the structured constructor; 4.1 supplies contains;
   4.5 supplies both scalar and table flattening; 4.12 supplies all three
   higher-order functions. None may remain an "outside D" surprise.
-- The [grammar/consumer overview](sql-grammar-extensions-since-2026-01-01.md)
-  also names **`LATERAL_FLATTEN`** as an existing function-name spelling.
-  The grammar explicitly handles that spelling's MODE literals.
-  T028/T033/T034 must preserve and verify its compatibility policy separately
-  from Snowflake `LATERAL FLATTEN` syntax; it is recorded under canonical
-  FLATTEN, not counted as another native Snowflake function.
+- **Scope reduction (2026-11-19):** `LATERAL_FLATTEN` compatibility is deferred
+  beyond 5.1.4. Its MODE-policy string is not proof of a lexer entry or working
+  named-argument parsing. T028 uses only `FLATTEN(...)` examples, without explicit
+  `LATERAL` examples or lexer changes; existing modifier support remains unchanged.
+  T033/T034 must honor this exclusion. The canonical 42-name count is unchanged.
 - The [author handoff](panto-template-remediation-5.1.4.md),
   [resolution worklist](symbol-table-resolution-consolidation-worklist.md),
   [D1 checkpoint](slice-d-d1-checkpoint-summary.md), retired workplan pointers,
@@ -667,8 +666,9 @@ longer define exclusions from Slice D closure:
 | Slice C / 4.8 | `ARRAY_APPEND`, `ARRAY_PREPEND`, `ARRAY_INSERT`, `ARRAY_REMOVE`, `ARRAY_REMOVE_AT` | T032 carries forward independently identified mutator evidence. |
 | Slice E / 4.5 | `ARRAY_FLATTEN` | T027 closes the separate scalar-function requirement; the earlier audit found token/generic-name support but no registry entry or SQL-call tests. |
 
-`FLATTEN` / `LATERAL FLATTEN` (including `LATERAL_FLATTEN` compatibility) and
-`FILTER` / `TRANSFORM` / `REDUCE` transfer from E to **T028..T031 in D**.
+`FLATTEN` and `FILTER` / `TRANSFORM` / `REDUCE` transfer from E to **T028..T031
+in D**. `LATERAL_FLATTEN` compatibility is deferred beyond 5.1.4; new T028
+examples use only `FLATTEN(...)`.
 
 The comparison accounts for the 32 `ARRAY_*`/`ARRAYS_*` names in the retrieved
 Snowflake semi-structured list, `STRTOK_TO_ARRAY`, the four candidates above,
@@ -715,7 +715,29 @@ the audited planning/companion documents remains excluded from D closure.
   inventory, official named token-ID maps, developer manual repairs and matrix.
 - [x] **D5.2 / T026:** ARRAY_CONTAINS independent VARIANT/operand/full matrix.
 - [x] **D5.3 / T027:** scalar ARRAY_FLATTEN routing/affinity/full matrix.
-- [ ] **D5.4 / T028:** advanced FLATTEN/lateral forms and compatibility spelling.
+- [x] **D5.4 / T028:** advanced FLATTEN forms complete; no new explicit LATERAL examples or underscored compatibility spelling.
+
+### T028 FLATTEN completion (2026-11-19)
+
+- Added 56 individually named `arC028_flatten*V0Test` methods to the existing
+  table-function host: 51 full six-output goldens and five exact positioned
+  syntax-diagnostic cases. Six snippet cases additionally compare all six
+  AccessObject outputs and complete diagnostics (QUERY, TUPLE, JOIN_EXTENSION,
+  INSERT, DDL and SCRIPT).
+- Named INPUT/PATH/OUTER/RECURSIVE/MODE options, all six output columns, aliases,
+  correlated/chained inputs, derived/CTE/set-op/join consumers, hidden/missing/
+  ambiguous/unresolved/self/later references, substitutions and SCRIPT reset
+  have independent cells. Existing 78 host tests and their goldens are unchanged.
+- Resolve input references against preceding sources before registering the
+  function output; preserve target-aware UPDATE egress. Bare argument variables
+  retain predicand typing. INSERT input columns remain in the source scope,
+  without importing target-table columns.
+- Focused Maven selection: **304 passed, zero failures/errors/skips**, including
+  all **134** table-function host tests. Existing lexer baseline passed.
+  FLATTEN runtime values, cardinality, JSON traversal and type validity remain
+  database responsibilities.
+- `LATERAL_FLATTEN` compatibility is deferred; new examples use `FLATTEN(...)`
+  only. No lexer or parser-grammar changes are required.
 - [ ] **D5.5 / T029:** FILTER syntax/bindings/lineage/full higher-order matrix.
 - [ ] **D5.6 / T030:** TRANSFORM independent higher-order matrix.
 - [ ] **D5.7 / T031:** REDUCE independent array/initial-value/lambda matrix.
