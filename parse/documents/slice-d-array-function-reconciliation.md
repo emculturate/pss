@@ -12,8 +12,9 @@ Generation/compilation passed; D0.5's developer manual golden repairs are now
 committed in `641ded6`, with all 36 affected classes validated. D1.1 completes
 the ARRAY_REPEAT matrix with 48 cases. D1.2.1 completes ARRAY_TO_STRING with 45
 cases; D1.2.2 completes ARRAY_SLICE with 55 cases. D2.6 completes ARRAY_DISTINCT,
-ARRAY_COMPACT and ARRAY_SIZE with 31 cases each. The focused host passes
-452/452. Five older matrix remediations and four D3.8 implementations remain pending.
+ARRAY_COMPACT and ARRAY_SIZE with 31 cases each. D3.8.1-D3.8.3 complete TO_ARRAY,
+AS_ARRAY and IS_ARRAY with 35, 32 and 37 cases respectively. The focused host
+passes 556/556. Five older matrix remediations and D3.8.4 SPLIT remain pending.
 
 See the [D1 checkpoint summary](slice-d-d1-checkpoint-summary.md) for the changes,
 verification and reusable tooling added since the manual token-ID repair commit.
@@ -36,15 +37,17 @@ verification and reusable tooling added since the manual token-ID repair commit.
    earlier green tests did not establish the workplan's full closure contract.
 4. **Four documented Snowflake functions were omitted from the conversion /
    predicate / split target list:** `TO_ARRAY`, `AS_ARRAY`, `IS_ARRAY`, and `SPLIT`.
-   All four are now explicitly approved for D3.8; implementation and strict
-   matrices remain pending. `SPLIT` was the only new lexer keyword needed in this
-   D batch and is now present; the other three existing tokens are unchanged.
+   All four are explicitly approved for D3.8. `TO_ARRAY`, `AS_ARRAY` and
+   `IS_ARRAY` now have dedicated conversion-family routing, Snowflake affinity
+   and independent strict matrices. Only `SPLIT` implementation/matrix remains
+   pending. `SPLIT` was the only new lexer keyword needed in this D batch and
+   is already present; the other three existing tokens are unchanged.
 5. `ARRAY_CONSTRUCT_STRUCTURED` remains a separate, already planned constructor
    gap under Slice A / GC1. Its planned lexer addition must be settled before
    another supposedly final token-ID repair pass.
 
 The initial source audit did not establish runtime certification. Subsequent
-manual token-ID repairs are committed, and the D2.6 focused run passed 452/452
+manual token-ID repairs are committed, and the D3.8.1-D3.8.3 focused run passed 556/556
 with zero failures/errors/skips. This does not close the remaining per-function
 gaps or the final Slice D sign-off ladder.
 
@@ -71,7 +74,7 @@ higher-order functions are not silently moved into D.
   Pause for developer manual golden repairs. Complete matrix work and the final
   accuracy sign-off ladder afterward.
 
-## Approved 21-function ledger (17 explicit routes plus four pending additions)
+## Approved 21-function ledger (20 explicit routes plus one pending addition)
 
 Shared sources:
 
@@ -119,13 +122,13 @@ diagnostic assertions and complete output goldens.
 | `ARRAY_POSITION` | D3.5; remediation D3.9 | 367 | P | Yes | 8 | 8 | 0 | Matrix gaps |
 | `ARRAYS_ZIP` | D3.5; remediation D3.9 | 373 | Z | Yes | 8 | 8 | 0 | Matrix gaps |
 | `ARRAYS_TO_OBJECT` | D3.6 | 454 | C | Yes | 40 | 38 | 40 | Expanded matrix plus two parser-only syntax cases present |
-| `TO_ARRAY` | D3.8.1 | 376 | Generic; explicit family pending | No | 0 | 0 | 0 | Approved implementation/matrix pending |
-| `AS_ARRAY` | D3.8.2 | 377 | Generic; explicit family pending | No | 0 | 0 | 0 | Approved implementation/matrix pending |
-| `IS_ARRAY` | D3.8.3 | 378 | Generic; explicit family pending | No | 0 | 0 | 0 | Approved implementation/matrix pending |
+| `TO_ARRAY` | D3.8.1 / T012 complete | 376 | C | Yes | 35 | 33 | 35 | Dedicated conversion route; scalar/VARIANT/NULL controls; evidence below |
+| `AS_ARRAY` | D3.8.2 / T013 complete | 377 | C | Yes | 32 | 30 | 32 | Dedicated conversion route; VARIANT/NULL controls; evidence below |
+| `IS_ARRAY` | D3.8.3 / T014 complete | 378 | C | Yes | 37 | 35 | 37 | Dedicated conversion route; bare predicates and projection/CASE; evidence below |
 | `SPLIT` | D0 complete; D3.8.4 pending | 456 | Generic; explicit family pending | No | 0 | 0 | 0 | Dedicated D matrix pending; composition coverage exists elsewhere |
 
-Total: **452 methods**, of which 435 assert all six extractor outputs and seventeen
-are parser-only syntax controls. The focused run passes all 452. This is not a
+Total: **556 methods**, of which 533 assert all six extractor outputs and 23
+are parser-only syntax controls. The focused run passes all 556. This is not a
 claim that every signature-negative case across all 21 functions is established;
 D-SIG and the remaining per-function batches remain open.
 
@@ -501,3 +504,130 @@ Retrieved 2026-11-18:
 | literal:null-and-duplicates | `arC46_arraySizeLiteralArrayWithNullAndDuplicatesV0Test` |
 
 Focused host: 452 passed, zero failures/errors/skips; 435 six-output cases and 17 syntax controls.
+
+## D3.8.1 TO_ARRAY method-level completion evidence
+
+35 methods; 33 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC47_toArraySelectPlacementV0Test` |
+| placement:Where | `arC47_toArrayWherePlacementV0Test` |
+| placement:Join | `arC47_toArrayJoinPlacementV0Test` |
+| placement:Having | `arC47_toArrayHavingPlacementV0Test` |
+| placement:Qualify | `arC47_toArrayQualifyPlacementV0Test` |
+| placement:OrderBy | `arC47_toArrayOrderByPlacementV0Test` |
+| placement:Values | `arC47_toArrayValuesPlacementV0Test` |
+| placement:Insert | `arC47_toArrayInsertPlacementV0Test` |
+| placement:Update | `arC47_toArrayUpdatePlacementV0Test` |
+| placement:Delete | `arC47_toArrayDeletePlacementV0Test` |
+| placement:Ddl | `arC47_toArrayDdlPlacementV0Test` |
+| placement:Script | `arC47_toArrayScriptPlacementV0Test` |
+| arg1:Unqualified | `arC47_toArrayArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC47_toArrayArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC47_toArrayArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC47_toArrayArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC47_toArrayArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC47_toArrayArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC47_toArrayArg1ColumnVariableV0Test` |
+| arg1:Null | `arC47_toArrayArg1NullV0Test` |
+| deep:nested | `arC47_toArrayNestedExpressionV0Test` |
+| deep:derived | `arC47_toArrayDerivedOutputV0Test` |
+| deep:setop | `arC47_toArraySetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC47_toArrayQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC47_toArraySameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC47_toArrayUppercaseV0Test` |
+| dialect:mixed | `arC47_toArrayMixedDialectV0Test` |
+| syntax:TrailingComma | `arC47_toArrayTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC47_toArrayMissingRightParenthesisSyntaxV0Test` |
+| input:variant-object | `arC47_toArrayVariantObjectInputV0Test` |
+| input:empty-variant-array | `arC47_toArrayEmptyVariantArrayV0Test` |
+| input:json-null | `arC47_toArrayJsonNullInputV0Test` |
+| input:numeric-scalar | `arC47_toArrayNumericScalarInputV0Test` |
+| input:delimited-string | `arC47_toArrayDelimitedStringInputV0Test` |
+| input:variant-array | `arC47_toArrayVariantArrayInputV0Test` |
+
+## D3.8.2 AS_ARRAY method-level completion evidence
+
+32 methods; 30 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC48_asArraySelectPlacementV0Test` |
+| placement:Where | `arC48_asArrayWherePlacementV0Test` |
+| placement:Join | `arC48_asArrayJoinPlacementV0Test` |
+| placement:Having | `arC48_asArrayHavingPlacementV0Test` |
+| placement:Qualify | `arC48_asArrayQualifyPlacementV0Test` |
+| placement:OrderBy | `arC48_asArrayOrderByPlacementV0Test` |
+| placement:Values | `arC48_asArrayValuesPlacementV0Test` |
+| placement:Insert | `arC48_asArrayInsertPlacementV0Test` |
+| placement:Update | `arC48_asArrayUpdatePlacementV0Test` |
+| placement:Delete | `arC48_asArrayDeletePlacementV0Test` |
+| placement:Ddl | `arC48_asArrayDdlPlacementV0Test` |
+| placement:Script | `arC48_asArrayScriptPlacementV0Test` |
+| arg1:Unqualified | `arC48_asArrayArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC48_asArrayArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC48_asArrayArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC48_asArrayArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC48_asArrayArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC48_asArrayArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC48_asArrayArg1ColumnVariableV0Test` |
+| arg1:Null | `arC48_asArrayArg1NullV0Test` |
+| deep:nested | `arC48_asArrayNestedExpressionV0Test` |
+| deep:derived | `arC48_asArrayDerivedOutputV0Test` |
+| deep:setop | `arC48_asArraySetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC48_asArrayQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC48_asArraySameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC48_asArrayUppercaseV0Test` |
+| dialect:mixed | `arC48_asArrayMixedDialectV0Test` |
+| syntax:TrailingComma | `arC48_asArrayTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC48_asArrayMissingRightParenthesisSyntaxV0Test` |
+| input:variant-object | `arC48_asArrayVariantObjectInputV0Test` |
+| input:empty-variant-array | `arC48_asArrayEmptyVariantArrayV0Test` |
+| input:json-null | `arC48_asArrayJsonNullInputV0Test` |
+
+## D3.8.3 IS_ARRAY method-level completion evidence
+
+37 methods; 35 six-output goldens; 2 parser-only controls. Every method compares complete exact diagnostics. Existing extractor goldens are preserved.
+
+| Matrix cell | Methods |
+|---|---|
+| placement:Select | `arC49_isArraySelectPlacementV0Test` |
+| placement:Where | `arC49_isArrayWherePlacementV0Test` |
+| placement:Join | `arC49_isArrayJoinPlacementV0Test` |
+| placement:Having | `arC49_isArrayHavingPlacementV0Test` |
+| placement:Qualify | `arC49_isArrayQualifyPlacementV0Test` |
+| placement:OrderBy | `arC49_isArrayOrderByPlacementV0Test` |
+| placement:Values | `arC49_isArrayValuesPlacementV0Test` |
+| placement:Insert | `arC49_isArrayInsertPlacementV0Test` |
+| placement:Update | `arC49_isArrayUpdatePlacementV0Test` |
+| placement:Delete | `arC49_isArrayDeletePlacementV0Test` |
+| placement:Ddl | `arC49_isArrayDdlPlacementV0Test` |
+| placement:Script | `arC49_isArrayScriptPlacementV0Test` |
+| arg1:Unqualified | `arC49_isArrayArg1UnqualifiedV0Test` |
+| arg1:Unresolved | `arC49_isArrayArg1UnresolvedV0Test` |
+| arg1:Ambiguous | `arC49_isArrayArg1AmbiguousV0Test` |
+| arg1:MissingAlias | `arC49_isArrayArg1MissingAliasV0Test` |
+| arg1:HiddenAlias | `arC49_isArrayArg1HiddenAliasV0Test` |
+| arg1:PredicandVariable | `arC49_isArrayArg1PredicandVariableV0Test` |
+| arg1:ColumnVariable | `arC49_isArrayArg1ColumnVariableV0Test` |
+| arg1:Null | `arC49_isArrayArg1NullV0Test` |
+| deep:nested | `arC49_isArrayNestedExpressionV0Test` |
+| deep:derived | `arC49_isArrayDerivedOutputV0Test` |
+| deep:setop | `arC49_isArraySetOpSiblingIsolationV0Test` |
+| neutral:udf | `arC49_isArrayQualifiedUdfNeutralV0Test` |
+| neutral:column | `arC49_isArraySameNamedColumnNeutralV0Test` |
+| dialect:uppercase | `arC49_isArrayUppercaseV0Test` |
+| dialect:mixed | `arC49_isArrayMixedDialectV0Test` |
+| syntax:TrailingComma | `arC49_isArrayTrailingCommaSyntaxV0Test` |
+| syntax:MissingRightParenthesis | `arC49_isArrayMissingRightParenthesisSyntaxV0Test` |
+| input:variant-object | `arC49_isArrayVariantObjectInputV0Test` |
+| input:empty-variant-array | `arC49_isArrayEmptyVariantArrayV0Test` |
+| input:json-null | `arC49_isArrayJsonNullInputV0Test` |
+| predicate:where | `arC49_isArrayBooleanWhereV0Test` |
+| predicate:join | `arC49_isArrayBooleanJoinV0Test` |
+| predicate:having | `arC49_isArrayBooleanHavingV0Test` |
+| predicate:qualify | `arC49_isArrayBooleanQualifyV0Test` |
+| predicate:case | `arC49_isArrayBooleanCaseProjectionV0Test` |
+
+Focused host: 556 passed, zero failures/errors/skips; 533 six-output cases and 23 syntax controls.

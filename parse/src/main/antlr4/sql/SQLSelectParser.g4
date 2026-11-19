@@ -1356,6 +1356,9 @@ array_conversion_seed_function_name
   : SPLIT_TO_ARRAY
   | STRTOK_TO_ARRAY
   | ARRAYS_TO_OBJECT
+  | TO_ARRAY
+  | AS_ARRAY
+  | IS_ARRAY
   ;
 
 array_range_seed_function

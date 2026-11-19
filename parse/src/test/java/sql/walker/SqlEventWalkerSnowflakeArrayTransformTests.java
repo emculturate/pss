@@ -9780,4 +9780,2097 @@ public class SqlEventWalkerSnowflakeArrayTransformTests extends AbstractSqlParse
 				"{query0={result_value=[[@18,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}}",
 				"{def_query0={query_dictionary={result_value=[[@18,44:55='result_value',<457>,1:44]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@23,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
 	}
+
+	@Test
+	public void arC47_toArraySelectPlacementV0Test() {
+		final String query = "SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayWherePlacementV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE to_array(a.payload) IS NOT NULL AND a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={condition={left={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON to_array(a.payload) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC47_toArrayHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload HAVING to_array(a.payload) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:77) is recognized as Snowflake-specific grammar.",
+						1, 77, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}], filters=[{name=payload, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY to_array(a.payload) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]]}, table_dictionary={events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE a.active = 1 ORDER BY to_array(a.payload), a.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:54) is recognized as Snowflake-specific grammar.",
+						1, 54, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id]",
+				"{}",
+				"{events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}, ordered_by=[{name=payload, table_ref=a}, {name=id, table_ref=a}], filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayValuesPlacementV0Test() {
+		final String query = "VALUES (7, to_array('tag'))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={function_name=to_array, parameters={1={literal='tag'}}}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC47_toArrayInsertPlacementV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}",
+				"{query0={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}, def_query0={query_dictionary={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, table_dictionary={events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void arC47_toArrayUpdatePlacementV0Test() {
+		final String query = "UPDATE events SET result_value = to_array(payload) WHERE active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={function_name=to_array, parameters={1={column={name=payload, table_ref=null}}}}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<457>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=payload, table_ref=events}]}, table_dictionary={events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<457>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<457>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<457>,1:18]]}}}}");
+	}
+
+	@Test
+	public void arC47_toArrayDeletePlacementV0Test() {
+		final String query = "DELETE FROM events WHERE to_array(payload) IS NULL AND active = 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={delete={table={alias=null, table=events}, where={and={1={condition={left={function={function_name=to_array, parameters={1={column={name=payload, table_ref=null}}}}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}, filters=[{name=payload, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+	}
+
+	@Test
+	public void arC47_toArrayDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_to_array AS SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
+						1, 39, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_to_array}, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}",
+				"{query0={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}, table_dictionary={events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC47_toArrayScriptPlacementV0Test() {
+		final String query = "SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, to_array(c.payload) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=c}}}}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, 3={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@26,92:93='id',<457>,2:9]]}}, 3={query0={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@26,92:93='id',<457>,2:9]]}, table_dictionary={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, to_array(payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, to_array(payload) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:29)]]",
+						1, 29, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, to_array(payload) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:22). Possible sources: [events, labels]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:22)]]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1MissingAliasV0Test() {
+		final String query = "SELECT a.id, to_array(z.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'z'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=z}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, to_array(a.payload) AS result_value FROM (SELECT a.id, a.payload FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'a'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}",
+				"{query0={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, query1={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, table_dictionary={events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, to_array(<payload_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, to_array(a.<payload_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayArg1NullV0Test() {
+		final String query = "SELECT a.id, to_array(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(to_array(a.payload), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, to_array(a.payload) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, table_dictionary={events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC47_toArraySetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, to_array(a.payload) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}, events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@14,47:56='left_value',<457>,1:47]]}, query1={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}, table_dictionary={archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@14,47:56='left_value',<457>,1:47]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC47_toArrayQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.to_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}}, function_name=to_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArraySameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.to_array AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=to_array, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={to_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}, table_dictionary={events={to_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=to_array, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayUppercaseV0Test() {
+		final String query = "SELECT a.id, TO_ARRAY(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=TO_ARRAY, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayMixedDialectV0Test() {
+		final String query = "SELECT a.id, to_array(a.payload) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:50); unlikely to run on either engine.",
+						1, 50, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT to_array(a.payload,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: ')' in rule value_expression: SELECT to_array(a.payload,) AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT to_array(a.payload,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC47_toArrayMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT to_array(a.payload AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: 'AS' in rule value_expression: SELECT to_array(a.payload AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT to_array(a.payload AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC47_toArrayVariantObjectInputV0Test() {
+		final String query = "SELECT a.id, to_array(parse_json('{\"k\":1}')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={function={parameters={1={literal='{\"k\":1}'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayEmptyVariantArrayV0Test() {
+		final String query = "SELECT a.id, to_array(parse_json('[]')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={function={parameters={1={literal='[]'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayJsonNullInputV0Test() {
+		final String query = "SELECT a.id, to_array(parse_json('null')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={function={parameters={1={literal='null'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayNumericScalarInputV0Test() {
+		final String query = "SELECT a.id, to_array(7) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={literal=7}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,28:39='result_value',<457>,1:28]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayDelimitedStringInputV0Test() {
+		final String query = "SELECT a.id, to_array('x,y') AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={literal='x,y'}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,32:43='result_value',<457>,1:32]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC47_toArrayVariantArrayInputV0Test() {
+		final String query = "SELECT a.id, to_array(parse_json('[1,null,2]')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'to_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=to_array, parameters={1={function={parameters={1={literal='[1,null,2]'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,51:62='result_value',<457>,1:51]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,84:84='a',<457>,1:84]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArraySelectPlacementV0Test() {
+		final String query = "SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayWherePlacementV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE as_array(a.payload) IS NOT NULL AND a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={condition={left={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON as_array(a.payload) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC48_asArrayHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload HAVING as_array(a.payload) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:77) is recognized as Snowflake-specific grammar.",
+						1, 77, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}], filters=[{name=payload, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY as_array(a.payload) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]]}, table_dictionary={events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE a.active = 1 ORDER BY as_array(a.payload), a.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:54) is recognized as Snowflake-specific grammar.",
+						1, 54, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id]",
+				"{}",
+				"{events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}, ordered_by=[{name=payload, table_ref=a}, {name=id, table_ref=a}], filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayValuesPlacementV0Test() {
+		final String query = "VALUES (7, as_array(parse_json('[1,null,2]')))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={function_name=as_array, parameters={1={function={parameters={1={literal='[1,null,2]'}}, function_name=parse_json}}}}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC48_asArrayInsertPlacementV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}",
+				"{query0={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}, def_query0={query_dictionary={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, table_dictionary={events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void arC48_asArrayUpdatePlacementV0Test() {
+		final String query = "UPDATE events SET result_value = as_array(payload) WHERE active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={function_name=as_array, parameters={1={column={name=payload, table_ref=null}}}}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<457>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=payload, table_ref=events}]}, table_dictionary={events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<457>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<457>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<457>,1:18]]}}}}");
+	}
+
+	@Test
+	public void arC48_asArrayDeletePlacementV0Test() {
+		final String query = "DELETE FROM events WHERE as_array(payload) IS NULL AND active = 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={delete={table={alias=null, table=events}, where={and={1={condition={left={function={function_name=as_array, parameters={1={column={name=payload, table_ref=null}}}}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}, filters=[{name=payload, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+	}
+
+	@Test
+	public void arC48_asArrayDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_as_array AS SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
+						1, 39, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_as_array}, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}",
+				"{query0={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}, table_dictionary={events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC48_asArrayScriptPlacementV0Test() {
+		final String query = "SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, as_array(c.payload) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=c}}}}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, 3={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@26,92:93='id',<457>,2:9]]}}, 3={query0={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@26,92:93='id',<457>,2:9]]}, table_dictionary={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, as_array(payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, as_array(payload) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:29)]]",
+						1, 29, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, as_array(payload) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:22). Possible sources: [events, labels]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:22)]]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1MissingAliasV0Test() {
+		final String query = "SELECT a.id, as_array(z.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'z'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=z}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, as_array(a.payload) AS result_value FROM (SELECT a.id, a.payload FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'a'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}",
+				"{query0={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, query1={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, table_dictionary={events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, as_array(<payload_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, as_array(a.<payload_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayArg1NullV0Test() {
+		final String query = "SELECT a.id, as_array(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(as_array(a.payload), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, as_array(a.payload) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, table_dictionary={events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC48_asArraySetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, as_array(a.payload) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}, events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@14,47:56='left_value',<457>,1:47]]}, query1={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}, table_dictionary={archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@14,47:56='left_value',<457>,1:47]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC48_asArrayQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.as_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}}, function_name=as_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArraySameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.as_array AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=as_array, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], as_array=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}, table_dictionary={events={active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]], as_array=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=as_array, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayUppercaseV0Test() {
+		final String query = "SELECT a.id, AS_ARRAY(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=AS_ARRAY, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayMixedDialectV0Test() {
+		final String query = "SELECT a.id, as_array(a.payload) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:50); unlikely to run on either engine.",
+						1, 50, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT as_array(a.payload,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: ')' in rule value_expression: SELECT as_array(a.payload,) AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT as_array(a.payload,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC48_asArrayMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT as_array(a.payload AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: 'AS' in rule value_expression: SELECT as_array(a.payload AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT as_array(a.payload AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC48_asArrayVariantObjectInputV0Test() {
+		final String query = "SELECT a.id, as_array(parse_json('{\"k\":1}')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={function={parameters={1={literal='{\"k\":1}'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayEmptyVariantArrayV0Test() {
+		final String query = "SELECT a.id, as_array(parse_json('[]')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={function={parameters={1={literal='[]'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC48_asArrayJsonNullInputV0Test() {
+		final String query = "SELECT a.id, as_array(parse_json('null')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'as_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=as_array, parameters={1={function={parameters={1={literal='null'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArraySelectPlacementV0Test() {
+		final String query = "SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayWherePlacementV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE is_array(a.payload) IS NOT NULL AND a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={condition={left={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@22,77:77='a',<457>,1:77]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayJoinPlacementV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON is_array(a.payload) = b.ref_value AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={condition={left={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, right={column={name=ref_value, table_ref=b}}, operator==}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@26,90:90='a',<457>,1:90]]}, labels={ref_value=[[@22,74:74='b',<457>,1:74]], event_id=[[@30,97:97='b',<457>,1:97]], active=[[@34,114:114='b',<457>,1:114]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=ref_value, table_ref=b}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC49_isArrayHavingPlacementV0Test() {
+		final String query = "SELECT a.id, count(*) AS total FROM events a GROUP BY a.id, a.payload HAVING is_array(a.payload) IS NOT NULL";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:77) is recognized as Snowflake-specific grammar.",
+						1, 77, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={condition={left={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, from={table={alias=a, table=events}}, groupby={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}}}",
+				"[total, id]",
+				"{}",
+				"{events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}",
+				"{query0={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={total=[[@10,25:29='total',<457>,1:25]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,60:60='a',<457>,1:60], [@26,86:86='a',<457>,1:86]], *=[[@7,19:19='*',<291>,1:19]], id=[[@1,7:7='a',<457>,1:7], [@16,54:54='a',<457>,1:54]]}}, grouped_by=[{name=id, table_ref=a}, {name=payload, table_ref=a}], filters=[{name=payload, table_ref=a}], interface={total=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayQualifyPlacementV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY is_array(a.payload) IS NOT NULL AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={condition={left={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, operator=IS NOT NULL}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@37,135:136='rn',<457>,1:135]]}, table_dictionary={events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayOrderByPlacementV0Test() {
+		final String query = "SELECT a.id FROM events a WHERE a.active = 1 ORDER BY is_array(a.payload), a.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:54) is recognized as Snowflake-specific grammar.",
+						1, 54, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}}, orderby={1={null_order=null, predicand={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id]",
+				"{}",
+				"{events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@17,63:63='a',<457>,1:63]], active=[[@8,32:32='a',<457>,1:32]], id=[[@1,7:7='a',<457>,1:7], [@22,75:75='a',<457>,1:75]]}}, ordered_by=[{name=payload, table_ref=a}, {name=id, table_ref=a}], filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayValuesPlacementV0Test() {
+		final String query = "VALUES (7, is_array(parse_json('[1,null,2]')))";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:11) is recognized as Snowflake-specific grammar.",
+						1, 11, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={values={matrix={1={row={1={literal=7}, 2={function={function_name=is_array, parameters={1={function={parameters={1={literal='[1,null,2]'}}, function_name=parse_json}}}}}}}}}}}",
+				"[$1, $2]",
+				"{}",
+				"{}",
+				"{values0={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}}",
+				"{def_values0={query_dictionary={$1=[[@1,7:7='(',<287>,1:7]], $2=[[@1,7:7='(',<287>,1:7]]}, interface={$1=[], $2=[]}}}");
+	}
+
+	@Test
+	public void arC49_isArrayInsertPlacementV0Test() {
+		final String query = "INSERT INTO results (id, result_value) SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={insert={preamble=insert_into, from={from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}}, target_table={table={alias=null, table=results}}, columns={1={column={name=id, table_ref=null}}, 2={column={name=result_value, table_ref=null}}}}}}",
+				"[result_value, id]",
+				"{}",
+				"{results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}",
+				"{query0={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, insert1={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}",
+				"{def_insert1={query_dictionary={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}, table_dictionary={results={result_value=[[@6,25:36='result_value',<457>,1:25]], id=[[@4,21:22='id',<457>,1:21]]}}, def_query0={query_dictionary={result_value=[[@20,75:86='result_value',<457>,1:75]], id=[[@11,48:49='id',<457>,1:48]]}, table_dictionary={events={payload=[[@15,61:61='a',<457>,1:61]], active=[[@25,108:108='a',<457>,1:108]], id=[[@9,46:46='a',<457>,1:46]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={id=[{name=id, table_ref=query0}], result_value=[{name=result_value, table_ref=query0}]}}}");
+	}
+
+	@Test
+	public void arC49_isArrayUpdatePlacementV0Test() {
+		final String query = "UPDATE events SET result_value = is_array(payload) WHERE active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:33) is recognized as Snowflake-specific grammar.",
+						1, 33, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={update={table={alias=null, table=events}, where={condition={left={column={name=active, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=result_value, table_ref=null}}, to={function={function_name=is_array, parameters={1={column={name=payload, table_ref=null}}}}}}}}}}",
+				"[result_value]",
+				"{}",
+				"{events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}",
+				"{update0={result_value=[[@3,18:29='result_value',<457>,1:18]]}}",
+				"{def_update0={assignments={result_value=[{name=payload, table_ref=events}]}, table_dictionary={events={payload=[[@7,42:48='payload',<457>,1:42], [@8,49:49=')',<288>,1:49]], active=[[@10,57:62='active',<457>,1:57]]}}, update_dictionary={result_value=[[@3,18:29='result_value',<457>,1:18]]}, target_table={events={result_value=[[@3,18:29='result_value',<457>,1:18]]}}, filters=[{name=active, table_ref=events}], lhs_unresolved_columns={result_value={column={name=result_value, table_ref=null}, locations=[[@3,18:29='result_value',<457>,1:18]]}}}}");
+	}
+
+	@Test
+	public void arC49_isArrayDeletePlacementV0Test() {
+		final String query = "DELETE FROM events WHERE is_array(payload) IS NULL AND active = 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:25) is recognized as Snowflake-specific grammar.",
+						1, 25, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={delete={table={alias=null, table=events}, where={and={1={condition={left={function={function_name=is_array, parameters={1={column={name=payload, table_ref=null}}}}}, operator=IS NULL}}, 2={condition={left={column={name=active, table_ref=null}}, right={literal=0}, operator==}}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}",
+				"{}",
+				"{def_delete0={query_dictionary={}, table_dictionary={events={payload=[[@6,34:40='payload',<457>,1:34]], active=[[@11,55:60='active',<457>,1:55]]}}, filters=[{name=payload, table_ref=events}, {name=active, table_ref=events}], interface=null}}");
+	}
+
+	@Test
+	public void arC49_isArrayDdlPlacementV0Test() {
+		final String query = "CREATE VIEW v_is_array AS SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.DdlContext tree = parser.ddl();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 1,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:39) is recognized as Snowflake-specific grammar.",
+						1, 39, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{DDL={create={type=VIEW, name={table=v_is_array}, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[]",
+				"{}",
+				"{events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}",
+				"{query0={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}}",
+				"{def_create1={def_query0={query_dictionary={result_value=[[@16,62:73='result_value',<457>,1:62]], id=[[@7,35:36='id',<457>,1:35]]}, table_dictionary={events={payload=[[@11,48:48='a',<457>,1:48]], active=[[@21,95:95='a',<457>,1:95]], id=[[@5,33:33='a',<457>,1:33]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}}");
+	}
+
+	@Test
+	public void arC49_isArrayScriptPlacementV0Test() {
+		final String query = "SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1;\nSELECT b.id FROM orders b WHERE b.active = 1;\nSELECT c.id, is_array(c.payload) AS other_value FROM archive_events c WHERE c.active = 1;";
+		final SQLSelectParserParser parser = parse(query);
+		final SQLSelectParserParser.ScriptContext tree = parser.script();
+		Assert.assertEquals("Expected no syntax errors", 0, parser.getNumberOfSyntaxErrors());
+		Assert.assertEquals("Expected dedicated array function routing", 2,
+				Trees.findAllRuleNodes(tree, SQLSelectParserParser.RULE_array_conversion_seed_function).size());
+		final SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:3 c:13) is recognized as Snowflake-specific grammar.",
+						3, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SCRIPT={1={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={select={1={column={name=id, table_ref=b}}}, from={table={alias=b, table=orders}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}, 3={select={1={column={name=id, table_ref=c}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=c}}}}, alias=other_value}}, from={table={alias=c, table=archive_events}}, where={condition={left={column={name=active, table_ref=c}}, right={literal=1}, operator==}}}}}",
+				"[]",
+				"{SCRIPT={1={}, 2={}, 3={}}}",
+				"{SCRIPT={1={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, 2={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, 3={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}}}",
+				"{SCRIPT={1={query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}, 2={query0={id=[[@26,92:93='id',<457>,2:9]]}}, 3={query0={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}}}}",
+				"{SCRIPT={1={def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}, 2={def_query0={query_dictionary={id=[[@26,92:93='id',<457>,2:9]]}, table_dictionary={orders={active=[[@31,115:115='b',<457>,2:32]], id=[[@24,90:90='b',<457>,2:7]]}}, filters=[{name=active, table_ref=b}], interface={id=[{name=id, table_ref=b}]}, table_alias={b=orders}}}, 3={def_query0={query_dictionary={other_value=[[@49,165:175='other_value',<457>,3:36]], id=[[@40,138:139='id',<457>,3:9]]}, table_dictionary={archive_events={payload=[[@44,151:151='c',<457>,3:22]], active=[[@54,205:205='c',<457>,3:76]], id=[[@38,136:136='c',<457>,3:7]]}}, filters=[{name=active, table_ref=c}], interface={other_value=[{name=payload, table_ref=c}], id=[{name=id, table_ref=c}]}, table_alias={c=archive_events}}}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1UnqualifiedV0Test() {
+		final String query = "SELECT a.id, is_array(payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:28='payload',<457>,1:22]], active=[[@15,67:67='a',<457>,1:67]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=events}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1UnresolvedV0Test() {
+		final String query = "SELECT 7 AS marker, is_array(payload) AS result_value";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:20) is recognized as Snowflake-specific grammar.",
+						1, 20, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:29)]]",
+						1, 29, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={alias=marker, literal=7}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}}}",
+				"[marker, result_value]",
+				"{}",
+				"{}",
+				"{query0={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}}",
+				"{def_query0={query_dictionary={marker=[[@3,12:17='marker',<457>,1:12]], result_value=[[@10,41:52='result_value',<457>,1:41]]}, interface={marker=[], result_value=[{name=payload, table_ref=null}]}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1AmbiguousV0Test() {
+		final String query = "SELECT a.id, is_array(payload) AS result_value FROM events a JOIN labels b ON a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.SEVERE_WARNING,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						"Ambiguous column reference 'payload' at (l:1 c:22). Possible sources: [events, labels]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.ERROR,
+						"UNRESOLVED_UNQUALIFIED_COLUMNS",
+						"Unresolved unqualified column reference(s): [payload [(l:1 c:22)]]",
+						1, 22, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=null}}}}, alias=result_value}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}",
+				"{query0={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,34:45='result_value',<457>,1:34]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={id=[[@1,7:7='a',<457>,1:7], [@18,78:78='a',<457>,1:78]]}, labels={event_id=[[@22,85:85='b',<457>,1:85]], active=[[@26,102:102='b',<457>,1:102]]}}, filters=[{name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={result_value=[{name=payload, table_ref=null}], id=[{name=id, table_ref=a}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1MissingAliasV0Test() {
+		final String query = "SELECT a.id, is_array(z.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'z'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=z}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=z}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1HiddenAliasV0Test() {
+		final String query = "SELECT q.id, is_array(a.payload) AS result_value FROM (SELECT a.id, a.payload FROM events a WHERE a.active = 1) q WHERE q.id > 0";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"Source Table not found for Column 'payload' at (l:1 c:36). No alias or table called 'a'.",
+						1, 36, "SqlASTWalkerHelper", null, "payload", false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=id, table_ref=q}}, right={literal=0}, operator=>}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}",
+				"{query0={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, query1={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={payload=[[@22,70:76='payload',<457>,1:70]], id=[[@18,64:65='id',<457>,1:64], [@1,7:7='q',<457>,1:7], [@35,120:120='q',<457>,1:120]]}, table_dictionary={events={payload=[[@20,68:68='a',<457>,1:68]], active=[[@27,98:98='a',<457>,1:98]], id=[[@16,62:62='a',<457>,1:62]]}}, filters=[{name=active, table_ref=a}], interface={payload=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, filters=[{name=id, table_ref=q}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1PredicandVariableV0Test() {
+		final String query = "SELECT a.id, is_array(<payload_expr>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={substitution={name=<payload_expr>, type=predicand}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_expr>=predicand}",
+				"{events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=<payload_expr>, type=predicand}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1ColumnVariableV0Test() {
+		final String query = "SELECT a.id, is_array(a.<payload_col>) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={substitution={name=<payload_col>, type=column}, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{<payload_col>=column}",
+				"{events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}",
+				"{query0={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,42:53='result_value',<457>,1:42]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@17,75:75='a',<457>,1:75]], id=[[@1,7:7='a',<457>,1:7]], <payload_col>=[[@7,22:22='a',<457>,1:22]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{substitution={name=<payload_col>, type=column}, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayArg1NullV0Test() {
+		final String query = "SELECT a.id, is_array(NULL) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={null_literal=null}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@10,31:42='result_value',<457>,1:31]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@15,64:64='a',<457>,1:64]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayNestedExpressionV0Test() {
+		final String query = "SELECT a.id, coalesce(is_array(a.payload), a.fallback_value) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:22) is recognized as Snowflake-specific grammar.",
+						1, 22, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={parameters={1={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={column={name=fallback_value, table_ref=a}}}, function_name=coalesce}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@19,64:75='result_value',<457>,1:64]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={fallback_value=[[@14,43:43='a',<457>,1:43]], payload=[[@9,31:31='a',<457>,1:31]], active=[[@24,97:97='a',<457>,1:97]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}, {name=fallback_value, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayDerivedOutputV0Test() {
+		final String query = "SELECT q.id, q.result_value FROM (SELECT a.id, is_array(a.payload) AS result_value FROM events a WHERE a.active = 1) q WHERE q.result_value IS NOT NULL ORDER BY q.id";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:47) is recognized as Snowflake-specific grammar.",
+						1, 47, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=q}}, 2={column={name=result_value, table_ref=q}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=q}}, sort_order=ASC}}, from={table={alias=q, query={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=result_value, table_ref=q}}, operator=IS NOT NULL}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}",
+				"{query0={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, query1={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query1={query_dictionary={result_value=[[@7,15:26='result_value',<457>,1:15]], id=[[@3,9:10='id',<457>,1:9]]}, def_query0={query_dictionary={result_value=[[@22,70:81='result_value',<457>,1:70], [@5,13:13='q',<457>,1:13], [@35,125:125='q',<457>,1:125]], id=[[@13,43:44='id',<457>,1:43], [@1,7:7='q',<457>,1:7], [@43,161:161='q',<457>,1:161]]}, table_dictionary={events={payload=[[@17,56:56='a',<457>,1:56]], active=[[@27,103:103='a',<457>,1:103]], id=[[@11,41:41='a',<457>,1:41]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}, ordered_by=[{name=id, table_ref=q}], filters=[{name=result_value, table_ref=q}], interface={result_value=[{name=result_value, table_ref=q}], id=[{name=id, table_ref=q}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void arC49_isArraySetOpSiblingIsolationV0Test() {
+		final String query = "SELECT a.id AS left_id, is_array(a.payload) AS left_value FROM events a WHERE a.active = 1 UNION ALL SELECT b.id AS right_id, b.other_value AS right_value FROM archive_events b WHERE b.archived = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:24) is recognized as Snowflake-specific grammar.",
+						1, 24, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={union={1={select={1={column={name=id, table_ref=a}, alias=left_id}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=left_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=b}, alias=right_id}, 2={column={name=other_value, table_ref=b}, alias=right_value}}, from={table={alias=b, table=archive_events}}, where={condition={left={column={name=archived, table_ref=b}}, right={literal=1}, operator==}}}}}}",
+				"[left_value, left_id]",
+				"{}",
+				"{archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}, events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={left_id=[[@5,15:21='left_id',<457>,1:15]], left_value=[[@14,47:56='left_value',<457>,1:47]]}, query1={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}}",
+				"{def_union2={def_query1={query_dictionary={right_id=[[@31,116:123='right_id',<457>,1:116]], right_value=[[@37,143:153='right_value',<457>,1:143]]}, table_dictionary={archive_events={archived=[[@42,183:183='b',<457>,1:183]], other_value=[[@33,126:126='b',<457>,1:126]], id=[[@27,108:108='b',<457>,1:108]]}}, setop=UNION, filters=[{name=archived, table_ref=b}], interface={right_id=[{name=id, table_ref=b}], right_value=[{name=other_value, table_ref=b}]}, table_alias={b=archive_events}}, def_query0={query_dictionary={left_value=[[@14,47:56='left_value',<457>,1:47]], left_id=[[@5,15:21='left_id',<457>,1:15]]}, table_dictionary={events={payload=[[@9,33:33='a',<457>,1:33]], active=[[@19,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={left_value=[{name=payload, table_ref=a}], left_id=[{name=id, table_ref=a}]}, table_alias={a=events}}, interface={left_value=query_column, left_id=query_column}}}");
+	}
+
+	@Test
+	public void arC49_isArrayQualifiedUdfNeutralV0Test() {
+		final String query = "SELECT a.id, util.is_array(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={schema=util, parameters={1={column={name=payload, table_ref=a}}}, function_name=is_array}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@14,41:52='result_value',<457>,1:41]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,27:27='a',<457>,1:27]], active=[[@19,74:74='a',<457>,1:74]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArraySameNamedColumnNeutralV0Test() {
+		final String query = "SELECT a.id, a.is_array AS stored_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runQuery(query);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor);
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=is_array, table_ref=a}, alias=stored_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[id, stored_value]",
+				"{}",
+				"{events={is_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], stored_value=[[@9,27:38='stored_value',<457>,1:27]]}, table_dictionary={events={is_array=[[@5,13:13='a',<457>,1:13]], active=[[@14,60:60='a',<457>,1:60]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], stored_value=[{name=is_array, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayUppercaseV0Test() {
+		final String query = "SELECT a.id, IS_ARRAY(a.payload) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=IS_ARRAY, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@17,69:69='a',<457>,1:69]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayMixedDialectV0Test() {
+		final String query = "SELECT a.id, is_array(a.payload) AS result_value, extract(isodow from a.created_at) AS weekday FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"STATEMENT_MIXED_DIALECT_GRAMMAR",
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:50); unlikely to run on either engine.",
+						1, 50, "SqlASTWalkerHelper", null, null, false, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}, alias=result_value}, 3={alias=weekday, datetime_function={function_name=extract, part_form=KEYWORD, part=isodow, source={column={name=created_at, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[weekday, result_value, id]",
+				"{}",
+				"{events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={weekday=[[@23,87:93='weekday',<457>,1:87]], result_value=[[@12,36:47='result_value',<457>,1:36]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@7,22:22='a',<457>,1:22]], active=[[@28,115:115='a',<457>,1:115]], created_at=[[@18,70:70='a',<457>,1:70]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={weekday=[{name=created_at, table_ref=a}], result_value=[{name=payload, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayTrailingCommaSyntaxV0Test() {
+		final String query = "SELECT is_array(a.payload,) AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: ')' in rule value_expression: SELECT is_array(a.payload,) AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", ")", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT is_array(a.payload,) AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, ")", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC49_isArrayMissingRightParenthesisSyntaxV0Test() {
+		final String query = "SELECT is_array(a.payload AS result_value FROM events a";
+		final SQLSelectParserParser parser = parse(query);
+		parser.sql();
+		final errorhandling.ParseErrorCollector collector =
+				(errorhandling.ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertEquals("Parser error count is wrong", 3, collector.getErrorCount());
+		final java.util.List<ParseDiagnostic> diagnostics = new java.util.ArrayList<>(collector.getDiagnostics());
+		diagnostics.addAll(collectParserListenerDiagnostics(parser));
+		Assert.assertEquals("Parser diagnostics are wrong", Arrays.asList(
+				new ParseDiagnostic(ParseDiagnostic.Severity.FATAL,
+						"REPORT_ERROR",
+						"Line 1:26 - unexpected input: 'AS' in rule value_expression: SELECT is_array(a.payload AS result_value FROM events a",
+						1, 26, "ParseErrorCollector", "value_expression", "AS", false, "parse.strategy", "NoViableAltException", java.util.Map.of("contextSnippet", "SELECT is_array(a.payload AS result_value FROM events a", "parserRules", "value_expression,select_item,select_list", "syntaxClass", "GRAMMAR_GAP")),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER",
+						"Line 1:26 - Syntax error, attempting recovery",
+						1, 26, "ParseErrorCollector", null, "AS", true, "parse.strategy", "NoViableAltException", null),
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_INLINE",
+						"Line 1:15 - Invalid syntax near '('",
+						1, 15, "ParseErrorCollector", null, "(", true, "parse.strategy", null, null)), diagnostics);
+	}
+
+	@Test
+	public void arC49_isArrayVariantObjectInputV0Test() {
+		final String query = "SELECT a.id, is_array(parse_json('{\"k\":1}')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={function={parameters={1={literal='{\"k\":1}'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,48:59='result_value',<457>,1:48]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,81:81='a',<457>,1:81]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayEmptyVariantArrayV0Test() {
+		final String query = "SELECT a.id, is_array(parse_json('[]')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={function={parameters={1={literal='[]'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,43:54='result_value',<457>,1:43]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,76:76='a',<457>,1:76]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayJsonNullInputV0Test() {
+		final String query = "SELECT a.id, is_array(parse_json('null')) AS result_value FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:13) is recognized as Snowflake-specific grammar.",
+						1, 13, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={function={function_name=is_array, parameters={1={function={parameters={1={literal='null'}}, function_name=parse_json}}}}, alias=result_value}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[result_value, id]",
+				"{}",
+				"{events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}",
+				"{query0={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={result_value=[[@13,45:56='result_value',<457>,1:45]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={active=[[@18,78:78='a',<457>,1:78]], id=[[@1,7:7='a',<457>,1:7]]}}, filters=[{name=active, table_ref=a}], interface={result_value=[], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayBooleanWhereV0Test() {
+		final String query = "SELECT a.id, a.label FROM events a WHERE is_array(a.payload) AND a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:41) is recognized as Snowflake-specific grammar.",
+						1, 41, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=a}}}, from={table={alias=a, table=events}}, where={and={1={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@19,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@14,50:50='a',<457>,1:50]], active=[[@19,65:65='a',<457>,1:65]], id=[[@1,7:7='a',<457>,1:7]], label=[[@5,13:13='a',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=active, table_ref=a}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayBooleanJoinV0Test() {
+		final String query = "SELECT a.id, b.label FROM events a JOIN labels b ON is_array(a.payload) AND a.id = b.event_id WHERE b.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:52) is recognized as Snowflake-specific grammar.",
+						1, 52, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=JOIN, on={and={1={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={condition={left={column={name=id, table_ref=a}}, right={column={name=event_id, table_ref=b}}, operator==}}}}}, 3={table={alias=b, table=labels}}}}, where={condition={left={column={name=active, table_ref=b}}, right={literal=1}, operator==}}}}",
+				"[id, label]",
+				"{}",
+				"{events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@22,76:76='a',<457>,1:76]]}, labels={event_id=[[@26,83:83='b',<457>,1:83]], active=[[@30,100:100='b',<457>,1:100]], label=[[@5,13:13='b',<457>,1:13]]}}",
+				"{query0={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}}",
+				"{def_query0={query_dictionary={id=[[@3,9:10='id',<457>,1:9]], label=[[@7,15:19='label',<457>,1:15]]}, table_dictionary={events={payload=[[@17,61:61='a',<457>,1:61]], id=[[@1,7:7='a',<457>,1:7], [@22,76:76='a',<457>,1:76]]}, labels={event_id=[[@26,83:83='b',<457>,1:83]], active=[[@30,100:100='b',<457>,1:100]], label=[[@5,13:13='b',<457>,1:13]]}}, filters=[{name=payload, table_ref=a}, {name=id, table_ref=a}, {name=event_id, table_ref=b}, {name=active, table_ref=b}], interface={id=[{name=id, table_ref=a}], label=[{name=label, table_ref=b}]}, table_alias={a=events, b=labels}}}");
+	}
+
+	@Test
+	public void arC49_isArrayBooleanHavingV0Test() {
+		final String query = "SELECT a.group_id, count(*) AS total FROM events a GROUP BY a.group_id, a.payload HAVING is_array(a.payload) AND count(*) > 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:89) is recognized as Snowflake-specific grammar.",
+						1, 89, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=group_id, table_ref=a}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=total}}, having={and={1={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={condition={left={function={function_name=COUNT, qualifier=null, parameters=*}}, right={literal=1}, operator=>}}}}, from={table={alias=a, table=events}}, groupby={1={column={name=group_id, table_ref=a}}, 2={column={name=payload, table_ref=a}}}}}",
+				"[total, group_id]",
+				"{}",
+				"{events={payload=[[@20,72:72='a',<457>,1:72], [@26,98:98='a',<457>,1:98]], group_id=[[@1,7:7='a',<457>,1:7], [@16,60:60='a',<457>,1:60]], *=[[@7,25:25='*',<291>,1:25], [@33,119:119='*',<291>,1:119]]}}",
+				"{query0={group_id=[[@3,9:16='group_id',<457>,1:9]], total=[[@10,31:35='total',<457>,1:31]]}}",
+				"{def_query0={query_dictionary={total=[[@10,31:35='total',<457>,1:31]], group_id=[[@3,9:16='group_id',<457>,1:9]]}, table_dictionary={events={payload=[[@20,72:72='a',<457>,1:72], [@26,98:98='a',<457>,1:98]], group_id=[[@1,7:7='a',<457>,1:7], [@16,60:60='a',<457>,1:60]], *=[[@7,25:25='*',<291>,1:25], [@33,119:119='*',<291>,1:119]]}}, grouped_by=[{name=group_id, table_ref=a}, {name=payload, table_ref=a}], filters=[{name=payload, table_ref=a}], interface={total=[], group_id=[{name=group_id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayBooleanQualifyV0Test() {
+		final String query = "SELECT a.id, row_number() over (partition by a.group_id order by a.id) AS rn FROM events a QUALIFY is_array(a.payload) AND rn <= 5";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:99) is recognized as Snowflake-specific grammar.",
+						1, 99, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=rn, window_function={over={partition_by={1={column={name=group_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=id, table_ref=a}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=events}}, qualify={and={1={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}, 2={condition={left={column={name=rn, table_ref=null}}, right={literal=5}, operator=<=}}}}}}",
+				"[id, rn]",
+				"{}",
+				"{events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}",
+				"{query0={rn=[[@22,74:75='rn',<457>,1:74], [@34,123:124='rn',<457>,1:123]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={window_ordered_by=[{name=id, table_ref=a}], query_dictionary={id=[[@3,9:10='id',<457>,1:9]], rn=[[@22,74:75='rn',<457>,1:74], [@34,123:124='rn',<457>,1:123]]}, table_dictionary={events={payload=[[@29,108:108='a',<457>,1:108]], group_id=[[@12,45:45='a',<457>,1:45]], id=[[@1,7:7='a',<457>,1:7], [@17,65:65='a',<457>,1:65]]}}, window_partition_by=[{name=group_id, table_ref=a}], filters=[{name=payload, table_ref=a}, {name=rn, table_ref=query0}], interface={id=[{name=id, table_ref=a}], rn=[{name=group_id, table_ref=a}, {name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
+
+	@Test
+	public void arC49_isArrayBooleanCaseProjectionV0Test() {
+		final String query = "SELECT a.id, CASE WHEN is_array(a.payload) THEN a.id ELSE a.fallback_id END AS classified_id FROM events a WHERE a.active = 1";
+		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_array_conversion_seed_function);
+		assertNoFatalErrors(extractor);
+		assertExactDiagnostics(extractor,
+				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+						"routine 'is_array' at (l:1 c:23) is recognized as Snowflake-specific grammar.",
+						1, 23, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertOutputs(extractor,
+				"{SQL={select={1={column={name=id, table_ref=a}}, 2={alias=classified_id, case={clauses={1={then={column={name=id, table_ref=a}}, when={function={function_name=is_array, parameters={1={column={name=payload, table_ref=a}}}}}}}, else={column={name=fallback_id, table_ref=a}}}}}, from={table={alias=a, table=events}}, where={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}}}",
+				"[classified_id, id]",
+				"{}",
+				"{events={payload=[[@9,32:32='a',<457>,1:32]], fallback_id=[[@18,58:58='a',<457>,1:58]], active=[[@28,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7], [@14,48:48='a',<457>,1:48]]}}",
+				"{query0={classified_id=[[@23,79:91='classified_id',<457>,1:79]], id=[[@3,9:10='id',<457>,1:9]]}}",
+				"{def_query0={query_dictionary={classified_id=[[@23,79:91='classified_id',<457>,1:79]], id=[[@3,9:10='id',<457>,1:9]]}, table_dictionary={events={payload=[[@9,32:32='a',<457>,1:32]], fallback_id=[[@18,58:58='a',<457>,1:58]], active=[[@28,113:113='a',<457>,1:113]], id=[[@1,7:7='a',<457>,1:7], [@14,48:48='a',<457>,1:48]]}}, filters=[{name=active, table_ref=a}], interface={classified_id=[{name=id, table_ref=a}, {name=payload, table_ref=a}, {name=fallback_id, table_ref=a}], id=[{name=id, table_ref=a}]}, table_alias={a=events}}}");
+	}
 }
