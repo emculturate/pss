@@ -211,11 +211,31 @@ does not itself authorize publication.
    the updated instruction pointer, all eight guides, and ZIP integrity
    were verified again without changing the parser candidate.
 
-   | Handoff artifact | SHA-256 |
+   | Handoff artifact | SHA-256 (superseded by 2026-11-21 row when integrating) |
    |------------------|---------|
    | `pss-parse-5.1.4-1-fat.jar` | `4b7cde697d03cc5fc80189ab3797ff87ff13a46cd91e3890a09b0da0fa6ce3cf` |
    | `pss-parse-docs-5.1.4-1.jar` | `0bce15cc616f71d2bc469a420effbf071af5867921c693cd43e3a5ef990197d1` |
    | `pss-parse-docs-5.1.4-1-agent-kit.zip` | `5012eadf8bc8290d916312efacd9fe817cd6638049527df6f91e7836680b48f0` |
+
+   **Local release candidate — 2026-11-21 11:19:48 -05:00 (Entries 21–27):**
+   after the Fall remediation accuracy gate, `mvn -Pisolated-build,release-tests
+   clean verify` succeeded with **5,488 reported, 0 failures, 0 errors, 40
+   skipped** (release profile). Candidate source **`167b22a`**. Fat JAR and
+   docs/agent-kit were relocated from `target-maven/` to the standard `target/`
+   handoff paths (byte-for-byte). The first same-day attempt at
+   `mvn -Prelease-tests clean verify` without isolation failed when the IDE
+   Java language server wrote Eclipse stub classes into `parse/target/` during
+   the long test phase; keep `java.autobuild.enabled` false or use
+   `-Pisolated-build` for release verification when the IDE is open.
+
+   | Handoff artifact | SHA-256 |
+   |------------------|---------|
+   | `pss-parse-5.1.4-1-fat.jar` | `549b34860846d733e2200f26b330ac9d146876729a3278b7b7d945cf2520f706` |
+   | `pss-parse-docs-5.1.4-1.jar` | `ddce8e37172f8527cbbd5c6613e084a6cd931da34e87046e5e56e0d7d39be086` |
+   | `pss-parse-docs-5.1.4-1-agent-kit.zip` | `552cb002ada23ae0abc61cc7d473d4406c040bd881f58d4d9b0ec55549d44a5c` |
+
+   Log: `.tmp/release-candidate-isolated-2026-11-21.log`. No Maven install,
+   deploy, or Archiva upload.
 
    The standard parser and test JARs were also generated locally. No Maven
    install, deploy or repository upload was performed. This completes the
