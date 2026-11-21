@@ -44,4 +44,10 @@ mvn -pl parse -Dtest=ParseLatencyDiagnosticTest test
 
 ## What's next (outside this pack)
 
-See [sql-grammar-5.1.4-workplan.md](../../../documents/sql-grammar-5.1.4-workplan.md) **Entry 3** (`PARSE_URL` / `:` field access) and Entries **1–8** for other open parser work.
+**5.1.3 / Spring closure (2026-11-21):** this pack closes the historical
+5.1.3→5.1.4 RMCP timeout/degradation handoff. Parser work continues only on
+`Fall-2026-Extensions` under
+[sql-grammar-5.1.4-workplan.md](../../../documents/sql-grammar-5.1.4-workplan.md)
+(Entries **1**, **5–10**, **15**, **28–29**, etc.). Entries **21–27** Fall
+remediation closed with default accuracy suite **5,488 / 0 failures** on
+2026-11-21; see workplan § *Spring / 5.1.3 closure and Fall remediation gate*.

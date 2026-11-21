@@ -25,6 +25,14 @@ isProject: false
 
 # Complete 5.1.4 Lineage
 
+## Parser vs RMCP boundary (2026-11-21)
+
+Spring **5.1.3** parser work and the RMCP timeout/degradation pack are **closed**.
+Fall Entries **21–27** remediation is **closed** in the parser (`mvn -pl parse
+test`, 0 failures). This document and **Entry 29** track **consumer** lineage
+gaps only (e.g. RMCP still delegating `traceLineage514` to 5.1.3 explain code),
+not unfinished parser 5.1.3 debt.
+
 ## Ownership decision
 - Implement the authoritative lineage program in the PSS parser, where grammar contexts, scope ownership, substitutions, token locations, and unresolved-reference state are available.
 - The parser should publish both a structured lineage document and a human-readable explanation derived from that document.

@@ -54,18 +54,42 @@ Link to those records rather than copying their inventories or measurements.
 | **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Complete** (closed 2026-11-13) — targeted fix + warning policy + parity re-evaluation delivered; see Entry 20 section |
 | **21** | QUERY variables in FROM/JOIN: author guidance and tuple-versus-query distinction | Diagnostic enhancement | **Closed by owner decision** (2026-11-21) — no dedicated warning; Entry 22 covers contradictory reuse |
 | **22** | Conflicting types for repeated occurrences of one substitution name | Diagnostic / consistency enhancement | **Complete** (2026-11-21) — positioned per-occurrence warnings; first public-map type retained |
-| **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Complete in source** (2026-11-21) — synthetic scopes, presumed outputs, ambiguity preservation, and focused regressions complete |
-| **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Targeted fix complete in source** — focused regressions pass; broader caller audit and release acceptance remain open |
-| **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Complete in source** (2026-11-21) — focused datetime regressions pass; local release JAR not rebuilt |
-| **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete in source** (2026-11-20) — focused tests pass; local release JAR not rebuilt |
-| **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Complete in source** (2026-11-21) — unquoted keys merge case-insensitively with deduplicated tokens; focused dictionary/scope regressions pass |
-| **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Source-order fix complete in source** — focused alias/scope regressions pass; release-level verification remains open |
+| **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Complete** (2026-11-21) — synthetic scopes, presumed outputs, ambiguity preservation; default accuracy suite green |
+| **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Complete** (2026-11-21) — targeted fix, focused regressions, and default accuracy suite; bounded post-fix caller audit deferred |
+| **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Complete** (2026-11-21) — focused datetime regressions and default accuracy suite |
+| **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete** (2026-11-21) — focused tests and default accuracy suite |
+| **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Complete** (2026-11-21) — case-insensitive merge with deduplicated tokens; accuracy suite including four refreshed live-sample goldens |
+| **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Complete in source** (2026-11-21) — source-order fix and focused regressions; not re-run on this accuracy gate |
 | **29** | Parser-owned structured lineage and explanation | Enhancement / design | **Proposed; contract, scope, and acceptance thresholds pending** |
 
 **5.0.0 → 5.1.4 parity gate update:** Entry **20** is closed (2026-11-13) and
 no longer blocks parity. Remaining parity/release checks continue to be the
 corpus, consumer, generator, and release verification gates documented in this
 workplan.
+
+### Spring / 5.1.3 closure and Fall remediation gate (2026-11-21)
+
+**5.1.3 line and branch:** `Spring-2026-Extensions` closed with the **5.1.4**
+parser ship. The former **5.1.3** RMCP timeout/degradation pack lives under
+[`5.1.4-panto-outstanding`](../docs/rmcp-handoff/5.1.4-panto-outstanding/)
+(renamed in-repo; filenames retain `513` where historical). §2.8 / §2.11 /
+Phase 2.9 are **closed** per
+[`remaining-work-sequence.md`](../docs/rmcp-handoff/5.1.4-panto-outstanding/remaining-work-sequence.md).
+There is **no unfinished 5.1.3 parser work** on `Fall-2026-Extensions`; open
+items are **5.1.4** entries in this workplan only. Downstream RMCP
+`traceLineage514` gaps (delegating to 5.1.3 explain code) are **Entry 29**
+consumer work, not open parser 5.1.3 debt.
+
+**Entries 21–27 — default accuracy suite:** `mvn -pl parse test` (no
+`release-tests` / `diagnostic-tests`) passed **5,488** run, **0** failures,
+**62** skipped (~2 min, 2026-11-21). Four
+`SqlEventWalkerLiveSampleQueriesTests` table-dictionary goldens were refreshed
+for Entry **27** merge/dedup semantics. This closes source + accuracy-suite
+acceptance for the Fall **514 defect remediation** batch (Entries **22–27**;
+Entry **21** closed by owner decision). **Local release JAR / agent-kit rebuild**,
+optional `-Prelease-tests`, frozen-corpus compare, and RMCP integration remain
+under [wrap-up sequence](#wrap-up-sequence--local-candidate-first-archiva-publication-on-hold)
+below.
 
 ### 5.1.4 release completion checklist (scoped subset)
 
@@ -100,45 +124,31 @@ gates listed below, and is not whole-release certification.
     Scope is limited to that approved twelve-method set, not a new broad audit.
   - **Tier 3 is explicitly out of 5.1.4 scope.**
 
-- **Entries 21–23 — substitution-variable remediations**
-  - Entry 22 repeated-name type-conflict diagnostics are complete in source:
-    each conflicting occurrence emits a positioned severe warning and the
-    public substitution map retains the first type.
-  - Entry 21's separate QUERY-versus-TUPLE warning is closed as obsolete.
-  - Entry 23 opaque query-source column binding is complete in source with
-    synthetic `def_queryN` scopes, presumed-output warnings, and normal
-    ambiguity diagnostics; release-level verification remains open.
+- **Entries 21–23 — substitution-variable remediations — CLOSED (accuracy gate 2026-11-21)**
+  - Entry 22 repeated-name type-conflict diagnostics: positioned severe warnings;
+    public map retains the first type.
+  - Entry 21's separate QUERY-versus-TUPLE warning: closed as obsolete.
+  - Entry 23 opaque query-source column binding: synthetic `def_queryN` scopes,
+    presumed-output warnings, and ambiguity diagnostics.
 
-- **Entry 24 — fourth 5.1.4 remediation: confirmed IN-list collection defect**
-  - Preserve all source columns and occurrence tokens across successive
-    ordinary IN lists in SELECT CASE expressions.
-  - Root cause, reproduction, runtime trace, and completed characterization
-    are recorded in [Entry 24](#entry-24--successive-in-lists-silently-overwrite-column-collection).
-    The targeted IN-frame fix and focused regressions are in source; the
-    broader caller audit and release acceptance remain open.
+- **Entry 24 — IN-list collection defect — CLOSED (accuracy gate 2026-11-21)**
+  - Targeted ordinary IN-list fix and focused regressions; default accuracy
+    suite green. Bounded post-fix caller audit deferred (not a release blocker).
+  - Detail: [Entry 24](#entry-24--successive-in-lists-silently-overwrite-column-collection).
 
-- **Entry 25 — datetime story completion**
-  - Datetime TRUNCATE routing, missing supported parts/aliases, per-function
-    part subsets, and false dialect conflicts for shared aliases are corrected
-    in source.
-  - Multiple named date/time-part allowlists now cover functions with different
-    supported subsets, backed by shared part/alias definitions.
-  - [Entry 25](#entry-25--datetime-story-completion-and-function-specific-part-lists)
-    records the verified baseline examples and focused acceptance coverage.
-    Release-JAR rebuilding and release-level verification remain open.
+- **Entry 25 — datetime story completion — CLOSED (accuracy gate 2026-11-21)**
+  - TRUNCATE routing, part lists, per-function subsets, shared-alias affinity.
+  - [Entry 25](#entry-25--datetime-story-completion-and-function-specific-part-lists).
 
-- **Entry 26 — Unicode literal preservation: complete in source**
-  - MCP JSON, stream, and bulk preprocessing preserves literal data while
-    retaining existing syntax normalization. Focused tests passed; the local
-    release JAR still needs the ordinary candidate build and owner validation.
+- **Entry 26 — Unicode literal preservation — CLOSED (accuracy gate 2026-11-21)**
+  - MCP/bulk literal preservation; focused suite and default accuracy suite.
 
 - **Entries 27–29 — additional 5.1.4 handoffs**
-  - Entry 27 cross-scope dictionary casing is complete in source with focused
-    SQL/QUERY dictionary and scope regressions.
-  - Entry 28 ordered-alias source-order fix and focused regressions are
-    complete in source; release-level verification remains open.
-  - Entry 29 parser-owned structured lineage remains a proposal without an
-    approved contract or schema.
+  - Entry 27 cross-scope dictionary casing — **CLOSED** (accuracy gate 2026-11-21).
+  - Entry 28 ordered-alias source-order fix — complete in source; outside the
+    21–27 batch verification pass.
+  - Entry 29 parser-owned structured lineage — proposal only (RMCP consumer
+    gaps, not open parser 5.1.3 work).
 
 **Latest scope reduction — deferred beyond 5.1.4, not release prerequisites:**
 - **Entry 7, entirely:** endpoint parity, type×grammar coverage and their
@@ -4772,8 +4782,8 @@ and [typed AST substitution](panto-variable-inheritance-using-bundles.md#typed-a
 
 ## Entry 24 — Successive IN lists silently overwrite column collection
 
-**Status:** Targeted ordinary IN-list fix implemented and focused regressions
-passed; broader caller audit and release acceptance remain open.
+**Status:** **Complete** (2026-11-21) — targeted fix, focused regressions, and
+default accuracy suite green; bounded post-fix caller audit deferred.
 **Kind:** Dictionary / reference-token collection defect.
 **Implementation:** the targeted fix and focused regressions are complete in
 source. The broader audit and release acceptance remain open.
@@ -5125,9 +5135,8 @@ features.
 
 ## Entry 25 — Datetime story completion and function-specific part lists
 
-**Status:** Complete in source (2026-11-21); focused datetime regressions pass.
-The local release JAR has not been rebuilt and release-level verification
-remains open.
+**Status:** **Complete** (2026-11-21) — focused datetime regressions and default
+accuracy suite green. Local release JAR rebuild remains under wrap-up.
 **Kind:** Defect correction / completion of the Entry 1 Snowflake story.
 **Owner direction:** correct the deficiencies below, including creating
 multiple date/time-part lists where functions support different subsets.
@@ -5312,8 +5321,8 @@ existing token-ID workflow rather than making part names newly reserved.
 
 ## Entry 26 — Preserve Unicode string-literal contents
 
-**Status:** Complete in source (2026-11-20); local release JAR not rebuilt and
-downstream integration not yet verified.
+**Status:** **Complete** (2026-11-21) — focused tests and default accuracy suite
+green. Local release JAR rebuild and RMCP integration remain under wrap-up.
 **Kind:** MCP / bulk preprocessing defect.
 **Report:** [Unicode string-literal normalization defect](<./514 defect and enhancement requirements/unicode-string-literal-normalization-defect.md>).
 
@@ -5340,8 +5349,8 @@ upstream text mutation before these transports is not addressed by this fix.
 
 ## Entry 27 — Cross-scope physical-column case fragmentation
 
-**Status:** Complete in source (2026-11-21); focused SQL/QUERY dictionary and
-scope regressions pass. The local release JAR has not been rebuilt.
+**Status:** **Complete** (2026-11-21) — focused SQL/QUERY dictionary and scope
+regressions plus default accuracy suite (four live-sample goldens refreshed).
 **Report:** [cross-scope column-case fragmentation](<./514 defect and enhancement requirements/cross-scope-column-case-fragmentation-defect.md>).
 
 ### Goal and evidence
@@ -5364,9 +5373,9 @@ This is not a token-ID renumbering issue.
 3. **Complete.** Added independent full-golden tests for same-scope,
    predicate-subquery, CTE, swapped casing, production-shaped QUERY input, and
    case-sensitive double-quoted controls.
-4. **Complete in source.** SQL/QUERY behavior and 737 focused dictionary/scope
-   regressions pass; consumer dictionary guidance now states the casing
-   contract. Release-JAR rebuilding and release-level verification remain open.
+4. **Complete.** SQL/QUERY behavior, focused dictionary/scope regressions, and
+   default accuracy suite pass; consumer dictionary guidance states the casing
+   contract (2026-11-21).
 
 **Out of scope:** changing identifier spelling globally, merging distinct
 quoted identifiers, or relaxing query-scope visibility.
@@ -5375,8 +5384,8 @@ quoted identifiers, or relaxing query-scope visibility.
 
 ## Entry 28 — Ordered select-alias lineage invariance
 
-**Status:** Source-order fix implemented and focused alias/scope regressions
-passed; release-level verification remains open.
+**Status:** Source-order fix and focused alias/scope regressions complete in
+source (2026-11-21); not part of the Entries 21–27 accuracy gate.
 **Reports:** [consumer-alias iteration-order finding](<./514 defect and enhancement requirements/ordered-alias-iteration-order-defect.md>)
 and [temporal-name finding](<./514 defect and enhancement requirements/ordered-alias-temporal-name-resolution-defect.md>).
 
