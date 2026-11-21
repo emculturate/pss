@@ -9044,8 +9044,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
 		if (substitutionMap != null) {
-			substitutionMap.put(MUMBLE_TYPE_KEY, type);
-			walker.substitutionsMap.put((String) substitutionMap.get("name"), type);
+			walker.registerSubstitutionVariable(substitutionMap, type);
 		}
 		return columnMap;
 	}
@@ -10191,6 +10190,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 1) {
 			item.put(MUMBLE_NAME_KEY, ctx.getChild(0).getText());
+			walker.rememberSubstitutionOccurrence(item, ctx.getStart());
 			subMap.put(MUMBLE_SUBSTITUTION_KEY, item);
 		}
 		// Add item to parent map
@@ -10218,6 +10218,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (ctx.getChildCount() == 1) {
 			String variable_name = ctx.getChild(0).getText();
 			item.put(MUMBLE_NAME_KEY, variable_name);
+			walker.rememberSubstitutionOccurrence(item, ctx.getStart());
 			item.put(MUMBLE_PARTS_KEY, subItem);
 			String[] trim = variable_name.split("\\.",0);
 			// Added 9/16/2021 GAH: Allow 5 part variable names
@@ -10443,6 +10444,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> substitution = new HashMap<String, Object>();
 		substitution.put(MUMBLE_NAME_KEY, ctx.start.getInputStream().getText(new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
 		substitution.put(MUMBLE_PARTS_KEY, parts);
+		walker.rememberSubstitutionOccurrence(substitution, ctx.getStart());
 
 		subMap.clear();
 		subMap.put(MUMBLE_SUBSTITUTION_KEY, substitution);

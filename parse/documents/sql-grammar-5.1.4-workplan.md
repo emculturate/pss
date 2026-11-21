@@ -100,12 +100,12 @@ gates listed below, and is not whole-release certification.
     Scope is limited to that approved twelve-method set, not a new broad audit.
   - **Tier 3 is explicitly out of 5.1.4 scope.**
 
-- **Entries 21–23 — newly recorded 5.1.4 remediation proposals (2026-11-19)**
-  - Discuss FROM/JOIN query-variable guidance, repeated-name type conflicts,
-    and opaque query-source column binding before implementation.
-  - These are open assessment/design items, not approved diagnostic severities,
-    symbol-table formats, or completed fixes. Additional integration findings
-    may extend this remediation list.
+- **Entries 21–23 — substitution-variable remediations**
+  - Entry 22 repeated-name type-conflict diagnostics are complete in source:
+    each conflicting occurrence emits a positioned severe warning and the
+    public substitution map retains the first type.
+  - Entry 21 FROM/JOIN guidance and Entry 23 opaque query-source column binding
+    remain open assessment/design items.
 
 - **Entry 24 — fourth 5.1.4 remediation: confirmed IN-list collection defect**
   - Preserve all source columns and occurrence tokens across successive
@@ -131,7 +131,8 @@ gates listed below, and is not whole-release certification.
     release JAR still needs the ordinary candidate build and owner validation.
 
 - **Entries 27–29 — additional 5.1.4 handoffs**
-  - Entry 27 cross-scope dictionary casing remains unverified and unfixed.
+  - Entry 27 cross-scope dictionary casing is complete in source with focused
+    SQL/QUERY dictionary and scope regressions.
   - Entry 28 ordered-alias source-order fix and focused regressions are
     complete in source; release-level verification remains open.
   - Entry 29 parser-owned structured lineage remains a proposal without an
@@ -4452,9 +4453,9 @@ cases, or changing the DATEADD test goldens.
 
 ## Entry 21 — QUERY variables in FROM/JOIN: author guidance
 
-**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
-not implemented.
-**Kind:** Diagnostic enhancement.
+**Status:** Closed by owner decision (2026-11-21); no dedicated diagnostic or
+source change is required.
+**Kind:** Author guidance / superseded diagnostic proposal.
 
 ### Shared evidence and sample for Entries 21–23
 
@@ -4490,40 +4491,38 @@ dictionary entry. Do not restore 5.0.0's indiscriminate table-dictionary behavio
 Typing, row-source participation, inferred columns, and binding validation are
 separate concerns.
 
-### Goal and proposal
+### Final decision
 
-Consider a warning when a FROM/JOIN row source is a QUERY variable, explaining
-when a TUPLE variable would be preferable. Keep the QUERY form legal and retain
-its contextual type. Diagnostic wording, applicability, and severity remain
-open; this is not approval for a blanket warning.
+The proposed QUERY-versus-TUPLE authoring warning is obsolete and must not be
+implemented. A parenthesized QUERY variable and a bare TUPLE variable are both
+legal, intentional endpoint choices. The parser must preserve the type assigned
+by each grammatical occurrence rather than recommending one type over the
+other.
 
-### Reasonableness and decisions
-
-- **Benefit:** explain the parentheses-driven distinction and help authors
-  choose the intended snippet endpoint instead of encountering opaque column
-  diagnostics.
+- **Mixed use of one name:** Entry 22 now emits a positioned severe warning for
+  every occurrence whose contextual type conflicts with the first registration.
+  That diagnostic is sufficient author guidance; do not emit an additional
+  QUERY-versus-TUPLE warning.
 - **Legitimate QUERY use:** `FROM (<q>) q` can intentionally require a query-body
   snippet such as `SELECT id FROM t`. A TUPLE occurrence can instead accept
   `schema.table` or a parenthesized query fragment such as `(SELECT id FROM t)`.
   The choice affects the snippet's grammar and who supplies its parentheses;
   switching the template alone is not necessarily a compatible correction.
-- **Risk:** warning on every legal QUERY row source could create noise or
-  incorrectly imply that a deliberate whole-query binding is invalid. Decide
-  whether guidance should be unconditional, conditional, or documentation-only.
-- Coordinate with Entry 23 so advice about authoring style is not confused with
-  source-column validity or duplicated by unresolved-column diagnostics.
+- **Single-type use:** a legal QUERY row source is not suspicious merely because
+  a TUPLE spelling was also possible. Blanket guidance would create noise and
+  incorrectly imply that a deliberate whole-query binding is invalid.
+- **Separate lineage concern:** Entry 23 owns presumed external output columns
+  for an opaque QUERY source. Its warning reports assumed outputs, not an
+  authoring preference between QUERY and TUPLE.
 
 ### Phases and acceptance
 
-1. Characterize parenthesized QUERY and bare TUPLE occurrences in FROM and JOIN,
-   with concrete snippet bindings, before selecting a guidance policy.
-2. Agree warning conditions and wording. If implemented, identify the variable,
-   occurrence location, contextual type, and endpoint/parenthesis implications.
-3. Keep legitimate QUERY row sources accepted, preserve their AST type, and
-   create no table-dictionary entry for them.
-4. Add focused, one-query-per-method full-golden and position-based diagnostic
-   tests for the agreed positive and negative cases; update consumer guidance
-   only after the policy is approved.
+1. [x] Characterize parenthesized QUERY and bare TUPLE occurrences in both
+   registration orders.
+2. [x] Preserve each occurrence's contextual AST type and keep QUERY row
+   sources legal without creating QUERY-variable table-dictionary entries.
+3. [x] Use Entry 22 for mixed-name type contradictions.
+4. [x] Retire the standalone QUERY-versus-TUPLE warning proposal.
 
 **Out of scope:** rejecting all QUERY row sources, automatically retagging them
 as TUPLE, changing lexer tokens, or implementing variable substitution itself.
@@ -4534,23 +4533,22 @@ as TUPLE, changing lexer tokens, or implementing variable substitution itself.
 
 ## Entry 22 — Conflicting types for one substitution name
 
-**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
-not implemented.
+**Status:** Complete (2026-11-21); focused and bounded compatibility
+regressions pass.
 **Kind:** Diagnostic / substitution-map consistency enhancement.
 
-**Evidence:** use the [Entry 21 sample](#shared-evidence-and-sample-for-entries-2123)
-inside a larger statement that also uses the same variable as a bare TUPLE in
-another subquery. The owner observed this mixed-type use; exact larger-query
-reproduction and traversal-order characterization remain pending.
+**Evidence:** the query-3868 mixed QUERY/TUPLE pattern is covered in both
+registration orders, and traversal order is characterized across clause,
+nested-query, CASE, and DML placements. Exact reproduction of the larger
+legacy statement remains outside this focused remediation.
 
 ### Goal and proposal
 
 At substitution registration, compare every second and subsequent occurrence's
-contextual type with the type already registered for that name. Report a type
-conflict rather than silently replacing the registry value. The owner's
-preferred starting policy is to preserve the first registration and issue at
-least a severe warning, potentially a fatal diagnostic. Final severity is not
-yet decided.
+contextual type with the type already registered for that exact map key. Every
+occurrence whose type differs from the first registration emits a positioned
+`SUBSTITUTION_VARIABLE_TYPE_CONFLICT` severe warning. The public substitution
+map retains the first type and keeps its existing `name -> type` shape.
 
 ### Reasonableness and decisions
 
@@ -4560,34 +4558,37 @@ yet decided.
   last-write-wins behavior. It does not by itself make a conflicting statement
   valid or eliminate order-dependent behavior; diagnostics and downstream
   handling must make that explicit.
-- **Severity trade-off:** a fatal prevents potentially incompatible snippet
-  composition; a severe warning preserves authoring/inspection workflows but
-  must not be presented as proof that one snippet satisfies every occurrence.
-- **Compatibility question:** decide whether all unequal contextual types
-  conflict or whether explicitly justified compatible pairs are allowed.
-  For example, a column-reference fragment may also be a valid scalar
-  predicand. Do not silently coerce types or assume endpoint overlap proves
-  equivalent composition behavior.
-- Define identity using the existing variable-name normalization rules, and
-  decide the registry lifetime across nested scopes, SCRIPT statements, and
-  separate parser invocations. Do not accidentally introduce cross-parse state.
+- **Severity:** severe warning, not fatal, so legacy prevalence can be measured
+  without preventing parser output.
+- **Compatibility:** every unequal contextual type conflicts. Repeated
+  occurrences of the same conflicting type each receive their own diagnostic.
+- **Identity and lifetime:** exact existing map keys are used without new case
+  folding or normalization. Nested scopes in one SQL statement share the
+  registry; separate SCRIPT statements and parser invocations do not.
 - Preserve each AST occurrence's grammar-derived type even if the global map
-  retains the first type. Evaluate effects on dictionaries, binding, generation,
-  serialization, and consumers that currently expect one type per name.
+  retains the first type. Diagnostic-only occurrence locations are private and
+  do not alter AST or public substitution-map output. Row-source construction
+  and per-scope table-dictionary publication use the occurrence type, not the
+  retained public-map type.
 
 ### Phases and acceptance
 
-1. Inventory all substitution-registration paths and characterize current
-   overwrite behavior, including the QUERY/TUPLE example in both source orders.
-2. Agree conflict/compatibility, severity, registry lifetime, first-entry
-   retention, and repeated-diagnostic policies before changing registration.
-3. Diagnostics must identify the name, original/new types, and both occurrence
-   locations/scopes. Detect third and fourth conflicting occurrences as well;
-   decide whether they produce individual or aggregated diagnostics.
-4. Test same-name/same-type reuse, each approved conflicting or compatible pair,
-   nested/sibling scopes, reversed occurrence order, and parser reuse/reset.
-   Assert full AST/maps/dictionaries and exact positioned diagnostics, with one
-   SQL query per test method.
+1. [x] Route typed substitution registration through first-entry retention.
+2. [x] Emit one recoverable severe warning at every second or later conflicting
+   occurrence, identifying the name, first type, new type, line, and column.
+3. [x] Preserve occurrence-specific AST types and the public map's scalar value
+   shape; keep location tracking private and per statement.
+4. [x] Add twelve one-query full-golden regressions covering same-type reuse,
+   repeated conflicts of one later type, every contextual type as the first
+   registration followed by all six other types, both QUERY/TUPLE orderings
+   from the query-3868 pattern, and SCRIPT statement isolation.
+5. [x] Add twelve one-query placement regressions covering WHERE, GROUP BY,
+   HAVING, ORDER BY, QUALIFY, window partition/order expressions, shared CTE
+   and derived-query scope, CASE WHEN, INSERT, UPDATE, and DELETE. All assert
+   exact positioned diagnostics and complete parser-output goldens. The
+   focused 24-test class, a bounded 286-test substitution/alias/script/
+   set-operation selection, and the 280-test occurrence-aware tuple-source
+   follow-up selection pass; the full suite was intentionally not run.
 
 **Out of scope:** silently renaming variables, rewriting occurrence types,
 selecting a usable binding for the author, or silently changing the public
@@ -4599,8 +4600,9 @@ substitution-map value shape.
 
 ## Entry 23 — Opaque QUERY-variable row-source column binding
 
-**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
-not implemented.
+**Status:** Partially specified (2026-11-21); Entry 22 interactions and the
+symbol-table representation are decided below. Implementation and regression
+coverage remain open.
 **Kind:** Resolution / symbol-table metadata enhancement.
 
 **Evidence:** the [Entry 21 sample](#shared-evidence-and-sample-for-entries-2123)
@@ -4609,16 +4611,16 @@ Names in the enclosing SELECT's query dictionary establish output identity,
 not successful resolution of the WHERE, GROUP BY, or SELECT input references.
 The [query-substitution presumed-lineage report](<./514 defect and enhancement requirements/query-substitution-single-source-binding-defect.md>)
 adds qualified and tuple controls, corpus cases, and a proposed placeholder
-shape. Treat that shape as design input, not an approved public schema; preserve
-the owner-specified diagnostic and design decisions below.
+shape. The constrained synthetic-scope form approved below supersedes the
+report's broader design alternatives.
 
-### Goal and proposal
+### Goal
 
-Consider associating otherwise unresolved columns with a visible opaque
-QUERY-variable row source, rather than reporting them as having no possible
-source. Preserve `type=query` and the owner's rule that such a source does
-**not** become a table-dictionary entry. Distinguish an assumed/deferred source
-binding from validation against an actual exported query interface.
+Associate eligible external column references with a visible opaque
+QUERY-variable row source without inventing an internal query body. Preserve
+`type=query` and the owner's rule that such a source does **not** become a
+table-dictionary entry. The published structure records required presumed
+outputs, not validated exports.
 
 **Owner-specified warning (2026-11-19):** if columns are credited to the QUERY
 variable as presumed outputs, still emit a **warning**, replacing the generic
@@ -4633,63 +4635,117 @@ names presumed to come from that occurrence's row source, across the relevant
 clauses. Anchor the diagnostic's source location/hyperlink at the **QUERY
 variable occurrence in the SQL text**, not at the first presumed column.
 Do not suppress unrelated unresolved, ambiguous, or conflicting-type
-diagnostics. This warning policy is specified; the source representation and
-eligibility rules remain proposals pending discussion and implementation.
+diagnostics.
 
-### Representation options and trade-offs
+### Decisions inherited from Entry 22
 
-- **Owner's candidate:** represent the placeholder using an alias and a
-  synthetic `def_queryN` scope containing the minimum interface/query-dictionary
-  metadata needed to record columns required by surrounding clauses.
-- **Benefit:** existing alias-to-query traversal could expose these dependencies
-  without pretending the placeholder is a physical table.
-- **Risk:** ordinary `def_queryN` payloads describe parsed scopes and exported
-  outputs. A synthetic payload could falsely imply a real SELECT body or proven
-  exports. An explicit opaque/inferred marker and substitution link may be
-  necessary; their schema and consumer compatibility are not yet approved.
-- **Alternative for discussion:** explicit opaque-row-source metadata linked
-  from the existing alias, rather than fabricating a normal query scope.
-  Compare consumer work and compatibility before choosing either format.
-- Preserve an explicit author alias such as `fund_agg`. Decide whether the
-  variable name is a source identity, a fallback alias, or both; do not overwrite
-  aliases or derive colliding scope keys directly from variable text.
-- Record all required SELECT/aggregate-argument, WHERE, GROUP BY, JOIN/ON, and
-  other clause occurrences with their token evidence and roles. Do not add
-  WHERE-only names to the enclosing SELECT's output dictionary or interface.
-- Keep inferred requirements occurrence/scope-aware when one name appears in
-  several subqueries. Do not let another occurrence's table dictionary or
-  inferred columns leak into this scope as proof of resolution.
-- Define ambiguity behavior for multiple visible opaque sources, or opaque
-  sources mixed with physical/known query sources. A single opaque source does
-  not justify choosing arbitrarily when several sources could supply a name.
-- Replace generic unresolved reporting only for references actually credited
-  under the approved policy, retaining the owner-specified presumed-output
-  warning above. Decide how Entry 21 guidance relates without redundant advice.
-  Real existence/export validation requires an available bound snippet; do not
-  claim the parser already performs that later validation.
+1. [x] The exact substitution-map key is retained without normalization.
+2. [x] The first contextual type remains the public `name -> type` value.
+3. [x] Every occurrence retains its own AST type; Entry 23 must determine
+   QUERY-source eligibility from that occurrence, never from the retained
+   public-map type.
+4. [x] Nested scopes share the statement registry, while SCRIPT statements are
+   isolated.
+5. [x] Mixed QUERY/TUPLE use receives the Entry 22 severe warning. Entry 23 may
+   still publish positional QUERY presumed outputs and positional TUPLE table
+   metadata; it must not add a second type-choice warning.
+6. [x] Row-source construction and per-scope table-dictionary publication are
+   occurrence-aware.
+
+### Approved synthetic `def_queryN` design
+
+Implement the opaque QUERY occurrence by following the normal parsed-query
+source path as closely as possible:
+
+1. Allocate a unique `queryN` for **each QUERY-variable row-source occurrence**.
+   Never key the scope by substitution name and never share one synthetic scope
+   between occurrences.
+2. Publish a nested `def_queryN` containing only:
+   - `interface`: one key for each external column that must be exported by the
+     eventual bound query. Use an empty dependency list (`column=[]`) because
+     no internal source lineage is known.
+   - `query_dictionary`: the same output keys with the deduplicated tokens of
+     the external references that established each requirement. This bucket is
+     non-empty whenever a presumed interface column exists.
+3. Do **not** add `table_dictionary`, filters, grouping, ordering, internal
+   aliases, a fabricated SELECT body, or any other internal query structure to
+   the synthetic scope. Clause roles remain in the enclosing query's normal
+   buckets.
+4. Register a FROM/JOIN alias through the normal parent `table_alias` map:
+   `fund_agg=queryN`. Register a CTE name through the same `context_list` and
+   companion alias behavior used for a real parsed CTE body. Reuse the existing
+   query-source registration helpers rather than introducing a second alias
+   convention.
+5. Parent references retain their normal `{name, table_ref=<author alias>}`
+   shapes. Consumers resolve that alias to `queryN`, open `def_queryN`, and find
+   the required name in its interface.
+
+Illustrative minimum output:
+
+```text
+def_query0={
+  query_dictionary={
+    partnercontact_id=[<external reference tokens>],
+    eab_fund_type=[<external reference tokens>]
+  },
+  interface={
+    partnercontact_id=[],
+    eab_fund_type=[]
+  }
+}
+table_alias={fund_agg=query0}
+```
+
+The empty interface dependency lists and the owner-specified warning together
+mean “required presumed output with unknown internal lineage.” They must not be
+described as validated exports.
+
+### Eligibility and collection rules
+
+- A qualified reference such as `fund_agg.col` is eligible when `fund_agg`
+  resolves to this QUERY occurrence.
+- An unqualified reference is eligible only when normal scope resolution leaves
+  exactly this opaque QUERY source as the single possible visible source.
+  Multiple opaque, physical, or concrete-query candidates remain unresolved or
+  ambiguous under existing rules.
+- Collect required names from SELECT expressions and aggregate arguments,
+  WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY, window clauses, and JOIN/ON.
+  Preserve every reference token in `query_dictionary`; deduplicate interface
+  keys and the diagnostic's displayed name list.
+- Missing columns on a concrete parsed query remain invalid. Presumed binding
+  applies only when the QUERY variable has no query AST to inspect.
+- One variable name used in several scopes or occurrences creates independent
+  `queryN` scopes and independent warnings.
+- Replace the generic unresolved diagnostic only for references actually
+  credited to the synthetic scope. Emit one presumed-output warning per QUERY
+  occurrence, anchored at that variable token. Real validation requires the
+  eventual bound snippet and is outside parser scope.
 
 ### Phases and acceptance
 
-1. Characterize the standalone sample, a nested wrapper, and mixed QUERY/TUPLE
-   reuse. Coordinate with Entry 22 so registry conflicts cannot silently change
-   source eligibility.
-2. Approve the opaque-source representation, assumed-versus-validated status,
-   token ownership, scope visibility, ambiguity, and diagnostic policies.
-3. Test qualified and unqualified references in SELECT/aggregate arguments,
+1. [x] Characterize mixed QUERY/TUPLE reuse and prevent the retained public-map
+   type from changing positional source behavior.
+2. [x] Approve the synthetic `def_queryN` representation, presumed status,
+   token ownership, scope visibility, ambiguity, and diagnostic policies above.
+3. [ ] Implement per-occurrence synthetic scope allocation, external-reference
+   collection, normal alias/CTE registration, and warning replacement.
+4. [ ] Test qualified and unqualified references in SELECT/aggregate arguments,
    WHERE, GROUP BY, and JOIN/ON; include multiple-source ambiguity, repeated
    names, and inaccessible sibling/ancestor-scope controls.
-4. Keep missing concrete columns on closed, parsed query interfaces invalid.
+5. [ ] Keep missing concrete columns on closed, parsed query interfaces invalid.
    Do not admit condition, column, predicand, in-list, or join-extension
    substitutions as row sources merely because they are variables.
-5. Assert no QUERY-variable table-dictionary entry; correct clause lineage and
-   token coverage; unchanged surrounding output boundaries; and explicit
-   assumed/deferred status in the approved representation. Use independent
-   full-golden tests and positioned diagnostics. Assert the exact presumed-output
-   warning, its deduplicated column list, and its location/hyperlink target at
-   the applicable QUERY variable occurrence. Repeated column uses must not
-   duplicate names in the message; unrelated diagnostics must remain intact.
-6. Document any published schema/consumer impact and update the symbol-table
-   and dictionary guides before implementation is accepted.
+6. [ ] Assert no QUERY-variable table-dictionary entry; correct clause lineage
+   and token coverage; unchanged surrounding output boundaries; and explicit
+   presumed status through empty interface dependencies plus the warning. Use
+   independent full-golden tests and positioned diagnostics. Assert the exact
+   presumed-output warning, its deduplicated column list, and its
+   location/hyperlink target at the applicable QUERY variable occurrence.
+   Repeated column uses must not duplicate names in the message; unrelated
+   diagnostics must remain intact.
+7. [ ] Document the synthetic-scope contract in the symbol-table and dictionary
+   guides, regenerate the vendor mirror, and verify consumer compatibility
+   before implementation is accepted.
 
 **Out of scope:** restoring type-agnostic 5.0.0 table collection, inventing
 verified exports or a real SQL body, bypassing normal concrete-subquery

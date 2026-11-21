@@ -3,6 +3,7 @@ package astwalkers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -100,6 +101,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				"SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR";
 		public static final String DIAG_SQL_STATEMENT_MIXED_DIALECT_GRAMMAR =
 				"SQL_STATEMENT_MIXED_DIALECT_GRAMMAR";
+		public static final String DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT =
+				"SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
@@ -149,6 +152,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * Collect Substitution Variable List
 	 */
 	public HashMap<String, Object> substitutionsMap;
+	private final IdentityHashMap<Map<String, Object>, Token> substitutionOccurrenceTokens =
+			new IdentityHashMap<Map<String, Object>, Token>();
+	private final IdentityHashMap<Map<String, Object>, HashSet<String>> tupleSubstitutionSourceRefsByScope =
+			new IdentityHashMap<Map<String, Object>, HashSet<String>>();
 
 	/**
 	 * Accumulates qualified unresolved entries (with locations) across nested scopes
@@ -363,6 +370,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR,
 				 "STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				 "%s at (l:%s c:%s) is recognized as PostgreSQL-specific grammar.");
+		 registerDiagnostic(
+				 DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT,
+				 "SUBSTITUTION_VARIABLE_TYPE_CONFLICT",
+				 "First occurrence of %s registered as %s. Conflicting variable of type %s found at (l:%s c:%s).");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -401,6 +412,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		getWalkerTableDictionary().clear();
 		queryColumnDictionaryMap.clear();
 		substitutionsMap.clear();
+		substitutionOccurrenceTokens.clear();
+		tupleSubstitutionSourceRefsByScope.clear();
 		globalQualifiedUnresolvedLocations.clear();
 		emittedQualifiedSourceNotFoundKeys.clear();
 	}
@@ -2994,11 +3007,69 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (subMap.containsKey(getASTWALKER_SUBSTITUTION_KEY())) {
 			Map<String, Object> hold = (Map<String, Object>) subMap.get(getASTWALKER_SUBSTITUTION_KEY());
 			if (!hold.containsKey(getASTWALKER_TYPE_KEY())) {
-				hold.put(getASTWALKER_TYPE_KEY(), type);
-				substitutionsMap.put((String) hold.get("name"), type);
+				registerSubstitutionVariable(hold, type);
 			}
 		}
 		return subMap;
+	}
+
+	public void rememberSubstitutionOccurrence(Map<String, Object> substitution, Token token) {
+		if (substitution != null && token != null) {
+			substitutionOccurrenceTokens.put(substitution, token);
+		}
+	}
+
+	public void registerSubstitutionVariable(Map<String, Object> substitution, String type) {
+		if (substitution == null || type == null) {
+			return;
+		}
+		substitution.put(getASTWALKER_TYPE_KEY(), type);
+		Object nameObject = substitution.get(MUMBLE_NAME_KEY);
+		if (!(nameObject instanceof String name)) {
+			return;
+		}
+		if (MUMBLE_TUPLE_KEY.equals(type)) {
+			HashSet<String> references = tupleSubstitutionSourceRefsByScope.computeIfAbsent(
+					symbolTable,
+					scope -> new HashSet<String>());
+			references.add(normalizeTableReference(name));
+		}
+		Object originalType = substitutionsMap.get(name);
+		if (originalType == null) {
+			substitutionsMap.put(name, type);
+			return;
+		}
+		if (originalType.equals(type)) {
+			return;
+		}
+		Token token = substitutionOccurrenceTokens.get(substitution);
+		Integer line = token == null ? null : token.getLine();
+		Integer charPosition = token == null ? null : token.getCharPositionInLine();
+		String message = String.format(
+				getDiagnosticMessage(DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT),
+				name,
+				originalType,
+				type,
+				line,
+				charPosition);
+		addWalkerDiagnostic(
+				errorhandling.ParseDiagnostic.Severity.SEVERE_WARNING,
+				getDiagnosticCode(DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT),
+				message,
+				line,
+				charPosition,
+				getClass().getSimpleName(),
+				null,
+				name,
+				true,
+				"ast-walk",
+				null,
+				null);
+	}
+
+	public HashSet<String> detachTupleSubstitutionSourceRefsForCurrentScope() {
+		HashSet<String> references = tupleSubstitutionSourceRefsByScope.remove(symbolTable);
+		return references == null ? new HashSet<String>() : references;
 	}
 
 	/*

@@ -5005,6 +5005,8 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
 		if (localTableCollection == null)
 			localTableCollection = new HashMap<String, Object>();
+		Set<String> localTupleSubstitutionSourceRefs =
+				walker.detachTupleSubstitutionSourceRefsForCurrentScope();
 		convertProfileLocalTableDictSize = localTableCollection.size();
 		HashMap<String, Object> localTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TARGET_TABLE_KEY);
 		if (localTargetTableCollection == null)
@@ -5977,11 +5979,10 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> tableDictionaryForSymbolTable = new HashMap<String, Object>();
 		for (Map.Entry<String, Object> tableEntry : localTableCollection.entrySet()) {
 			String tableRef = tableEntry.getKey();
-			if (tableRef != null && tableRef.startsWith("<")) {
-				Object substitutionType = walker.substitutionsMap == null ? null : walker.substitutionsMap.get(tableRef);
-				if (substitutionType != null && !MUMBLE_TUPLE_KEY.equals(substitutionType.toString())) {
-					continue;
-				}
+			if (tableRef != null
+					&& tableRef.startsWith("<")
+					&& !localTupleSubstitutionSourceRefs.contains(tableRef)) {
+				continue;
 			}
 			if (tableRef == null
 					|| tableRef.isBlank()
