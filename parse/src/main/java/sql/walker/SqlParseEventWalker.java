@@ -11269,7 +11269,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			form = ctx.level.identifier() != null ? "IDENTIFIER" : MUMBLE_EXTRACT_PART_FORM_KEYWORD;
 		}
-		if (DatetimePartRegistry.findCanonical(text).isEmpty()) {
+		if (!DatetimePartRegistry.isSupported(DatetimePartRegistry.Family.ADD_DIFF, text)) {
 			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 		}
 		Map<String, Object> level = new LinkedHashMap<>();
@@ -11307,7 +11307,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			form = ctx.level.identifier() != null ? "IDENTIFIER" : MUMBLE_EXTRACT_PART_FORM_KEYWORD;
 		}
-		if (DatetimePartRegistry.findCanonical(text).isEmpty()) {
+		if (!DatetimePartRegistry.isSupported(DatetimePartRegistry.Family.ADD_DIFF, text)) {
 			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 		}
 		Map<String, Object> level = new LinkedHashMap<>();
@@ -11409,7 +11409,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (valueObj == null) {
 			valueObj = subMap.remove("2");
 		}
-		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+		if (!DatetimePartRegistry.isSupported(
+				DatetimePartRegistry.Family.TRUNCATION,
+				normalizeExtractPartText(levelObj))) {
 			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 		}
 		subMap.clear();
@@ -11431,7 +11433,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (levelObj == null) {
 			levelObj = subMap.remove("2");
 		}
-		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+		if (!DatetimePartRegistry.isSupported(
+				DatetimePartRegistry.Family.TRUNCATION,
+				normalizeExtractPartText(levelObj))) {
 			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 		}
 		subMap.clear();
@@ -11461,7 +11465,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (boundaryObj == null) {
 			boundaryObj = subMap.remove("4");
 		}
-		if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+		if (!DatetimePartRegistry.isSupported(
+				DatetimePartRegistry.Family.TIME_SLICE,
+				normalizeExtractPartText(levelObj))) {
 			diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 		}
 		if (boundaryObj != null && !isSupportedSnowflakeTimeSliceBoundary(boundaryObj)) {
@@ -11509,7 +11515,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		function.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
 		function.put(MUMBLE_VALUE_KEY, walker.stampPredicandSubstitutionsInValueSubtree(liftExtractSourceNode(valueObj)));
 		if (levelObj != null) {
-			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(levelObj)).isEmpty()) {
+			if (!DatetimePartRegistry.isSupported(
+					DatetimePartRegistry.Family.LAST_DAY,
+					normalizeExtractPartText(levelObj))) {
 				diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), ctx.level.getStart());
 			}
 			function.put(MUMBLE_DATETIME_LEVEL_KEY, buildDatetimeMetadata(levelObj, true));
@@ -12363,7 +12371,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (lower.equals("date_trunc")) {
-			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(arg1)).isEmpty()) {
+			if (!DatetimePartRegistry.isSupported(
+					DatetimePartRegistry.Family.TRUNCATION,
+					normalizeExtractPartText(arg1))) {
 				diagnosticService.emitInvalidDatetimePart(functionName.toUpperCase(Locale.ROOT), anchor);
 			}
 			subMap.remove(MUMBLE_FUNCTION_KEY);
@@ -12371,8 +12381,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		if (lower.equals("trunc")) {
-			if (DatetimePartRegistry.findCanonical(normalizeExtractPartText(arg2)).isEmpty()) {
+		if (lower.equals("trunc") || lower.equals("truncate")) {
+			if (!DatetimePartRegistry.isSupported(
+					DatetimePartRegistry.Family.TRUNCATION,
+					normalizeExtractPartText(arg2))) {
 				return;
 			}
 			subMap.remove(MUMBLE_FUNCTION_KEY);

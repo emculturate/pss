@@ -360,6 +360,128 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	}
 
 	@Test
+	public void numericTruncateRemainsGenericControl() {
+		SqlParserAccess parser = parseEndpoint("select truncate(42.75, 1) as rounded from events", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		assertOutputs(parser,
+				"{SQL={select={1={function={parameters={1={literal=42.75}, 2={literal=1}}, function_name=truncate}, alias=rounded}}, from={table={alias=null, table=events}}}}",
+				"[rounded]",
+				"{}",
+				"{events={}}",
+				"{query0={rounded=[[@10,29:35='rounded',<459>,1:29]]}}",
+				"{def_query0={query_dictionary={rounded=[[@10,29:35='rounded',<459>,1:29]]}, table_dictionary={events={}}, interface={rounded=[]}}}",
+				"null");
+	}
+
+	@Test
+	public void qualifiedTruncateRemainsGenericControl() {
+		SqlParserAccess parser = parseEndpoint(
+				"select custom.truncate(a.ts, a.day) as bucket from events a",
+				"SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 0, parser.getAllDiagnostics().size());
+		assertOutputs(parser,
+				"{SQL={select={1={function={schema=custom, parameters={1={column={name=ts, table_ref=a}}, 2={column={name=day, table_ref=a}}}, function_name=truncate}, alias=bucket}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={day=[[@9,29:29='a',<459>,1:29]], ts=[[@5,23:23='a',<459>,1:23]]}}",
+				"{query0={bucket=[[@14,39:44='bucket',<459>,1:39]]}}",
+				"{def_query0={query_dictionary={bucket=[[@14,39:44='bucket',<459>,1:39]]}, table_dictionary={events={day=[[@9,29:29='a',<459>,1:29]], ts=[[@5,23:23='a',<459>,1:23]]}}, interface={bucket=[{name=ts, table_ref=a}, {name=day, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionDatetimeTruncateBarePartUsesStructuredAst() {
+		SqlParserAccess parser = parseEndpoint("select truncate(a.ts, day) as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_trunc_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=truncate, level={canonical=DAY, text=day, form=KEYWORD}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@3,16:16='a',<459>,1:16]]}}",
+				"{query0={bucket=[[@10,30:35='bucket',<459>,1:30]]}}",
+				"{def_query0={query_dictionary={bucket=[[@10,30:35='bucket',<459>,1:30]]}, table_dictionary={events={ts=[[@3,16:16='a',<459>,1:16]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionDatetimeTruncateQuotedPartUsesStructuredAst() {
+		SqlParserAccess parser = parseEndpoint("select truncate(a.ts, 'day') as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_trunc_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=truncate, level={canonical=DAY, text=day, form=STRING}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@3,16:16='a',<459>,1:16]]}}",
+				"{query0={bucket=[[@10,32:37='bucket',<459>,1:32]]}}",
+				"{def_query0={query_dictionary={bucket=[[@10,32:37='bucket',<459>,1:32]]}, table_dictionary={events={ts=[[@3,16:16='a',<459>,1:16]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionDateTruncAcceptsWeekIsoAlias() {
+		SqlParserAccess parser = parseEndpoint("select date_trunc('week_iso', a.ts) as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_date_trunc_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=date_trunc, level={canonical=WEEK_ISO, text=week_iso, form=STRING}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@5,30:30='a',<459>,1:30]]}}",
+				"{query0={bucket=[[@10,39:44='bucket',<459>,1:39]]}}",
+				"{def_query0={query_dictionary={bucket=[[@10,39:44='bucket',<459>,1:39]]}, table_dictionary={events={ts=[[@5,30:30='a',<459>,1:30]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionTruncAcceptsWeekIsoAlias() {
+		SqlParserAccess parser = parseEndpoint("select trunc(a.ts, 'week_iso') as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_trunc_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=trunc, level={canonical=WEEK_ISO, text=week_iso, form=STRING}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@3,13:13='a',<459>,1:13]]}}",
+				"{query0={bucket=[[@10,34:39='bucket',<459>,1:34]]}}",
+				"{def_query0={query_dictionary={bucket=[[@10,34:39='bucket',<459>,1:34]]}, table_dictionary={events={ts=[[@3,13:13='a',<459>,1:13]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionDatePartDowIsSharedInsideDateadd() {
+		SqlParserAccess parser = parseEndpoint(
+				"select dateadd(day, date_part(dow, a.ts), a.ts) as shifted from events a",
+				"SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_datetime_add_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=shifted, datetime_function={function_name=dateadd, level={canonical=DAY, text=day, form=KEYWORD}, increment={datetime_function={function_name=date_part, part_form=KEYWORD, part=dow, source={column={name=ts, table_ref=a}}}}, value={column={name=ts, table_ref=a}}}}}, from={table={alias=a, table=events}}}}",
+				"[shifted]",
+				"{}",
+				"{events={ts=[[@9,35:35='a',<459>,1:35], [@14,42:42='a',<459>,1:42]]}}",
+				"{query0={shifted=[[@19,51:57='shifted',<459>,1:51]]}}",
+				"{def_query0={query_dictionary={shifted=[[@19,51:57='shifted',<459>,1:51]]}, table_dictionary={events={ts=[[@9,35:35='a',<459>,1:35], [@14,42:42='a',<459>,1:42]]}}, interface={shifted=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
 	public void regressionDmlInsertPlacementForDateTrunc() {
 		SqlParserAccess insertParse = parseEndpoint("insert into archive_events (bucket) select date_trunc(day, e.created_at) as bucket from events e", "SQL");
 		Assert.assertEquals(insertParse.getAllDiagnostics().toString(), 1, insertParse.getAllDiagnostics().size());
@@ -789,10 +911,10 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 	}
 
 	@Test
-	public void regressionMixedAffinityFatalForExtractAndDatePart() {
+	public void regressionDowSharedAffinityForExtractAndDatePart() {
 		String mixed = "SELECT EXTRACT(epoch_second FROM ts), DATE_PART(DOW FROM order_date) FROM orders";
 		SqlParserAccess mixedParser = parseEndpoint(mixed, "SQL");
-		Assert.assertEquals(mixedParser.getAllDiagnostics().toString(), 2, mixedParser.getAllDiagnostics().size());
+		Assert.assertEquals(mixedParser.getAllDiagnostics().toString(), 1, mixedParser.getAllDiagnostics().size());
 		assertDiagnosticAtPosition(mixedParser.getSnippet(),
 				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
@@ -800,12 +922,6 @@ public class SqlEventWalkerDatetimeTruncExtractTests extends AbstractSqlParseEve
 				null,
 				1,
 				7);
-		assertFatalDiagnosticAtPosition(mixedParser.getSnippet(),
-				"STATEMENT_MIXED_DIALECT_GRAMMAR",
-				"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:38); unlikely to run on either engine.",
-				null,
-				1,
-				38);
 		assertOutputs(mixedParser,
 				"{SQL={select={1={datetime_function={function_name=EXTRACT, part_form=KEYWORD, part=epoch_second, source={column={name=ts, table_ref=null}}}}, 2={datetime_function={function_name=DATE_PART, part_form=KEYWORD, part=DOW, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}",
 				"[unnamed_1, unnamed_0]",

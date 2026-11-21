@@ -244,6 +244,54 @@ public class SqlEventWalkerDatetimeBoundarySliceTests extends AbstractSqlParseEv
 	}
 
 	@Test
+	public void regressionLastDayRejectsKnownHourPart() {
+		SqlParserAccess parser = parseEndpoint("select last_day(a.ts, 'hour') as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_last_day_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(),
+				"INVALID_DATETIME_PART",
+				"Invalid date/time part 'hour' for LAST_DAY at (l:1 c:22).",
+				"'hour'",
+				1,
+				22);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=last_day, value={column={name=ts, table_ref=a}}, level={canonical=HOUR, text=hour, form=STRING}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@3,16:16='a',<459>,1:16]]}}",
+				"{query0={bucket=[[@10,33:38='bucket',<459>,1:33]]}}",
+				"{def_query0={query_dictionary={bucket=[[@10,33:38='bucket',<459>,1:33]]}, table_dictionary={events={ts=[[@3,16:16='a',<459>,1:16]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
+	public void regressionTimeSliceRejectsKnownMillisecondPart() {
+		SqlParserAccess parser = parseEndpoint("select time_slice(a.ts, 1, 'millisecond') as bucket from events a", "SQL");
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"snowflake_time_slice_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
+				null, 1, 7);
+		assertFatalDiagnosticAtPositionWithFullMessage(parser.getSnippet(),
+				"INVALID_DATETIME_PART",
+				"Invalid date/time part 'millisecond' for TIME_SLICE at (l:1 c:27).",
+				"'millisecond'",
+				1,
+				27);
+		assertOutputs(parser,
+				"{SQL={select={1={alias=bucket, datetime_function={function_name=time_slice, value={column={name=ts, table_ref=a}}, slice_length={literal=1}, level={canonical=MILLISECOND, text=millisecond, form=STRING}}}}, from={table={alias=a, table=events}}}}",
+				"[bucket]",
+				"{}",
+				"{events={ts=[[@3,18:18='a',<459>,1:18]]}}",
+				"{query0={bucket=[[@12,45:50='bucket',<459>,1:45]]}}",
+				"{def_query0={query_dictionary={bucket=[[@12,45:50='bucket',<459>,1:45]]}, table_dictionary={events={ts=[[@3,18:18='a',<459>,1:18]]}}, interface={bucket=[{name=ts, table_ref=a}]}, table_alias={a=events}}}",
+				"null");
+	}
+
+	@Test
 	public void malformedNextDayInvalidWeekdayFatal() {
 		SqlParserAccess parser = parseEndpoint("select next_day(a.created_at, moonday) as next_mon from events a", "SQL");
 		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
@@ -617,19 +665,13 @@ public class SqlEventWalkerDatetimeBoundarySliceTests extends AbstractSqlParseEv
 	}
 
 	@Test
-	public void regressionMixedAffinityFatalForBoundaryFamily() {
+	public void regressionDowSharedAffinityForBoundaryFamily() {
 		SqlParserAccess parser = parseEndpoint("select time_slice(created_at, 15, minute, start), date_part(dow from order_date) from orders", "SQL");
-		Assert.assertEquals(parser.getAllDiagnostics().toString(), 2, parser.getAllDiagnostics().size());
+		Assert.assertEquals(parser.getAllDiagnostics().toString(), 1, parser.getAllDiagnostics().size());
 		assertDiagnosticAtPosition(parser.getSnippet(), "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
 				"snowflake_time_slice_expression at (l:1 c:7) is recognized as Snowflake-specific grammar.",
 				null, 1, 7);
-		assertFatalDiagnosticAtPosition(parser.getSnippet(),
-				"STATEMENT_MIXED_DIALECT_GRAMMAR",
-				"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:1 c:50); unlikely to run on either engine.",
-				null,
-				1,
-				50);
 		assertOutputs(parser,
 				"{SQL={select={1={datetime_function={function_name=time_slice, value={column={name=created_at, table_ref=null}}, slice_length={literal=15}, level={canonical=MINUTE, text=minute, form=KEYWORD}, boundary={canonical=START, text=start, form=KEYWORD}}}, 2={datetime_function={function_name=date_part, part_form=KEYWORD, part=dow, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}",
 				"[unnamed_1, unnamed_0]",

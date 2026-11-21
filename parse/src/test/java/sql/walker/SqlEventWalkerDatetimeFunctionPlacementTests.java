@@ -2591,6 +2591,22 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 				Assert.assertEquals(alias, part.getKey(), DatetimePartRegistry.findCanonical(alias).orElseThrow());
 			}
 		}
+		Assert.assertEquals(
+				Set.of("DAY", "HOUR", "MICROSECOND", "MILLISECOND", "MINUTE", "MONTH",
+						"NANOSECOND", "QUARTER", "SECOND", "WEEK", "WEEK_ISO", "YEAR", "YEAROFWEEKISO"),
+				Set.copyOf(DatetimePartRegistry.canonicalValues(DatetimePartRegistry.Family.TRUNCATION)));
+		Assert.assertEquals(
+				Set.of("DAY", "HOUR", "MINUTE", "MONTH", "QUARTER", "SECOND", "WEEK", "YEAR"),
+				Set.copyOf(DatetimePartRegistry.canonicalValues(DatetimePartRegistry.Family.TIME_SLICE)));
+		Assert.assertEquals(
+				Set.of("MONTH", "QUARTER", "WEEK", "YEAR"),
+				Set.copyOf(DatetimePartRegistry.canonicalValues(DatetimePartRegistry.Family.LAST_DAY)));
+		Assert.assertEquals("WEEK_ISO",
+				DatetimePartRegistry.findCanonical(DatetimePartRegistry.Family.TRUNCATION, "weekiso").orElseThrow());
+		Assert.assertTrue(DatetimePartRegistry.findCanonical(
+				DatetimePartRegistry.Family.LAST_DAY, "hour").isEmpty());
+		Assert.assertTrue(DatetimePartRegistry.findCanonical(
+				DatetimePartRegistry.Family.TIME_SLICE, "millisecond").isEmpty());
 	}
 
 	@Test
@@ -4321,13 +4337,13 @@ public class SqlEventWalkerDatetimeFunctionPlacementTests extends AbstractSqlPar
 	}
 
 	@Test
-	public void diffFamilySetHScriptResetsDialectAffinityPerStatementV0Test() {
+	public void diffFamilySetHScriptResetsSharedAliasAffinityPerStatementV0Test() {
 		final String script = "select datediff(day, a.created_at, a.resolved_at) as delta_days from events a; select extract(dow from b.created_at) as dow_part from events b";
 		final SQLSelectParserParser parser = parse(script);
 		SqlParseEventWalker extractor = runScriptParsertest(script, parser);
 		Assert.assertEquals(script, 0, parser.getNumberOfSyntaxErrors());
 		Assert.assertEquals(0, extractor.getSnippet().getFatalErrorCount());
 		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());
-		Assert.assertEquals(1, extractor.getPostgresDialectGrammarCount());
+		Assert.assertEquals(0, extractor.getPostgresDialectGrammarCount());
 	}
 }

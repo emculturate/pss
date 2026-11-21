@@ -1771,7 +1771,7 @@ snowflake_date_trunc_expression
   ;
 
 snowflake_datetime_trunc_expression
-  : function=TRUNC
+  : function=(TRUNC | TRUNCATE)
     LEFT_PAREN datetime_value=value_expression
     COMMA level=datetime_part RIGHT_PAREN
   ;

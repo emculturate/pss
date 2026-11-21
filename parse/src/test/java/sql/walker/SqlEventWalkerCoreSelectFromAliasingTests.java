@@ -3771,8 +3771,8 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	}
 
 	@Test
-	public void extractDowPostgresDialectWarningAndCounterInBasicSelect() {
-		final String query = "SELECT EXTRACT(DOW FROM order_date) FROM orders";
+	public void extractCenturyPostgresDialectWarningAndCounterInBasicSelect() {
+		final String query = "SELECT EXTRACT(CENTURY FROM order_date) FROM orders";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());
@@ -3782,7 +3782,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"EXTRACT/DATE_PART option 'DOW'",
+				"EXTRACT/DATE_PART option 'CENTURY'",
 				null,
 				1,
 				7);
@@ -3791,7 +3791,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	@Test
 	public void mixedPostgresExtractAndSnowflakeQualifyFatalWithCounters() {
 		final String query =
-				"SELECT EXTRACT(DOW FROM order_date) FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1";
+				"SELECT EXTRACT(CENTURY FROM order_date) FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Assert.assertEquals(1, extractor.getSnowflakeDialectGrammarCount());
@@ -3801,7 +3801,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"DOW",
+				"CENTURY",
 				null,
 				1,
 				7);
@@ -3811,14 +3811,14 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"unlikely to run on either engine",
 				null,
 				1,
-				48);
+				52);
 	}
 
 	@Test
 	public void scriptResetsDialectGrammarCountersPerStatement() {
 		final String script =
 				"SELECT order_date FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1;"
-						+ " SELECT EXTRACT(DOW FROM order_date) FROM orders;";
+						+ " SELECT EXTRACT(CENTURY FROM order_date) FROM orders;";
 		final SQLSelectParserParser parser = parse(script);
 		SqlParseEventWalker extractor = runScriptParsertest(script, parser);
 		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());

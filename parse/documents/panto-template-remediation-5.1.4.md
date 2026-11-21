@@ -210,7 +210,7 @@ must not infer that order from map iteration.
 | `DATEADD`, `TIMEADD`, `TIMESTAMPADD` | `level`, `increment`, `value` |
 | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF` | `level`, `left`, `right` |
 | `DATE_TRUNC` | `level`, `value` |
-| datetime `TRUNC` | `value`, optional `level` |
+| datetime `TRUNC`, `TRUNCATE` | `value`, `level` |
 | `TIME_SLICE` | `value`, `slice_length`, `level`, optional `boundary` |
 | `LAST_DAY` | `value`, optional `level` |
 | `NEXT_DAY`, `PREVIOUS_DAY` | `value`, `weekday` |
@@ -235,6 +235,11 @@ List<String> parts = DatetimePartRegistry.canonicalValues();
 // [DAY, HOUR, MICROSECOND, MILLISECOND, MINUTE, MONTH,
 //  NANOSECOND, QUARTER, SECOND, WEEK, YEAR]
 
+List<String> truncationParts =
+    DatetimePartRegistry.canonicalValues(DatetimePartRegistry.Family.TRUNCATION);
+// [DAY, HOUR, MICROSECOND, MILLISECOND, MINUTE, MONTH, NANOSECOND,
+//  QUARTER, SECOND, WEEK, WEEK_ISO, YEAR, YEAROFWEEKISO]
+
 Optional<List<String>> aliases =
     DatetimePartRegistry.aliasesForCanonical("YEAR");
 // Present: [y, year, years, yr, yrs, yy, yyy, yyyy]
@@ -242,19 +247,32 @@ Optional<List<String>> aliases =
 Optional<String> canonical = DatetimePartRegistry.findCanonical("Yy");
 // Present: YEAR
 
+Optional<String> truncationCanonical =
+    DatetimePartRegistry.findCanonical(
+        DatetimePartRegistry.Family.TRUNCATION, "weekiso");
+// Present: WEEK_ISO
+
 boolean found = DatetimePartRegistry.findCanonical("not_a_part").isPresent();
 // false
 ```
 
-- `canonicalValues()` discovers all currently registered canonical names as an
-  immutable, alphabetically sorted list of uppercase values. Use these to
-  populate prompts or call `aliasesForCanonical` without hardcoded names.
+- `canonicalValues()` retains the original add/diff-family discovery contract.
+  `canonicalValues(Family)` returns the immutable, alphabetically sorted
+  canonical subset for `ADD_DIFF`, `EXTRACTION`, `TRUNCATION`, `TIME_SLICE`,
+  or `LAST_DAY`.
 - `aliasesForCanonical` accepts a registered canonical name, case-insensitively,
   and returns an immutable, alphabetically sorted list of lowercase spellings,
   including the canonical spelling. An alias such as `yy` is not a canonical
   name: resolve it with `findCanonical` first.
 - `findCanonical` accepts a canonical spelling or alias, case-insensitively,
   and returns the registered uppercase canonical value.
+- `findCanonical(Family, spelling)` returns a canonical value only when that
+  spelling is valid for the requested family. `isSupported(Family, spelling)`
+  provides the corresponding boolean check. For example, `hour` is valid for
+  truncation but not `LAST_DAY`; `millisecond` is not valid for `TIME_SLICE`.
+- `WEEK_ISO` variations are valid for truncation and extraction. `LAST_DAY`
+  follows its function page and accepts only year, quarter, month, and week
+  plus those parts' variations.
 - The two input-taking lookups return `Optional.empty()` for null, blank, or unknown input. Input is
   otherwise exact: surrounding whitespace and SQL quote delimiters are not
   stripped. For a parsed part, pass `level.text`, not a quoted SQL literal.

@@ -627,13 +627,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	@Test
 	public void extractPostgresAffinityWarningAnchoredAtExtract() {
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
-				"SELECT EXTRACT(DOW FROM order_date) FROM orders");
+				"SELECT EXTRACT(CENTURY FROM order_date) FROM orders");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"DOW",
+				"CENTURY",
 				null,
 				1,
 				7);
@@ -642,13 +642,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	@Test
 	public void datePartPostgresAffinityWarningAnchoredAtDatePart() {
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
-				"SELECT DATE_PART(DOW FROM order_date) FROM orders");
+				"SELECT DATE_PART(CENTURY FROM order_date) FROM orders");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"DOW",
+				"CENTURY",
 				null,
 				1,
 				7);
@@ -684,13 +684,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void predicandExtractPostgresAffinityWarningAnchoredAtExtract() {
-		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("EXTRACT(DOW FROM order_date)");
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("EXTRACT(CENTURY FROM order_date)");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"DOW",
+				"CENTURY",
 				null,
 				1,
 				0);
@@ -698,13 +698,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void predicandDatePartPostgresAffinityWarningAnchoredAtDatePart() {
-		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("DATE_PART(DOW FROM order_date)");
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("DATE_PART(CENTURY FROM order_date)");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"DOW",
+				"CENTURY",
 				null,
 				1,
 				0);
@@ -712,7 +712,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedSnowflakeAndPostgresExtractPartsFatalOnSecondExtract() {
-		String query = "SELECT EXTRACT(epoch_second FROM ts), EXTRACT(DOW FROM order_date) FROM orders";
+		String query = "SELECT EXTRACT(epoch_second FROM ts), EXTRACT(CENTURY FROM order_date) FROM orders";
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -734,7 +734,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedSnowflakeExtractAndPostgresDatePartFatalOnDatePart() {
-		String query = "SELECT EXTRACT(epoch_second FROM ts), DATE_PART(DOW FROM order_date) FROM orders";
+		String query = "SELECT EXTRACT(epoch_second FROM ts), DATE_PART(CENTURY FROM order_date) FROM orders";
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -756,7 +756,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedNestedPostgresDatePartOverSnowflakeExtractFatalOnOuterDatePart() {
-		String query = "SELECT DATE_PART(DOW FROM EXTRACT(epoch_second FROM ts)) FROM t";
+		String query = "SELECT DATE_PART(CENTURY FROM EXTRACT(epoch_second FROM ts)) FROM t";
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -766,7 +766,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"epoch_second",
 				null,
 				1,
-				26);
+				30);
 		assertFatalDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_MIXED_DIALECT_GRAMMAR",
@@ -778,7 +778,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedNestedPredicandPostgresDatePartOverSnowflakeExtractFatalOnOuterDatePart() {
-		String query = "DATE_PART(DOW FROM EXTRACT(epoch_second FROM ts))";
+		String query = "DATE_PART(CENTURY FROM EXTRACT(epoch_second FROM ts))";
 		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -788,7 +788,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"epoch_second",
 				null,
 				1,
-				19);
+				23);
 		assertFatalDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_MIXED_DIALECT_GRAMMAR",
@@ -816,13 +816,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 	@Test
 	public void datePartCommaPostgresAffinityWarningAnchoredAtFunctionName() {
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
-				"SELECT date_part('dow', order_date) FROM orders");
+				"SELECT date_part('century', order_date) FROM orders");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"dow",
+				"century",
 				null,
 				1,
 				7);
@@ -844,13 +844,13 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void predicandDatePartCommaPostgresAffinityWarning() {
-		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("date_part('dow', order_date)");
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("date_part('century', order_date)");
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
 				ParseDiagnostic.Severity.WARNING,
-				"dow",
+				"century",
 				null,
 				1,
 				0);
@@ -858,7 +858,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedCommaFromAndCommaFormsFatalOnSecondFunction() {
-		String query = "SELECT EXTRACT('epoch_second', ts), date_part('dow', order_date) FROM orders";
+		String query = "SELECT EXTRACT('epoch_second', ts), date_part('century', order_date) FROM orders";
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -880,7 +880,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	@Test
 	public void mixedCommaFormNestedInSecondArgumentFatalOnOuterDatePart() {
-		String query = "SELECT date_part('dow', EXTRACT('epoch_second', ts)) FROM t";
+		String query = "SELECT date_part('century', EXTRACT('epoch_second', ts)) FROM t";
 		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticAtPosition(
@@ -890,7 +890,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"epoch_second",
 				null,
 				1,
-				24);
+				28);
 		assertFatalDiagnosticAtPosition(
 				snippet,
 				"STATEMENT_MIXED_DIALECT_GRAMMAR",

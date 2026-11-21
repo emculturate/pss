@@ -247,13 +247,23 @@ Entry 1 datetime implementation is complete for delivered Snowflake slices:
 
 - add family: `DATEADD`, `TIMEADD`, `TIMESTAMPADD`
 - diff family: `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`
-- trunc/extract family: `DATE_TRUNC`, datetime `TRUNC`, `DATE_PART`, `EXTRACT`
+- trunc/extract family: `DATE_TRUNC`, datetime `TRUNC`/`TRUNCATE`,
+  `DATE_PART`, `EXTRACT`
 - boundary/slice family: `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY`
 
 These families now publish structured datetime AST payloads with the normal
 dictionary/symbol-table contracts and per-statement dialect diagnostics.
 Consumer docs in this file should be treated as authoritative for those
 delivered families.
+
+Datetime parts are validated against function-specific registry families
+rather than one union set. Add/diff retains year through nanosecond;
+truncation additionally recognizes documented ISO-week forms such as
+`week_iso`/`weekiso`; `TIME_SLICE` accepts year through day plus
+hour/minute/second; and `LAST_DAY` accepts year/quarter/month/week with their
+documented variations. A known part used in the wrong family emits positioned
+`INVALID_DATETIME_PART`. Shared extraction aliases including `dow`, `doy`, and
+`epoch` are neutral for dialect-affinity purposes.
 
 Deferred datetime work:
 

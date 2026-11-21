@@ -1,26 +1,42 @@
 package sql.grammar;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public final class DatetimePartRegistry {
 
 	private static final Map<String, String> CANONICAL_PARTS = buildCanonicalParts();
+	private static final Map<Family, Set<String>> SUPPORTED_CANONICAL_PARTS = buildSupportedCanonicalParts();
+
+	public enum Family {
+		ADD_DIFF,
+		EXTRACTION,
+		TRUNCATION,
+		TIME_SLICE,
+		LAST_DAY
+	}
 
 	private DatetimePartRegistry() {
 	}
 
-	// Snowflake's supported add-family parts and their documented abbreviations.
 	private static Map<String, String> buildCanonicalParts() {
 		Map<String, String> parts = new HashMap<>();
 		register(parts, "YEAR", "y", "yy", "yyy", "yyyy", "yr", "years", "yrs");
 		register(parts, "QUARTER", "q", "qtr", "qtrs", "quarters");
 		register(parts, "MONTH", "mm", "mon", "mons", "months");
 		register(parts, "WEEK", "w", "wk", "weekofyear", "woy", "wy");
+		register(parts, "WEEK_ISO", "weekiso", "weekofyeariso", "weekofyear_iso");
 		register(parts, "DAY", "d", "dd", "days", "dayofmonth");
+		register(parts, "DAYOFWEEK", "weekday", "dow", "dw");
+		register(parts, "DAYOFWEEK_ISO", "dayofweekiso", "weekday_iso", "dow_iso", "dw_iso");
+		register(parts, "DAYOFYEAR", "yearday", "doy", "dy");
+		register(parts, "YEAROFWEEK");
+		register(parts, "YEAROFWEEKISO");
 		register(parts, "HOUR", "h", "hh", "hr", "hours", "hrs");
 		register(parts, "MINUTE", "m", "mi", "min", "minutes", "mins");
 		register(parts, "SECOND", "s", "sec", "seconds", "secs");
@@ -28,7 +44,41 @@ public final class DatetimePartRegistry {
 		register(parts, "MICROSECOND", "us", "usec", "microseconds");
 		register(parts, "NANOSECOND", "ns", "nsec", "nanosec", "nsecond",
 				"nanoseconds", "nanosecs", "nseconds");
+		register(parts, "EPOCH_SECOND", "epoch", "epoch_seconds");
+		register(parts, "EPOCH_MILLISECOND", "epoch_milliseconds");
+		register(parts, "EPOCH_MICROSECOND", "epoch_microseconds");
+		register(parts, "EPOCH_NANOSECOND", "epoch_nanoseconds");
+		register(parts, "TIMEZONE_HOUR", "tzh");
+		register(parts, "TIMEZONE_MINUTE", "tzm");
+		register(parts, "CENTURY");
+		register(parts, "DECADE");
+		register(parts, "ISODOW");
+		register(parts, "ISOYEAR");
+		register(parts, "MILLENNIUM");
 		return Map.copyOf(parts);
+	}
+
+	private static Map<Family, Set<String>> buildSupportedCanonicalParts() {
+		Map<Family, Set<String>> families = new EnumMap<>(Family.class);
+		Set<String> addDiff = Set.of(
+				"YEAR", "QUARTER", "MONTH", "WEEK", "DAY",
+				"HOUR", "MINUTE", "SECOND", "MILLISECOND", "MICROSECOND", "NANOSECOND");
+		families.put(Family.ADD_DIFF, addDiff);
+		families.put(Family.EXTRACTION, Set.of(
+				"YEAR", "QUARTER", "MONTH", "WEEK", "WEEK_ISO", "DAY",
+				"DAYOFWEEK", "DAYOFWEEK_ISO", "DAYOFYEAR", "YEAROFWEEK", "YEAROFWEEKISO",
+				"HOUR", "MINUTE", "SECOND", "MILLISECOND", "MICROSECOND", "NANOSECOND",
+				"EPOCH_SECOND", "EPOCH_MILLISECOND", "EPOCH_MICROSECOND", "EPOCH_NANOSECOND",
+				"TIMEZONE_HOUR", "TIMEZONE_MINUTE",
+				"CENTURY", "DECADE", "ISODOW", "ISOYEAR", "MILLENNIUM"));
+		families.put(Family.TRUNCATION, Set.of(
+				"YEAR", "QUARTER", "MONTH", "WEEK", "WEEK_ISO", "YEAROFWEEKISO", "DAY",
+				"HOUR", "MINUTE", "SECOND", "MILLISECOND", "MICROSECOND", "NANOSECOND"));
+		families.put(Family.TIME_SLICE, Set.of(
+				"YEAR", "QUARTER", "MONTH", "WEEK", "DAY",
+				"HOUR", "MINUTE", "SECOND"));
+		families.put(Family.LAST_DAY, Set.of("YEAR", "QUARTER", "MONTH", "WEEK"));
+		return Map.copyOf(families);
 	}
 
 	private static void register(Map<String, String> parts, String canonical, String... aliases) {
@@ -40,7 +90,12 @@ public final class DatetimePartRegistry {
 
 	/** Returns all registered uppercase canonical names, sorted and immutable. */
 	public static List<String> canonicalValues() {
-		return CANONICAL_PARTS.values().stream().distinct().sorted().toList();
+		return canonicalValues(Family.ADD_DIFF);
+	}
+
+	/** Returns the uppercase canonical names supported by one function family. */
+	public static List<String> canonicalValues(Family family) {
+		return SUPPORTED_CANONICAL_PARTS.get(family).stream().sorted().toList();
 	}
 
 	/**
@@ -75,6 +130,19 @@ public final class DatetimePartRegistry {
 			return Optional.empty();
 		}
 		return Optional.ofNullable(CANONICAL_PARTS.get(alias.toUpperCase(Locale.ROOT)));
+	}
+
+	/** Resolves an alias only when its canonical part is valid for the supplied family. */
+	public static Optional<String> findCanonical(Family family, String alias) {
+		Optional<String> canonical = findCanonical(alias);
+		if (canonical.isEmpty() || !SUPPORTED_CANONICAL_PARTS.get(family).contains(canonical.get())) {
+			return Optional.empty();
+		}
+		return canonical;
+	}
+
+	public static boolean isSupported(Family family, String alias) {
+		return findCanonical(family, alias).isPresent();
 	}
 
 	public static String canonicalize(String text) {

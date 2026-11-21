@@ -20,9 +20,12 @@ public final class ExtractDatetimeFieldAffinity {
 			"DAYOFYEAR",
 			"WEEKISO",
 			"WEEKOFYEAR",
+			"YEAROFWEEK",
+			"YEAROFWEEKISO",
 			"EPOCH_SECOND",
 			"EPOCH_MILLISECOND",
-			"EPOCH_MICROSECOND");
+			"EPOCH_MICROSECOND",
+			"EPOCH_NANOSECOND");
 
 	/**
 	 * Postgres-oriented parts from {@code extended_datetime_field} that are not Snowflake keyword parts
@@ -31,9 +34,6 @@ public final class ExtractDatetimeFieldAffinity {
 	private static final Set<String> POSTGRES_EXTENDED_PARTS = Set.of(
 			"CENTURY",
 			"DECADE",
-			"DOW",
-			"DOY",
-			"EPOCH",
 			"ISODOW",
 			"ISOYEAR",
 			"MICROSECONDS",

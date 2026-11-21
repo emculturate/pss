@@ -55,11 +55,11 @@ Link to those records rather than copying their inventories or measurements.
 | **21** | QUERY variables in FROM/JOIN: author guidance and tuple-versus-query distinction | Diagnostic enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — policy discussion pending; not implemented |
 | **22** | Conflicting types for repeated occurrences of one substitution name | Diagnostic / consistency enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — severity and compatibility policy pending; not implemented |
 | **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — representation and diagnostic policy pending; not implemented |
-| **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Confirmed; fourth 5.1.4 remediation** (2026-11-19) — root cause traced; ready for targeted implementation; not implemented |
-| **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Fifth 5.1.4 remediation** (2026-11-20) — deficiencies verified on the existing local JAR; correction substeps approved for planning; not implemented |
+| **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Targeted fix complete in source** — focused regressions pass; broader caller audit and release acceptance remain open |
+| **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Complete in source** (2026-11-21) — focused datetime regressions pass; local release JAR not rebuilt |
 | **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete in source** (2026-11-20) — focused tests pass; local release JAR not rebuilt |
 | **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Reported; not yet source-verified or fixed** |
-| **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Reported; root cause and relationship between reproductions unverified; not fixed** |
+| **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Source-order fix complete in source** — focused alias/scope regressions pass; release-level verification remains open |
 | **29** | Parser-owned structured lineage and explanation | Enhancement / design | **Proposed; contract, scope, and acceptance thresholds pending** |
 
 **5.0.0 → 5.1.4 parity gate update:** Entry **20** is closed (2026-11-13) and
@@ -115,14 +115,15 @@ gates listed below, and is not whole-release certification.
     The targeted IN-frame fix and focused regressions are in source; the
     broader caller audit and release acceptance remain open.
 
-- **Entry 25 — fifth 5.1.4 remediation: datetime story deficiencies**
-  - Correct datetime TRUNCATE handling, missing supported parts/aliases,
-    per-function part subsets, and false dialect conflicts for shared aliases.
-  - Implement multiple named date/time-part allowlists for functions with
-    different supported subsets, backed by shared part/alias definitions.
+- **Entry 25 — datetime story completion**
+  - Datetime TRUNCATE routing, missing supported parts/aliases, per-function
+    part subsets, and false dialect conflicts for shared aliases are corrected
+    in source.
+  - Multiple named date/time-part allowlists now cover functions with different
+    supported subsets, backed by shared part/alias definitions.
   - [Entry 25](#entry-25--datetime-story-completion-and-function-specific-part-lists)
-    records verified baseline examples and correction/acceptance substeps.
-    Historical Entry 1 slice completion does not waive these later findings.
+    records the verified baseline examples and focused acceptance coverage.
+    Release-JAR rebuilding and release-level verification remain open.
 
 - **Entry 26 — Unicode literal preservation: complete in source**
   - MCP JSON, stream, and bulk preprocessing preserves literal data while
@@ -130,9 +131,11 @@ gates listed below, and is not whole-release certification.
     release JAR still needs the ordinary candidate build and owner validation.
 
 - **Entries 27–29 — additional 5.1.4 handoffs**
-  - Resolve cross-scope dictionary casing and ordered-alias lineage defects;
-    assess and specify parser-owned structured lineage. The reports contain
-    black-box evidence, not source-verified root causes or approved schemas.
+  - Entry 27 cross-scope dictionary casing remains unverified and unfixed.
+  - Entry 28 ordered-alias source-order fix and focused regressions are
+    complete in source; release-level verification remains open.
+  - Entry 29 parser-owned structured lineage remains a proposal without an
+    approved contract or schema.
 
 **Latest scope reduction — deferred beyond 5.1.4, not release prerequisites:**
 - **Entry 7, entirely:** endpoint parity, type×grammar coverage and their
@@ -4703,14 +4706,12 @@ and [typed AST substitution](panto-variable-inheritance-using-bundles.md#typed-a
 **Status:** Targeted ordinary IN-list fix implemented and focused regressions
 passed; broader caller audit and release acceptance remain open.
 **Kind:** Dictionary / reference-token collection defect.
-**Implementation starting point:** the evidence below is sufficient to begin
-the targeted fix. Do not make repeating the exploratory probes a prerequisite.
-This does not waive regression tests or post-fix verification.
+**Implementation:** the targeted fix and focused regressions are complete in
+source. The broader audit and release acceptance remain open.
 The [compound IN report](<./514 defect and enhancement requirements/compound-in-table-dictionary-defect.md>)
 adds SQL/QUERY, OR, mixed-predicate, direct boolean-output, and JOIN ON
-reproductions, plus WHERE/HAVING controls. Its JOIN ON case reports losing even
-the selected left-table `id`; verify the responsible path and include that
-case, rather than assuming every reported manifestation has the same root cause.
+reproductions, plus WHERE/HAVING controls. Focused JOIN ON regressions verify
+that the selected left-table `id` and both predicate families are retained.
 
 ### Report and evidence provenance
 
@@ -4738,7 +4739,7 @@ SELECT also includes `src_donor_id`.
   statement and the operand-swapped variant were subsequently found in
   [snippet-row-9922.sql](<./514 defect and enhancement requirements/snippet-row-9922.sql>)
   and [snippet-row-9922-swapped.sql](<./514 defect and enhancement requirements/snippet-row-9922-swapped.sql>).
-- **Locally verified current-parser evidence:** reduced complete queries
+- **Locally verified pre-fix evidence:** reduced complete queries
   reproduce the loss, and a live walker trace proves replacement of the
   pending-reference map at each ordinary IN-list frame exit. AST and output
   interface dependencies retain both families, including resolved source
@@ -5055,8 +5056,9 @@ features.
 
 ## Entry 25 — Datetime story completion and function-specific part lists
 
-**Status:** Fifth 5.1.4 remediation (2026-11-20); deficiencies verified on the
-existing local candidate. Not implemented.
+**Status:** Complete in source (2026-11-21); focused datetime regressions pass.
+The local release JAR has not been rebuilt and release-level verification
+remains open.
 **Kind:** Defect correction / completion of the Entry 1 Snowflake story.
 **Owner direction:** correct the deficiencies below, including creating
 multiple date/time-part lists where functions support different subsets.
@@ -5316,9 +5318,10 @@ The second reports name/case-sensitive failures such as `BIRTH_DAY` and
 `END_DATE`, including nested derived-table forms. Both show interface lineage
 pointing to a physical column absent from the table dictionary.
 
-The proposed map-iteration and temporal-classification explanations are
-black-box hypotheses. Determine whether these are one or multiple code paths;
-do not assume either cause or alter precedence before tracing it.
+The reports proposed map iteration and temporal classification as black-box
+hypotheses. Source analysis identified the unordered interface egress traversal;
+processing outputs in recorded select-list order fixes the reported minimal
+examples. Broader case and nesting coverage remains part of acceptance below.
 
 ### Phases and acceptance
 

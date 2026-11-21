@@ -4644,11 +4644,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(dow, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -4663,11 +4659,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('dow', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -4682,11 +4674,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(doy, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -4701,11 +4689,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('doy', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -4720,11 +4704,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(epoch, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -4739,11 +4719,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('epoch', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5831,11 +5807,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(dow from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5850,11 +5822,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('dow' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5869,11 +5837,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(doy from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5888,11 +5852,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('doy' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5907,11 +5867,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract(epoch from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=KEYWORD, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -5926,11 +5882,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, extract('epoch' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_extract_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=extract, part_form=STRING, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7018,11 +6970,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(dow, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7037,11 +6985,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('dow', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7056,11 +7000,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(doy, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7075,11 +7015,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('doy', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7094,11 +7030,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(epoch, a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -7113,11 +7045,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('epoch', a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8205,11 +8133,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(dow from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8224,11 +8148,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('dow' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'dow' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=dow, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8243,11 +8163,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(doy from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8262,11 +8178,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('doy' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'doy' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=doy, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8281,11 +8193,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part(epoch from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=KEYWORD, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
@@ -8300,11 +8208,7 @@ public class SqlEventWalkerDatetimeMetadataTests extends AbstractSqlParseEventWa
 		final String query = "select a.id, a.year as stored_year, date_part('epoch' from a.ts) as result_value, b.label\nfrom events a join accounts b on a.account_id = b.id\nwhere a.active = 1 and b.enabled = 1";
 		final SqlParseEventWalker extractor = runDedicatedFunctionQuery(query, SQLSelectParserParser.RULE_date_part_expression);
 		assertNoFatalErrors(extractor);
-		assertExactDiagnostics(extractor,
-				new ParseDiagnostic(ParseDiagnostic.Severity.WARNING,
-						"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
-						"EXTRACT/DATE_PART option 'epoch' at (l:1 c:36) is recognized as PostgreSQL-specific grammar.",
-						1, 36, "SqlASTWalkerHelper", null, null, true, "ast-walk", null, null));
+		assertExactDiagnostics(extractor);
 		assertOutputs(extractor,
 				"{SQL={select={1={column={name=id, table_ref=a}}, 2={column={name=year, table_ref=a}, alias=stored_year}, 3={alias=result_value, datetime_function={function_name=date_part, part_form=STRING, part=epoch, source={column={name=ts, table_ref=a}}}}, 4={column={name=label, table_ref=b}}}, from={join={1={table={alias=a, table=events}}, 2={join=join, on={condition={left={column={name=account_id, table_ref=a}}, right={column={name=id, table_ref=b}}, operator==}}}, 3={table={alias=b, table=accounts}}}}, where={and={1={condition={left={column={name=active, table_ref=a}}, right={literal=1}, operator==}}, 2={condition={left={column={name=enabled, table_ref=b}}, right={literal=1}, operator==}}}}}}",
 				"[result_value, id, stored_year, label]",
