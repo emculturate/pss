@@ -5225,7 +5225,17 @@ public class SqlParseSymbolTreeHelper {
 		// cannot be constructed, then we have an invalid query and any unexplained logic will add fatal errors to the diagnostics 
 		// list that will help the user understand why their query is invalid.
 		if (localInterface != null) {
-		for (String outputCol: localInterface.keySet()) {
+		LinkedHashSet<String> resolutionOrder = new LinkedHashSet<String>();
+		if (activeConvertEgressSelectListOutputAliasSourceOrder != null) {
+			for (String alias : activeConvertEgressSelectListOutputAliasSourceOrder) {
+				String key = findKeyIgnoreCase(localInterface, alias);
+				if (key != null) {
+					resolutionOrder.add(key);
+				}
+			}
+		}
+		resolutionOrder.addAll(localInterface.keySet());
+		for (String outputCol: resolutionOrder) {
 			if (localScalarSubqueryAliases != null && localScalarSubqueryAliases.contains(outputCol)) {
 				continue;
 			}
@@ -19985,7 +19995,14 @@ public class SqlParseSymbolTreeHelper {
 			PredicateSubqueryMergeKind kind) {
 		boolean isSubquery = astReference != null && astReference.containsKey(MUMBLE_SELECT_KEY);
 		if (!isSubquery) {
+			Object pendingUnresolved = kind == PredicateSubqueryMergeKind.IN
+					? predicateFrameSymbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY) : null;
 			popPredicateFrameSymbolTableMerge(predicateFrameSymbols);
+			if (pendingUnresolved instanceof Map<?, ?> unresolved) {
+				mergeUnresolvedEntriesIntoCurrentScope((Map<String, Object>) unresolved);
+			} else if (pendingUnresolved != null) {
+				throw new IllegalStateException("Invalid unresolved-column bucket in IN predicate frame");
+			}
 			return;
 		}
 

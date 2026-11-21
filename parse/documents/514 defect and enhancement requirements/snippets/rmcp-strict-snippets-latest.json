@@ -1,0 +1,1619 @@
+{
+  "generatedAt": "2026-11-19T22:38:12.788Z",
+  "label": "snippets",
+  "rawPath": "rmcp/tmp/strict_raw/live_snippets_11-19.raw.jsonl.gz",
+  "compareReport": "reports/panto_strict_rerun/live_2026-11-19/snippets/rmcp-panto-extracted-snippets-compare-latest.json",
+  "versions": {
+    "baseline": "5.0.0-3",
+    "candidate": "5.1.4"
+  },
+  "rows": 88046,
+  "verdicts": {
+    "contract_change": 5687,
+    "review": 39166,
+    "clean": 43193
+  },
+  "verdictsByGroup": {
+    "column": {
+      "contract_change": 410,
+      "review": 989
+    },
+    "tuple": {
+      "review": 7090,
+      "contract_change": 361,
+      "clean": 1276
+    },
+    "condition": {
+      "clean": 831,
+      "contract_change": 539,
+      "review": 431
+    },
+    "in_list": {
+      "clean": 34069,
+      "review": 39,
+      "contract_change": 4
+    },
+    "join_extension": {
+      "review": 141,
+      "clean": 1
+    },
+    "predicand": {
+      "clean": 6280,
+      "contract_change": 4272,
+      "review": 30445
+    },
+    "query": {
+      "contract_change": 101,
+      "clean": 736,
+      "review": 31
+    }
+  },
+  "tags": {
+    "TABLE_KEY_LOST_UNKNOWN": {
+      "rows": 4699,
+      "byGroup": {
+        "column": 410,
+        "condition": 516,
+        "predicand": 3769,
+        "in_list": 4
+      },
+      "byLenient": {
+        "match": 4623,
+        "essentialMatch": 27,
+        "mixed": 49
+      },
+      "samples": [
+        {
+          "rowNumber": 1,
+          "key": "Acquia/Acquia all_sources_blnd null check:1|Acquia all_sources_bnd null check:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 2,
+          "key": "Acquia/Acquia duplicate email check:1|Acquia duplicate email check bundle:1|Acquia duplicate emial check:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 3,
+          "key": "Acquia/Acquia funnel_stage null check:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 4,
+          "key": "Acquia/Acquia hs_grade_level null check:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 5,
+          "key": "Acquia/Acquia percentage check bundle:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 6,
+          "key": "Acquia/Acquia address percentage check:1|Acquia address percentage check bundle:1|Acquia percentage check bundle:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 7,
+          "key": "Acquia/Acquia Test Email check bundle:1|Acquia test email percentage check:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        },
+        {
+          "rowNumber": 8,
+          "key": "Acquia/Acquia birth_date percentage check:1|Acquia birthdate percentage check bundle:1/column",
+          "group": "column",
+          "lenient": "match",
+          "detail": ""
+        }
+      ]
+    },
+    "TABLE_COLUMN_ADDED": {
+      "rows": 646,
+      "byGroup": {
+        "tuple": 625,
+        "query": 7,
+        "join_extension": 9,
+        "predicand": 5
+      },
+      "byLenient": {
+        "essentialMatch": 640,
+        "mixed": 5,
+        "improvement": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 10,
+          "key": "Acquia/Acquia address percentage check:1|Acquia address percentage check bundle:1|Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 11,
+          "key": "Acquia/Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 12,
+          "key": "Acquia/Acquia birth_date percentage check:1|Acquia birthdate percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 13,
+          "key": "Acquia/Acquia all_sources_blnd null check:1|Acquia all_sources_bnd null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 14,
+          "key": "Acquia/Acquia duplicate email check:1|Acquia duplicate email check bundle:1|Acquia duplicate emial check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 15,
+          "key": "Acquia/Acquia funnel_stage null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 16,
+          "key": "Acquia/Acquia hs_grade_level null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        },
+        {
+          "rowNumber": 17,
+          "key": "Acquia/Acquia not null check bundle:1|Acquia status check:2/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[Acquia].[pdp_acquia_contact_export]>.*"
+        }
+      ]
+    },
+    "INTERFACE_COLUMN_ADDED": {
+      "rows": 4545,
+      "byGroup": {
+        "tuple": 4484,
+        "join_extension": 54,
+        "predicand": 6,
+        "condition": 1
+      },
+      "byLenient": {
+        "essentialMatch": 4532,
+        "mixed": 8,
+        "improvement": 5
+      },
+      "samples": [
+        {
+          "rowNumber": 10,
+          "key": "Acquia/Acquia address percentage check:1|Acquia address percentage check bundle:1|Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "percent_address_null"
+        },
+        {
+          "rowNumber": 11,
+          "key": "Acquia/Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "Max_Null_Percent"
+        },
+        {
+          "rowNumber": 12,
+          "key": "Acquia/Acquia birth_date percentage check:1|Acquia birthdate percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "stu_birthdate_null_percentage"
+        },
+        {
+          "rowNumber": 13,
+          "key": "Acquia/Acquia all_sources_blnd null check:1|Acquia all_sources_bnd null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "all_sources_blnd_null_count"
+        },
+        {
+          "rowNumber": 15,
+          "key": "Acquia/Acquia funnel_stage null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "funnel_stage_null_count"
+        },
+        {
+          "rowNumber": 16,
+          "key": "Acquia/Acquia hs_grade_level null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "gradelevel_percent_null"
+        },
+        {
+          "rowNumber": 17,
+          "key": "Acquia/Acquia not null check bundle:1|Acquia status check:2/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "total_null"
+        },
+        {
+          "rowNumber": 18,
+          "key": "Acquia/Acquia Test Email check bundle:1|Acquia test email percentage check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "percentTestMail"
+        }
+      ]
+    },
+    "INTERFACE_LENGTH_CHANGED": {
+      "rows": 4544,
+      "byGroup": {
+        "tuple": 4484,
+        "join_extension": 53,
+        "predicand": 6,
+        "condition": 1
+      },
+      "byLenient": {
+        "essentialMatch": 4531,
+        "mixed": 8,
+        "improvement": 5
+      },
+      "samples": [
+        {
+          "rowNumber": 10,
+          "key": "Acquia/Acquia address percentage check:1|Acquia address percentage check bundle:1|Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 11,
+          "key": "Acquia/Acquia percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 12,
+          "key": "Acquia/Acquia birth_date percentage check:1|Acquia birthdate percentage check bundle:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 13,
+          "key": "Acquia/Acquia all_sources_blnd null check:1|Acquia all_sources_bnd null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 15,
+          "key": "Acquia/Acquia funnel_stage null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 16,
+          "key": "Acquia/Acquia hs_grade_level null check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 17,
+          "key": "Acquia/Acquia not null check bundle:1|Acquia status check:2/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        },
+        {
+          "rowNumber": 18,
+          "key": "Acquia/Acquia Test Email check bundle:1|Acquia test email percentage check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "0->1"
+        }
+      ]
+    },
+    "TABLE_KEY_LOST": {
+      "rows": 34594,
+      "byGroup": {
+        "column": 989,
+        "tuple": 2577,
+        "condition": 431,
+        "join_extension": 134,
+        "predicand": 30416,
+        "query": 9,
+        "in_list": 38
+      },
+      "byLenient": {
+        "essentialMatch": 34132,
+        "match": 452,
+        "degradation": 3,
+        "mixed": 7
+      },
+      "samples": [
+        {
+          "rowNumber": 19,
+          "key": "Acquia_AMS/status_threshold_acquia_ams_acs__categories_title_characters_check:V0.1/column",
+          "group": "column",
+          "lenient": "essentialMatch",
+          "detail": "acq_ams_tbl"
+        },
+        {
+          "rowNumber": 32,
+          "key": "Acquia_AMS/status_threshold_acquia_ams_acs__categories_title_characters_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "match",
+          "detail": "<[Acquia_AMS].[acs__categories].{fulfillment}>"
+        },
+        {
+          "rowNumber": 185,
+          "key": "ALR/ECRM_to_Enroll360:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "inst"
+        },
+        {
+          "rowNumber": 186,
+          "key": "ALR/ECRM_to_Enroll360:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "inst"
+        },
+        {
+          "rowNumber": 198,
+          "key": "ALR/ECRM_to_ALR:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "app; appc"
+        },
+        {
+          "rowNumber": 199,
+          "key": "ALR/ECRM_to_ALR:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "app; appc"
+        },
+        {
+          "rowNumber": 204,
+          "key": "ALR/ECRM_to_ALR:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "rr"
+        },
+        {
+          "rowNumber": 205,
+          "key": "ALR/ECRM_to_ALR:01/condition",
+          "group": "condition",
+          "lenient": "essentialMatch",
+          "detail": "rr"
+        }
+      ]
+    },
+    "CANDIDATE_SLOWER": {
+      "rows": 1380,
+      "byGroup": {
+        "tuple": 434,
+        "predicand": 802,
+        "query": 98,
+        "join_extension": 21,
+        "condition": 25
+      },
+      "byLenient": {
+        "essentialMatch": 273,
+        "mixed": 48,
+        "match": 1058,
+        "degradation": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 44,
+          "key": "Acquia_AMS/status_threshold_acquia_ams_acs__categories_title_characters_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "410ms->913ms"
+        },
+        {
+          "rowNumber": 45,
+          "key": "Acquia_AMS/status_threshold_acs_replication_date_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "mixed",
+          "detail": "55ms->176ms"
+        },
+        {
+          "rowNumber": 8231,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "83ms->237ms"
+        },
+        {
+          "rowNumber": 8232,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "81ms->226ms"
+        },
+        {
+          "rowNumber": 8233,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "83ms->227ms"
+        },
+        {
+          "rowNumber": 8234,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "44ms->127ms"
+        },
+        {
+          "rowNumber": 8245,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "match",
+          "detail": "109ms->262ms"
+        },
+        {
+          "rowNumber": 8253,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/predicand",
+          "group": "predicand",
+          "lenient": "match",
+          "detail": "54ms->110ms"
+        }
+      ]
+    },
+    "CANDIDATE_WARNING_NEW": {
+      "rows": 269,
+      "byGroup": {
+        "tuple": 94,
+        "in_list": 1,
+        "query": 15,
+        "join_extension": 11,
+        "predicand": 145,
+        "condition": 3
+      },
+      "byLenient": {
+        "mixed": 127,
+        "essentialMatch": 142
+      },
+      "samples": [
+        {
+          "rowNumber": 45,
+          "key": "Acquia_AMS/status_threshold_acs_replication_date_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "mixed",
+          "detail": "WARNING|STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR|snowflake_datetime_diff_expression at (l:# c:#) is recognized as Snowflake-specific grammar."
+        },
+        {
+          "rowNumber": 6923,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/in_list",
+          "group": "in_list",
+          "lenient": "mixed",
+          "detail": "WARNING|RECOVER|Syntax error, attempting recovery; WARNING|RECOVER_INLINE|Invalid syntax near ''American Indian or Alaska Native, Asian, Black or African American''"
+        },
+        {
+          "rowNumber": 8416,
+          "key": "ALR/Final DMP Extract Bundle:V0.1|Generated Final DMP Extract Bundle:Gen.V.01/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [primary_student_id [(l:# c:#)]]"
+        },
+        {
+          "rowNumber": 8417,
+          "key": "ALR/Final DMP Extract Bundle:V0.1/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [primary_student_id [(l:# c:#)]]"
+        },
+        {
+          "rowNumber": 9508,
+          "key": "AMS/AMS_BUNDLE:V1.0/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [preferred_full_name [(l:# c:#), (l:# c:#)]]"
+        },
+        {
+          "rowNumber": 35502,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [imputed_flag [(l:# c:#)], eab_fund_type [(l:# c:#)], eab_entry_year_academic [(l:# c:#), (l:# c:#)], agg_fund_amoun"
+        },
+        {
+          "rowNumber": 35579,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [fund_type [(l:# c:#)], calculated_field_# [(l:# c:#)]]; WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s"
+        },
+        {
+          "rowNumber": 35580,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s): [CALCULATED_FIELD_# [(l:# c:#)], FUND_TYPE [(l:# c:#)]]; WARNING|UNRESOLVED_UNQUALIFIED_COLUMNS|Unresolved unqualified column reference(s"
+        }
+      ]
+    },
+    "TABLE_COLUMN_LOST": {
+      "rows": 47,
+      "byGroup": {
+        "tuple": 35,
+        "predicand": 2,
+        "query": 9,
+        "join_extension": 1
+      },
+      "byLenient": {
+        "mixed": 3,
+        "essentialMatch": 41,
+        "degradation": 1,
+        "match": 2
+      },
+      "samples": [
+        {
+          "rowNumber": 45,
+          "key": "Acquia_AMS/status_threshold_acs_replication_date_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "mixed",
+          "detail": "<[Acquia_AMS].[pdp_ams_exp__acquia_contacts]>.CURRENT_TIMESTAMP"
+        },
+        {
+          "rowNumber": 8562,
+          "key": "ALR/Enroll360_StudentProgram_Longitudinal_EABInquiryInd:v01/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Current Batch Tbl>.current_date; <Last Delivered Tbl>.current_date"
+        },
+        {
+          "rowNumber": 9295,
+          "key": "AMS/AMS_BUNDLE:V1.0/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "<[AMS].[donor].{fulfillment}>.current_date"
+        },
+        {
+          "rowNumber": 9296,
+          "key": "AMS/AMS_BUNDLE:V1.1/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "<[AMS].[donor].{fulfillment}>.current_date"
+        },
+        {
+          "rowNumber": 9590,
+          "key": "AMS/AMS_BUNDLE:V1.0/query",
+          "group": "query",
+          "lenient": "degradation",
+          "detail": "<[AMS].[donor_sub_type].{fulfillment}>.donor_category_desc"
+        },
+        {
+          "rowNumber": 9922,
+          "key": "AMS/custom_bundle_AMS:V0.1|custom_bundle_MountMercy_ams:v0.1/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "<[AMS].[donor_source]>.end_date; <[AMS].[donor_source]>.end_date_5; <[AMS].[donor_source]>.end_date_6; <[AMS].[donor_source]>.end_date_7; <[AMS].[donor_source]>.end_date_8; <[AMS].[donor_source]>.end_date_9; <[AMS].[dono"
+        },
+        {
+          "rowNumber": 10067,
+          "key": "AMS/ams_mail_contacts_unique_key_pair_check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<[AMS].[mail_contacts].{final}>.count_of_key_pairs"
+        },
+        {
+          "rowNumber": 35605,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "<fao_calc.query.total_fund_amount_per_fund_type>.imputed_flag; <fao_calc.query.total_fund_amount_per_fund_type>.partnercontact_id; <fao_calc.query.total_fund_amount_per_fund_type>.*; <fao_calc.query.total_fund_amount_per"
+        }
+      ]
+    },
+    "AST_NODE_KIND_ADDED": {
+      "rows": 132,
+      "byGroup": {
+        "tuple": 11,
+        "predicand": 118,
+        "condition": 3
+      },
+      "byLenient": {
+        "mixed": 132
+      },
+      "samples": [
+        {
+          "rowNumber": 45,
+          "key": "Acquia_AMS/status_threshold_acs_replication_date_check:V0.1/tuple",
+          "group": "tuple",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form"
+        },
+        {
+          "rowNumber": 35901,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form"
+        },
+        {
+          "rowNumber": 35961,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        },
+        {
+          "rowNumber": 35962,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        },
+        {
+          "rowNumber": 35963,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        },
+        {
+          "rowNumber": 35964,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        },
+        {
+          "rowNumber": 36634,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        },
+        {
+          "rowNumber": 36635,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "datetime_function; level; canonical; text; form; increment; value"
+        }
+      ]
+    },
+    "CANDIDATE_NULL_TREE": {
+      "rows": 4,
+      "byGroup": {
+        "in_list": 1,
+        "predicand": 2,
+        "tuple": 1
+      },
+      "byLenient": {
+        "mixed": 2,
+        "error": 2
+      },
+      "samples": [
+        {
+          "rowNumber": 6923,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/in_list",
+          "group": "in_list",
+          "lenient": "mixed",
+          "detail": ""
+        },
+        {
+          "rowNumber": 57729,
+          "key": "Foundation/m_DEGREE_8094_OSF:v10097.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": ""
+        },
+        {
+          "rowNumber": 78765,
+          "key": "Foundation/m_STUDENT_COURSE_WORK_SRA_8020_OSF:v10048.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": ""
+        },
+        {
+          "rowNumber": 88050,
+          "key": "YouVisit/51840_School_ID_Inquiry_Pool-20484:Custom/predicand",
+          "group": "predicand",
+          "lenient": "error",
+          "detail": ""
+        }
+      ]
+    },
+    "CANDIDATE_FATAL_NEW": {
+      "rows": 29,
+      "byGroup": {
+        "in_list": 1,
+        "query": 3,
+        "tuple": 24,
+        "predicand": 1
+      },
+      "byLenient": {
+        "mixed": 1,
+        "essentialMatch": 25,
+        "error": 3
+      },
+      "samples": [
+        {
+          "rowNumber": 6923,
+          "key": "ALR/ALR.Partner Code Mapping.All:v01/in_list",
+          "group": "in_list",
+          "lenient": "mixed",
+          "detail": "FATAL|REPORT_ERROR|unexpected input: ']' in rule row_value_expression: 'American Indian or Alaska Native, Asian',]"
+        },
+        {
+          "rowNumber": 8416,
+          "key": "ALR/Final DMP Extract Bundle:V0.1|Generated Final DMP Extract Bundle:Gen.V.01/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'primary_student_id' at (l:# c:#) was not found in output interface of any visible query alias [cte]."
+        },
+        {
+          "rowNumber": 8417,
+          "key": "ALR/Final DMP Extract Bundle:V0.1/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'primary_student_id' at (l:# c:#) was not found in output interface of any visible query alias [cte]."
+        },
+        {
+          "rowNumber": 37022,
+          "key": "Enroll360/Enroll360.Partner Code Mapping.All:v01/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: target_partnercontact_id at (l:# c:#) and target_partnercontact_id at (l:# c:#).; FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defin"
+        },
+        {
+          "rowNumber": 78195,
+          "key": "Foundation/m_STUDENT_COURSE_WORK_8026_OSF:v.5001/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_academic_period.ACADEMIC_PERIOD#> at (l:# c:#) and <Lookup Procedure_lkp_academic_period.ACADEMIC_PER; FATAL|DUPLICATE_INTERFAC"
+        },
+        {
+          "rowNumber": 78235,
+          "key": "Foundation/m_PSFT_SC_STUDENT_COURSE_WORK_8297_OSF:v10337.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_active_courses_course_type_lkp.in_course_cd> at (l:# c:#) and <lookup procedure_lkp_active_courses_co"
+        },
+        {
+          "rowNumber": 78305,
+          "key": "Foundation/m_STUDENT_GROUPS_12372_OSF:v12372.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_apl_term_eff_dt.in_term_id_eff> at (l:# c:#) and <lookup procedure_lkp_apl_term_eff_dt.in_term_id_eff"
+        },
+        {
+          "rowNumber": 78309,
+          "key": "Foundation/m_OSF_SSF_SC_StudentCourses_8108:v10141.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_courses#.course_cd#> at (l:# c:#) and <lookup procedure_lkp_courses#.course_cd#> at (l:# c:#)."
+        }
+      ]
+    },
+    "TABLE_COLUMN_CASE_CHANGED": {
+      "rows": 7,
+      "byGroup": {
+        "query": 4,
+        "tuple": 3
+      },
+      "byLenient": {
+        "match": 4,
+        "essentialMatch": 3
+      },
+      "samples": [
+        {
+          "rowNumber": 8418,
+          "key": "ALR/Generated Final DMP Extract Bundle:Gen.V.01/query",
+          "group": "query",
+          "lenient": "match",
+          "detail": "<[ALR].[Student Race]>.primary_student_id->PRIMARY_STUDENT_ID"
+        },
+        {
+          "rowNumber": 8419,
+          "key": "ALR/Final DMP Extract Bundle:V0.1/query",
+          "group": "query",
+          "lenient": "match",
+          "detail": "<[ALR].[Student Race]>.primary_student_id->PRIMARY_STUDENT_ID"
+        },
+        {
+          "rowNumber": 8420,
+          "key": "ALR/Final DMP Extract Bundle:V0.1/query",
+          "group": "query",
+          "lenient": "match",
+          "detail": "<[ALR].[Student Race].{final}>.primary_student_id->PRIMARY_STUDENT_ID"
+        },
+        {
+          "rowNumber": 8421,
+          "key": "ALR/Final DMP Extract Bundle:V0.1/query",
+          "group": "query",
+          "lenient": "match",
+          "detail": "<[ALR].[Student Race].{final}>.primary_student_id->PRIMARY_STUDENT_ID"
+        },
+        {
+          "rowNumber": 8665,
+          "key": "ALR/ALR_StudentAddress_Format_Zip:v01/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Base Tbl>.zip->Zip"
+        },
+        {
+          "rowNumber": 37151,
+          "key": "Enroll360/Enroll360_StudentAddress_Format_Zip:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Base Tbl>.zip->Zip"
+        },
+        {
+          "rowNumber": 37334,
+          "key": "Enroll360/Enroll360_StudentAddress_Format_Zip:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Base Tbl>.zip->Zip"
+        }
+      ]
+    },
+    "CANDIDATE_SEVERE_NEW": {
+      "rows": 32,
+      "byGroup": {
+        "predicand": 1,
+        "query": 10,
+        "join_extension": 5,
+        "tuple": 16
+      },
+      "byLenient": {
+        "essentialMatch": 32
+      },
+      "samples": [
+        {
+          "rowNumber": 9336,
+          "key": "AMS/AMS_BUNDLE:V1.0/predicand",
+          "group": "predicand",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'gift_id' at (l:# c:#). Possible sources: [<[AMS].[gifts].{fulfillment}>, <[AMS].[donor].{fulfillment}>]"
+        },
+        {
+          "rowNumber": 9508,
+          "key": "AMS/AMS_BUNDLE:V1.0/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'preferred_full_name' at (l:# c:#). Possible sources: [<[AMS].[donor_address].{fulfillment}>, <[AMS].[donor].{fulfillment}>]"
+        },
+        {
+          "rowNumber": 35502,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_entry_year_academic' at (l:# c:#). Possible sources: [query#, query#]; SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_e"
+        },
+        {
+          "rowNumber": 35579,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'fund_type' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mapping].{conve; SEVERE_WARNING|A"
+        },
+        {
+          "rowNumber": 35580,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'CALCULATED_FIELD_#' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mappin; SEVERE_WARNING|A"
+        },
+        {
+          "rowNumber": 35582,
+          "key": "Enroll360/DeSales.SYFA/SYF Test PCM.All:v1/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_entry_year_academic' at (l:# c:#). Possible sources: [query#, query#]; SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_e"
+        },
+        {
+          "rowNumber": 35605,
+          "key": "Enroll360/Generated Enroll360.Partner Code Mapping.All:Gen.V.01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_entry_year_academic' at (l:# c:#). Possible sources: [query#, query#]; SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_e"
+        },
+        {
+          "rowNumber": 37030,
+          "key": "Enroll360/Enroll360.MigrationChecks:v1/query",
+          "group": "query",
+          "lenient": "essentialMatch",
+          "detail": "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_fund_amount' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_definition>]; SEVERE_WARNING|AM"
+        }
+      ]
+    },
+    "TABLE_KEY_QUALIFICATION_CHANGED": {
+      "rows": 87,
+      "byGroup": {
+        "tuple": 76,
+        "join_extension": 3,
+        "query": 6,
+        "predicand": 2
+      },
+      "byLenient": {
+        "essentialMatch": 69,
+        "match": 18
+      },
+      "samples": [
+        {
+          "rowNumber": 10101,
+          "key": "AMS/ams_mail_contacts_stream_key_appeal_code_mismatch_check:1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "stream_appeal_codes->pdp_ams.stream_appeal_codes"
+        },
+        {
+          "rowNumber": 35518,
+          "key": "Enroll360/Enroll360.imputed_funds:v02/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "par__student_year_funds->pdp_ug.par__student_year_funds"
+        },
+        {
+          "rowNumber": 35519,
+          "key": "Enroll360/Enroll360.imputed_funds.tenant:v01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "par__student_year_funds->pdp_ug.par__student_year_funds"
+        },
+        {
+          "rowNumber": 35571,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.SIS:v3/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "par__student_term_attributes->pdp_ug.par__student_term_attributes"
+        },
+        {
+          "rowNumber": 37044,
+          "key": "Enroll360/Enroll360.MigrationChecks:v1/query",
+          "group": "query",
+          "lenient": "match",
+          "detail": "mkt__zip_markets->pdp_ug.mkt__zip_markets"
+        },
+        {
+          "rowNumber": 82894,
+          "key": "MDS/add__cass_raw_address_acquia_form_answers_MDS:v0.1/predicand",
+          "group": "predicand",
+          "lenient": "match",
+          "detail": "acs__contacts->pdp_ug.acs__contacts; acs__form_last_answers->pdp_ug.acs__form_last_answers; rsc__acs_contacts_derived->pdp_ug.rsc__acs_contacts_derived"
+        },
+        {
+          "rowNumber": 82895,
+          "key": "MDS/add__cass_raw_address_partner_MDS:v0.1/predicand",
+          "group": "predicand",
+          "lenient": "match",
+          "detail": "rsc__partner_contacts->pdp_ug.rsc__partner_contacts; par__student_address->pdp_ug.par__student_address"
+        },
+        {
+          "rowNumber": 85188,
+          "key": "Partner_Data_Platform/con_contact_attribute_combined_PDPv0.1:v1|con_contact_attribute_combined_v1:v1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "dim_funnel_status->es_pdp_common.common.dim_funnel_status"
+        }
+      ]
+    },
+    "INTERFACE_COLUMN_LOST": {
+      "rows": 1,
+      "byGroup": {
+        "join_extension": 1
+      },
+      "byLenient": {
+        "essentialMatch": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 35573,
+          "key": "Enroll360/Enroll360.Partner Code Mapping.All:v01/join_extension",
+          "group": "join_extension",
+          "lenient": "essentialMatch",
+          "detail": "email_address; se_primary_student_id"
+        }
+      ]
+    },
+    "SUBSTITUTION_TYPE_CHANGED": {
+      "rows": 28,
+      "byGroup": {
+        "predicand": 28
+      },
+      "byLenient": {
+        "degradation": 4,
+        "neutral": 21,
+        "mixed": 3
+      },
+      "samples": [
+        {
+          "rowNumber": 35872,
+          "key": "Enroll360/Enroll360.finaid_final_variables:v01/predicand",
+          "group": "predicand",
+          "lenient": "degradation",
+          "detail": "<eab_financial_need>:condition->predicand"
+        },
+        {
+          "rowNumber": 36900,
+          "key": "Enroll360/Enroll360.finaid_final_variables:v01/predicand",
+          "group": "predicand",
+          "lenient": "degradation",
+          "detail": "<fao_calc.ti_grant>:condition->predicand"
+        },
+        {
+          "rowNumber": 42150,
+          "key": "Foundation/m_BNR_CS_ACTIVE_COURSES_8449_CAMPUS_OSF:v10490.1/predicand",
+          "group": "predicand",
+          "lenient": "neutral",
+          "detail": "<expression_exp_stg_1.v_subject_cd>:condition->predicand; <expression_exp_stg_1.v_course_no>:condition->predicand"
+        },
+        {
+          "rowNumber": 42151,
+          "key": "Foundation/m_STUDENT_EXAM_8319_OSF:v10362.1/predicand",
+          "group": "predicand",
+          "lenient": "neutral",
+          "detail": "<expression_exp_stg_logic.exam_cd>:condition->predicand"
+        },
+        {
+          "rowNumber": 42153,
+          "key": "Foundation/Updated m_STUDENT_TERM_DOWNFILL_BACKFILL_8052_OSF Bundle:v10085.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "<expression_exp_stud_clas_cd_set_member_specific.majr_code_conc_1_3>:condition->predicand; <expression_exp_stud_clas_cd_set_member_specific.majr_code_conc_1_2>:condition->predicand"
+        },
+        {
+          "rowNumber": 42160,
+          "key": "Foundation/Updated m_STUDENT_TERM_DOWNFILL_BACKFILL_8052_OSF Bundle:v10085.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "<expression_exp_stud_clas_cd_set_member_specific.majr_code_conc_2_3>:condition->predicand; <expression_exp_stud_clas_cd_set_member_specific.majr_code_conc_1_2>:query->predicand; <expression_exp_stud_clas_cd_set_member_sp"
+        },
+        {
+          "rowNumber": 42161,
+          "key": "Foundation/m_OSF_SSF_SA_Student_Advisor_8071:v10115.1/predicand",
+          "group": "predicand",
+          "lenient": "neutral",
+          "detail": "<expression_exptrans1.group_desc>:condition->predicand"
+        },
+        {
+          "rowNumber": 42195,
+          "key": "Foundation/m_CS_ACTIVE_COURSES_8342_Campus_OSF:v10383.1/predicand",
+          "group": "predicand",
+          "lenient": "neutral",
+          "detail": "<expression_exp_stg_1.course_no>:condition->predicand"
+        }
+      ]
+    },
+    "AST_NODE_KIND_LOST": {
+      "rows": 21,
+      "byGroup": {
+        "predicand": 16,
+        "tuple": 5
+      },
+      "byLenient": {
+        "mixed": 21
+      },
+      "samples": [
+        {
+          "rowNumber": 35962,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 35963,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 35964,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 36635,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 36858,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.SIS:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 36859,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 36860,
+          "key": "Enroll360/Enroll360.Student Term Attributes.embedded_feed.CRM:v01/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        },
+        {
+          "rowNumber": 36861,
+          "key": "Enroll360/Enroll360.effective_date:v01|Enroll360.StudentTermAttributes.AttributeLogic:v2/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "function; parameters"
+        }
+      ]
+    },
+    "BASELINE_FATAL_ONLY": {
+      "rows": 28,
+      "byGroup": {
+        "tuple": 28
+      },
+      "byLenient": {
+        "essentialMatch": 28
+      },
+      "samples": [
+        {
+          "rowNumber": 37566,
+          "key": "enrollment_services/Master Inquiry Pool Status Threshold:Master/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near ';'; FATAL||Invalid syntax near ';'"
+        },
+        {
+          "rowNumber": 78288,
+          "key": "Foundation/Updated m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_CAMPUS_OSF Bundle:v10518.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78289,
+          "key": "Foundation/Part 2 m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_CAMPUS_OSF Bundle:v10518.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78422,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8106_Campus_OSF:v10139.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78426,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8106_Campus_OSF:v10139.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78439,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8654_Campus_OSF:v10503.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78622,
+          "key": "Foundation/Updated m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_8140_Campus_OSF Bundle:v10177.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78848,
+          "key": "Foundation/m_STUDENT_TERM_STD_LOGIC_8021_OSF:v10049.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        }
+      ]
+    },
+    "BASELINE_DIAGNOSTIC_DROPPED": {
+      "rows": 33,
+      "byGroup": {
+        "tuple": 32,
+        "predicand": 1
+      },
+      "byLenient": {
+        "essentialMatch": 32,
+        "mixed": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 37566,
+          "key": "enrollment_services/Master Inquiry Pool Status Threshold:Master/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near ';'; FATAL||Invalid syntax near ';'"
+        },
+        {
+          "rowNumber": 57729,
+          "key": "Foundation/m_DEGREE_8094_OSF:v10097.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "FATAL||Invalid syntax near '='; FATAL||Invalid syntax near '='"
+        },
+        {
+          "rowNumber": 78288,
+          "key": "Foundation/Updated m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_CAMPUS_OSF Bundle:v10518.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78289,
+          "key": "Foundation/Part 2 m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_CAMPUS_OSF Bundle:v10518.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78422,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8106_Campus_OSF:v10139.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78426,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8106_Campus_OSF:v10139.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78439,
+          "key": "Foundation/m_PSFT_ST_STUDENT_TERM_STD_LOGIC_8654_Campus_OSF:v10503.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        },
+        {
+          "rowNumber": 78622,
+          "key": "Foundation/Updated m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_8140_Campus_OSF Bundle:v10177.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "FATAL||Invalid syntax near '<EOF>'"
+        }
+      ]
+    },
+    "FATAL_BOTH": {
+      "rows": 5,
+      "byGroup": {
+        "predicand": 1,
+        "tuple": 4
+      },
+      "byLenient": {
+        "mixed": 1,
+        "essentialMatch": 4
+      },
+      "samples": [
+        {
+          "rowNumber": 57729,
+          "key": "Foundation/m_DEGREE_8094_OSF:v10097.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": ""
+        },
+        {
+          "rowNumber": 78799,
+          "key": "Foundation/m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_8990_UPDT_bkp:v11246.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": ""
+        },
+        {
+          "rowNumber": 78825,
+          "key": "Foundation/MPLT_student_term_major_logic:v10132.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": ""
+        },
+        {
+          "rowNumber": 79149,
+          "key": "Foundation/m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_8990_UPDT_bkp:v11246.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": ""
+        },
+        {
+          "rowNumber": 79154,
+          "key": "Foundation/m_BNR_ST_STUDENT_TERM_DOWNFILL_BACKFILL_8990_UPDT_bkp:v11246.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": ""
+        }
+      ]
+    },
+    "SUBSTITUTION_LOST": {
+      "rows": 1,
+      "byGroup": {
+        "predicand": 1
+      },
+      "byLenient": {
+        "mixed": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 57729,
+          "key": "Foundation/m_DEGREE_8094_OSF:v10097.1/predicand",
+          "group": "predicand",
+          "lenient": "mixed",
+          "detail": "<expression_exp_std_logic.major_cd>"
+        }
+      ]
+    },
+    "BASELINE_ONLY_FAILED": {
+      "rows": 14,
+      "byGroup": {
+        "tuple": 8,
+        "predicand": 6
+      },
+      "byLenient": {
+        "error": 14
+      },
+      "samples": [
+        {
+          "rowNumber": 78284,
+          "key": "Foundation/m_BNR_SC_STUDENT_COURSE_WORK_8990_OSF:v11246.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in mod"
+        },
+        {
+          "rowNumber": 78305,
+          "key": "Foundation/m_STUDENT_GROUPS_12372_OSF:v12372.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in mod"
+        },
+        {
+          "rowNumber": 78547,
+          "key": "Foundation/m_STUDENT_COURSE_WORK_8039_OSF_Campus:v10067.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in mod"
+        },
+        {
+          "rowNumber": 78607,
+          "key": "Foundation/m_PSFT_SC_STUDENT_COURSE_WORK_8106_Campus_OSF:v10139.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in mod"
+        },
+        {
+          "rowNumber": 78765,
+          "key": "Foundation/m_STUDENT_COURSE_WORK_SRA_8020_OSF:v10048.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Line 2:62 - null - unexpected input: 'ORDER', Line 2:62 - Syntax error, attempting recovery, Line 1:27 - Invalid syntax near '(', Line 1:27 - Inva"
+        },
+        {
+          "rowNumber": 78853,
+          "key": "Foundation/m_STUDENT_TERM_STD_LOGIC_5282_OSF:v5282.1/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Exception: [Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in mod"
+        },
+        {
+          "rowNumber": 85093,
+          "key": "PANTO_TEST_DOMAIN/Values statement with where condition:01/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Key = k, Value = [@28,75:75='k',<328>,1:75]"
+        },
+        {
+          "rowNumber": 85095,
+          "key": "PANTO_TEST_DOMAIN/Values statement with alias:01/tuple",
+          "group": "tuple",
+          "lenient": "error",
+          "detail": "PssSqlParserAccessServer non-JSON stdout: Key = $1, Value = [@6,23:23='(',<285>,1:23]"
+        }
+      ]
+    },
+    "TABLE_KEY_ADDED": {
+      "rows": 2,
+      "byGroup": {
+        "tuple": 2
+      },
+      "byLenient": {
+        "essentialMatch": 2
+      },
+      "samples": [
+        {
+          "rowNumber": 79475,
+          "key": "Foundation/m_BNR_SC_STUDENT_COURSE_WORK_CAMPUS_OSF:v1.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Lookup Procedure_LKP_academic_period>"
+        },
+        {
+          "rowNumber": 80289,
+          "key": "Foundation/m_BNR_ST_STUDENT_TERM_STD_LOGIC_CAMPUS_OSF:v1.1/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "<Lookup Procedure_LKP_reg_start_end>"
+        }
+      ]
+    },
+    "TABLE_KEY_CASE_CHANGED": {
+      "rows": 1,
+      "byGroup": {
+        "tuple": 1
+      },
+      "byLenient": {
+        "essentialMatch": 1
+      },
+      "samples": [
+        {
+          "rowNumber": 85248,
+          "key": "Partner_Data_Platform/prc_sourcecontact_sourcetype_combined_bundle_demo_1:1|prc_sourcecontact_sourcetype_combined_bundle_demo_1:2/tuple",
+          "group": "tuple",
+          "lenient": "essentialMatch",
+          "detail": "[source type cappex]->[Source Type Cappex]"
+        }
+      ]
+    }
+  },
+  "maskedByTag": {
+    "INTERFACE_LENGTH_CHANGED": 4536,
+    "TABLE_KEY_LOST": 34584,
+    "CANDIDATE_FATAL_NEW": 25,
+    "TABLE_COLUMN_LOST": 43,
+    "CANDIDATE_SEVERE_NEW": 32,
+    "INTERFACE_COLUMN_LOST": 1
+  },
+  "signatures": {
+    "CANDIDATE_FATAL_NEW": {
+      "FATAL|REPORT_ERROR|unexpected input: ']' in rule row_value_expression: 'American Indian or Alaska Native, Asian',]": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'primary_student_id' at (l:# c:#) was not found in output interface of any visible query alias [cte].": 2,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: target_partnercontact_id at (l:# c:#) and target_partnercontact_id at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: target_partner_system_name at (l:# c:#) and target_partner_system_name at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: source_partnercontact_id at (l:# c:#) and source_partnercontact_id at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: source_partner_system_name at (l:# c:#) and source_partner_system_name at (l:# c:#).": 1,
+      "FATAL|SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH|UNION has different column counts. Expected # columns (source_partnercontact_id, source_partner_system_name, target_partnercontact_id, target_partner_system_nam": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_academic_period.ACADEMIC_PERIOD#> at (l:# c:#) and <Lookup Procedure_lkp_academic_period.ACADEMIC_PER": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_active_courses_course_type_lkp.in_course_cd> at (l:# c:#) and <lookup procedure_lkp_active_courses_co": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_apl_term_eff_dt.in_term_id_eff> at (l:# c:#) and <lookup procedure_lkp_apl_term_eff_dt.in_term_id_eff": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_courses#.course_cd#> at (l:# c:#) and <lookup procedure_lkp_courses#.course_cd#> at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_degree_college_cd#.major_cd_#> at (l:# c:#) and <lookup procedure_lkp_degree_college_cd#.major_cd_#> ": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_reg_start_end.ACADEMIC_PERIOD#> at (l:# c:#) and <Lookup Procedure_lkp_reg_start_end.ACADEMIC_PERIOD_": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_reg_start_end.ACADEMIC_PERIOD#> at (l:# c:#) and <Lookup Procedure_lkp_reg_start_end.ACADEMIC_PERIOD#": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_reg_start_end.in_academic_period> at (l:# c:#) and <lookup procedure_lkp_reg_start_end.academic_perio": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_reg_start_end.in_academic_period> at (l:# c:#) and <lookup procedure_lkp_reg_start_end.in_academic_pe": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_LKP_SGL.FINAL_GRADE#> at (l:# c:#) and <Lookup Procedure_LKP_SGL.SHRGRDE_QUALITY_POINTS> at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_LKP_SGL.FINAL_GRADE#> at (l:# c:#) and <Lookup Procedure_LKP_SGL.FINAL_GRADE#> at (l:# c:#).": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_unconnected_lkp_graduated_students.student_id#> at (l:# c:#) and <lookup procedure_unconnected_lkp_gradua": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'REGISTERED_IND' at (l:# c:#) was not found in output interface of any visible query alias [ex_ex_#].": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'REGISTERED_IND' at (l:# c:#) was not found in output interface of any visible query alias [ex_ex__#_#].": 2,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'out_GRADUATED_IND' at (l:# c:#) was not found in output interface of any visible query alias [ex_ex__#_#].": 1,
+      "FATAL|REPORT_ERROR|unexpected input: 'ORDER' in rule value_expression: ORDER BY rownumber) as academic_period,": 1,
+      "FATAL|APPLICATION_ISSUE_FATAL|Exception when walking the parse tree: class java.lang.String cannot be cast to class java.util.Map (java.lang.String and java.util.Map are in module java.base ": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_graduated_students#.STUDENT_ID#> at (l:# c:#) and <Lookup Procedure_lkp_graduated_students#.STUDENT_I": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_graduated_students#.STUDENT_ID#> at (l:# c:#) and <Lookup Procedure_lkp_graduated_students#.STVDEGC_D": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_graduated_students#.STUDENT_ID#> at (l:# c:#) and <Lookup Procedure_lkp_graduated_students#.ACADEMIC_": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <Lookup Procedure_lkp_term_start_end_last.ACADEMIC_PERIOD#> at (l:# c:#) and <Lookup Procedure_lkp_term_start_end_last.ACAD": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_term_start_end_last.in_academic_period> at (l:# c:#) and <lookup procedure_lkp_term_start_end_last.ac": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <lookup procedure_lkp_term_start_end_last.in_academic_period> at (l:# c:#) and <lookup procedure_lkp_term_start_end_last.in": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'TRANSFER_COURSE_IND' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_#].": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'transfer_course_ind' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_ey_#].": 2,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'TRANSFER_COURSE_IND' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_ey_#].": 1,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'registered_ind' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_up_#].": 2,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'academic_period' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_up_#].": 2,
+      "FATAL|UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES|Unqualified column 'in_grad_lkp' at (l:# c:#) was not found in output interface of any visible query alias [so_sr_up_#].": 2,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: <expression_exp_transfer_ind.transfer_student_ind> at (l:# c:#) and <expression_exp_transfer_ind.out_transfer_student_ind> ": 1,
+      "FATAL|DUPLICATE_INTERFACE_COLUMNS|Duplicate interface columns defined: extended_prop_min_value at (l:# c:#) and extended_prop_min_value at (l:# c:#).": 1,
+      "FATAL|REPORT_ERROR|unexpected input: '#O' in rule predicand_primary: #O": 1,
+      "FATAL|AST_WALKER_STACK_MISALIGN|Semantic analysis aborted: walker stack mis-aligned during AST walk.": 1
+    },
+    "CANDIDATE_SEVERE_NEW": {
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'gift_id' at (l:# c:#). Possible sources: [<[AMS].[gifts].{fulfillment}>, <[AMS].[donor].{fulfillment}>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'preferred_full_name' at (l:# c:#). Possible sources: [<[AMS].[donor_address].{fulfillment}>, <[AMS].[donor].{fulfillment}>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_entry_year_academic' at (l:# c:#). Possible sources: [query#, query#]": 3,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'fund_type' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mapping].{conve": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'calculated_field_#' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mappin": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'CALCULATED_FIELD_#' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mappin": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'FUND_TYPE' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].{fulfillment}>, <[Enroll#].[Partner Code Mapping].{conve": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_fund_amount' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_definition>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'fund_type' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_definition>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_entry_year_academic' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_defin": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_full_part_time' at (l:# c:#). Possible sources: [<cte#_final_totals_sliced>, <cte#_metric_map>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'slice' at (l:# c:#). Possible sources: [<cte#_final_totals_sliced>, <cte#_metric_map>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'sort_order' at (l:# c:#). Possible sources: [<cte#_final_totals_sliced>, <cte#_metric_map>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'category' at (l:# c:#). Possible sources: [<cte#_final_totals_sliced>, <cte#_metric_map>]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'institutional_gift_total' at (l:# c:#). Possible sources: [<[Enroll#].[Partner Configurations].{finaid_variable_gap}>, <[Enroll#].[P": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'partnercontact_id' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_definition>": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'partner_system_name' at (l:# c:#). Possible sources: [<[Enroll#].[Student Year Funds].[Last Validated].{final}>, <cte#_pop_definitio": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'configuration_type' at (l:# c:#). Possible sources: [<cte#_pop_definition>, <[Enroll#].[Partner Display Controls].[Last Validated].{": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'eab_exam_score' at (l:# c:#). Possible sources: [<[Enroll#].[Student Test Scores PDP Delivery].[Last Validated].{final}>, <cte#_acrk": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'application_incomplete_indicator_eab' at (l:# c:#). Possible sources: [<[enrollment_services].[Partner Data Contact]>, <[enrollment_": 4,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'application_incomplete_indicator_eab' at (l:# c:#). Possible sources: [<[enrollment_services].[Partner Data Race and Ethnicity]>, <[": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'downfill_college_cd' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'downfill_major_cd_#' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'college_cd_new' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'residency_cd_new' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'degree_cd_#_new' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'college_cd_#_new' at (l:# c:#). Possible sources: [aa#_student_term, aa#_final_code_#_values]": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'academic_period' at (l:# c:#). Possible sources: [<loo_lkp_college_cd_crosswalk>, <source definition_osf_campus_student_term_campus>": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'student_identifier' at (l:# c:#). Possible sources: [<loo_lkp_college_cd_crosswalk>, <source definition_osf_campus_student_term_camp": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'maxrno_or_effective_date' at (l:# c:#). Possible sources: [<loo_lkp_active_student_prog>, <input transformation_in_mplt_student_prog": 1,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'source_type' at (l:# c:#). Possible sources: [es_pdp_common.common.common_source_standard_mappings, <[Partner_Data_Platform].[Encour": 2,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'category' at (l:# c:#). Possible sources: [es_pdp_common.common.common_source_standard_mappings, <[Partner_Data_Platform].[Encoura C": 2,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'SOURCE_CODE' at (l:# c:#). Possible sources: [<[Partner_Data_Platform].[College Board Contacts]>, query#]": 6,
+      "SEVERE_WARNING|AMBIGUOUS_COLUMN_REFERENCE|Ambiguous column reference 'cur_address_valid' at (l:# c:#). Possible sources: [<[Partner_Data_Platform].[Contact Address Raw]>, query#]": 1
+    },
+    "BASELINE_DIAGNOSTIC_DROPPED": {
+      "FATAL||Invalid syntax near ';'": 11,
+      "FATAL||Invalid syntax near '='": 1,
+      "FATAL||Invalid syntax near '<EOF>'": 17,
+      "FATAL||Invalid syntax near '('": 4
+    }
+  },
+  "nodeKinds": {
+    "lost": {
+      "function": 10,
+      "parameters": 10,
+      "lookup": 7,
+      "Type": 4
+    },
+    "added": {
+      "datetime_function": 127,
+      "level": 124,
+      "canonical": 124,
+      "text": 124,
+      "form": 124,
+      "increment": 122,
+      "value": 121,
+      "function": 1,
+      "function_name": 1,
+      "parameters": 1,
+      "part_form": 3,
+      "part": 3,
+      "source": 3,
+      "exists": 4,
+      "operator": 1
+    }
+  },
+  "contract": {
+    "baseline": {
+      "errors,fatalErrorCount,interface,messages,sqlTree,substitutions,symbolTable,tableDictionary": 88032
+    },
+    "candidate": {
+      "queryDictionary,queryInterface,sqlTree,substitutionsMap,symbolTable,tableDictionary": 88042,
+      "errors,fatalErrorCount,hasFatalErrors,messages,ok,rmcpParserMeta,transport": 4
+    }
+  }
+}

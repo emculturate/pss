@@ -42,7 +42,10 @@ An output alias is **grounded** when every immediate dependency in its `interfac
 
 Inside the **`interface` bucket only**, a dependency on output alias `B` from output column `A` is stamped **`table_ref=queryN`** only when `B` appears **earlier** in select-list source order than `A`.
 
-Source order is derived from earliest `query_dictionary` token positions per interface key (`extractInterfaceColumnNamesInSelectTokenOrder` at convert egress).
+At convert egress, resolve interface entries in the select-list order recorded
+during the walk, so each defining output is grounded before later consumers.
+The order gate falls back to `query_dictionary` token positions when the
+recorded order is unavailable.
 
 Forward references keep `table_ref=null` in `interface` and remain in `unresolved_column` until finalize emits diagnostics.
 

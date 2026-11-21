@@ -112,8 +112,8 @@ gates listed below, and is not whole-release certification.
     ordinary IN lists in SELECT CASE expressions.
   - Root cause, reproduction, runtime trace, and completed characterization
     are recorded in [Entry 24](#entry-24--successive-in-lists-silently-overwrite-column-collection).
-    Implementation can start from that evidence without repeating discovery;
-    post-fix regression verification is still required.
+    The targeted IN-frame fix and focused regressions are in source; the
+    broader caller audit and release acceptance remain open.
 
 - **Entry 25 — fifth 5.1.4 remediation: datetime story deficiencies**
   - Correct datetime TRUNCATE handling, missing supported parts/aliases,
@@ -4700,8 +4700,8 @@ and [typed AST substitution](panto-variable-inheritance-using-bundles.md#typed-a
 
 ## Entry 24 — Successive IN lists silently overwrite column collection
 
-**Status:** Confirmed defect; fourth 5.1.4 remediation (2026-11-19), following
-Entries 21–23. Root cause traced; not implemented.
+**Status:** Targeted ordinary IN-list fix implemented and focused regressions
+passed; broader caller audit and release acceptance remain open.
 **Kind:** Dictionary / reference-token collection defect.
 **Implementation starting point:** the evidence below is sufficient to begin
 the targeted fix. Do not make repeating the exploratory probes a prerequisite.
@@ -4735,8 +4735,9 @@ SELECT also includes `src_donor_id`.
   names; 5.1.4 collects only `constituent_code*`. Both SQL and QUERY endpoints
   succeed without diagnostics. The AST contains all ten `end_date*` names,
   with forty occurrences of each in the complete query. The full original
-  statement was not supplied; do not reconstruct it and call it row-9922
-  replay evidence.
+  statement and the operand-swapped variant were subsequently found in
+  [snippet-row-9922.sql](<./514 defect and enhancement requirements/snippet-row-9922.sql>)
+  and [snippet-row-9922-swapped.sql](<./514 defect and enhancement requirements/snippet-row-9922-swapped.sql>).
 - **Locally verified current-parser evidence:** reduced complete queries
   reproduce the loss, and a live walker trace proves replacement of the
   pending-reference map at each ordinary IN-list frame exit. AST and output
@@ -4752,6 +4753,25 @@ SELECT also includes `src_donor_id`.
   `exitAlias_identifier` on the reduced CASE probe. No successful local
   old-JAR CASE comparison is claimed. The owner's full-query comparison and
   the independently proven current-code overwrite must remain distinguished.
+
+### Implemented targeted fix and verification
+
+For ordinary IN lists only, the predicate exit detaches its pending
+`unresolved_column` bucket before the existing shallow frame pop, then merges
+the eligible entries into the restored parent. True SELECT-subquery handling
+is unchanged; this is not a generic change to all frame merges.
+
+The persistent `SqlEventWalkerCompoundInDictionaryTests` cover the report's
+CASE, order, AND/OR, mixed predicate, boolean output, JOIN, WHERE, qualified,
+NOT IN, repeated-name and nested-list cases, plus SQL/QUERY parity on the
+two-WHEN fixture. Exact full-output golden tests also replay both original
+row-9922 fixtures. Each preserves all 21 source names: 40 distinct occurrences
+of each family member, plus one extra `constituent_code` in ELSE and one
+`src_donor_id` (802 locations total). Both parse without diagnostics.
+The focused regression selection and existing predicate, JOIN and subquery
+tests passed. The pre-fix helper fails the original and swapped replay goldens.
+The bounded audit, remaining controls and release verification below are not
+claimed complete. No release JAR was rebuilt or published for this fix.
 
 ### Complete minimal reproduction and exact captured trace
 
@@ -4978,8 +4998,8 @@ Proposed mandatory review wording:
 > Do not apply blanket deep merging to unrelated buckets. Validate both reference
 > accumulation and scope isolation through observable SQL regression outputs.
 
-These agent instructions and helper documentation are planned deliverables,
-not changes already made by this workplan update.
+The frame-edit rule is now in AGENTS.md and referenced from the Copilot
+instructions; the shallow merge helper documents its caller obligations.
 
 ### Regression work and acceptance
 
@@ -5281,7 +5301,8 @@ quoted identifiers, or relaxing query-scope visibility.
 
 ## Entry 28 — Ordered select-alias lineage invariance
 
-**Status:** Reported black-box defects; source verification and fix pending.
+**Status:** Source-order fix implemented and focused alias/scope regressions
+passed; release-level verification remains open.
 **Reports:** [consumer-alias iteration-order finding](<./514 defect and enhancement requirements/ordered-alias-iteration-order-defect.md>)
 and [temporal-name finding](<./514 defect and enhancement requirements/ordered-alias-temporal-name-resolution-defect.md>).
 
@@ -5300,6 +5321,12 @@ black-box hypotheses. Determine whether these are one or multiple code paths;
 do not assume either cause or alter precedence before tracing it.
 
 ### Phases and acceptance
+
+The interface egress loop now processes recorded select-list outputs in source
+order before remaining interface entries. This prevents a consumer from being
+classified before its defining output has been grounded. Focused goldens cover
+both reported minimal examples and their controls; the affected existing
+query-dictionary golden was updated for the changed map iteration order.
 
 1. Reproduce both reports and trace alias grounding, source-order handling,
    final interface stamping, and any temporal-name handling.

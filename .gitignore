@@ -2,3 +2,5 @@
 /.tmp/
 target-maven/
 /parse/testdata/live_queries/
+/parse/documents/514 defect and enhancement requirements/snippets/rmcp-panto-extracted-snippets-compare-2026-11-19.json
+/parse/documents/514 defect and enhancement requirements/snippets/rmcp-panto-extracted-snippets-compare-latest.json

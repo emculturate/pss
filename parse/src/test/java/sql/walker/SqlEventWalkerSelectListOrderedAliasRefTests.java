@@ -84,6 +84,62 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 		Assert.assertNotNull("expected fatal for forward prior_alias ref", fatal);
 	}
 
+	@Test
+	public void orderedAliasRegression_caseYTest() {
+		String query = "select case when a = 1 then 'x' else 'y' end as x, case when x = 'x' then 'y' else 'n' end as y from <[D].[T]> t";
+		SqlParseEventWalker extractor = parseHappyPath(query);
+		Assert.assertEquals("All diagnostics", 0, extractor.getSnippet().getParserDiagnosticList().size());
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={alias=x, case={clauses={1={then={literal='x'}, when={condition={left={column={name=a, table_ref=null}}, right={literal=1}, operator==}}}}, else={literal='y'}}}, 2={alias=y, case={clauses={1={then={literal='y'}, when={condition={left={column={name=x, table_ref=null}}, right={literal='x'}, operator==}}}}, else={literal='n'}}}}, from={table={alias=t, substitution={name=<[D].[T]>, parts={1=[D], 2=[T]}, type=tuple}}}}}",
+				"[x, y]",
+				"{<[D].[T]>=tuple}",
+				"{<[D].[T]>={a=[[@3,17:17='a',<459>,1:17]]}}",
+				"{query0={x=[[@12,48:48='x',<459>,1:48], [@16,61:61='x',<459>,1:61]], y=[[@25,94:94='y',<459>,1:94]]}}",
+				"{def_query0={query_dictionary={x=[[@12,48:48='x',<459>,1:48], [@16,61:61='x',<459>,1:61]], y=[[@25,94:94='y',<459>,1:94]]}, table_dictionary={<[D].[T]>={a=[[@3,17:17='a',<459>,1:17]]}}, interface={x=[{name=a, table_ref=<[D].[T]>}], y=[{name=x, table_ref=query0}]}, table_alias={t=<[D].[T]>}}}");
+	}
+
+	@Test
+	public void orderedAliasRegression_caseOutTest() {
+		String query = "select case when a = 1 then 'x' else 'y' end as x, case when x = 'x' then 'y' else 'n' end as out_col from <[D].[T]> t";
+		SqlParseEventWalker extractor = parseHappyPath(query);
+		Assert.assertEquals("All diagnostics", 0, extractor.getSnippet().getParserDiagnosticList().size());
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={alias=x, case={clauses={1={then={literal='x'}, when={condition={left={column={name=a, table_ref=null}}, right={literal=1}, operator==}}}}, else={literal='y'}}}, 2={alias=out_col, case={clauses={1={then={literal='y'}, when={condition={left={column={name=x, table_ref=null}}, right={literal='x'}, operator==}}}}, else={literal='n'}}}}, from={table={alias=t, substitution={name=<[D].[T]>, parts={1=[D], 2=[T]}, type=tuple}}}}}",
+				"[out_col, x]",
+				"{<[D].[T]>=tuple}",
+				"{<[D].[T]>={a=[[@3,17:17='a',<459>,1:17]]}}",
+				"{query0={x=[[@12,48:48='x',<459>,1:48], [@16,61:61='x',<459>,1:61]], out_col=[[@25,94:100='out_col',<459>,1:94]]}}",
+				"{def_query0={query_dictionary={out_col=[[@25,94:100='out_col',<459>,1:94]], x=[[@12,48:48='x',<459>,1:48], [@16,61:61='x',<459>,1:61]]}, table_dictionary={<[D].[T]>={a=[[@3,17:17='a',<459>,1:17]]}}, interface={out_col=[{name=x, table_ref=query0}], x=[{name=a, table_ref=<[D].[T]>}]}, table_alias={t=<[D].[T]>}}}");
+	}
+
+	@Test
+	public void orderedAliasRegression_birthTest() {
+		String query = "select right(BIRTH_YEAR, 2) BIRTH_DAY, substring(BIRTH_DAY, 6, 2) BIRTH_MONTH from <[ALR].[Inquiry]> as ad";
+		SqlParseEventWalker extractor = parseHappyPath(query);
+		Assert.assertEquals("All diagnostics", 0, extractor.getSnippet().getParserDiagnosticList().size());
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={function={parameters={1={column={name=BIRTH_YEAR, table_ref=null}}, 2={literal=2}}, function_name=right}, alias=BIRTH_DAY}, 2={function={parameters={1={column={name=BIRTH_DAY, table_ref=null}}, 2={literal=6}, 3={literal=2}}, function_name=substring}, alias=BIRTH_MONTH}}, from={table={alias=ad, substitution={name=<[ALR].[Inquiry]>, parts={1=[ALR], 2=[Inquiry]}, type=tuple}}}}}",
+				"[BIRTH_MONTH, BIRTH_DAY]",
+				"{<[ALR].[Inquiry]>=tuple}",
+				"{<[ALR].[Inquiry]>={BIRTH_YEAR=[[@3,13:22='BIRTH_YEAR',<459>,1:13]]}}",
+				"{query0={BIRTH_MONTH=[[@17,66:76='BIRTH_MONTH',<459>,1:66]], BIRTH_DAY=[[@7,28:36='BIRTH_DAY',<459>,1:28], [@11,49:57='BIRTH_DAY',<459>,1:49]]}}",
+				"{def_query0={query_dictionary={BIRTH_MONTH=[[@17,66:76='BIRTH_MONTH',<459>,1:66]], BIRTH_DAY=[[@7,28:36='BIRTH_DAY',<459>,1:28], [@11,49:57='BIRTH_DAY',<459>,1:49]]}, table_dictionary={<[ALR].[Inquiry]>={BIRTH_YEAR=[[@3,13:22='BIRTH_YEAR',<459>,1:13]]}}, interface={BIRTH_MONTH=[{name=BIRTH_DAY, table_ref=query0}], BIRTH_DAY=[{name=BIRTH_YEAR, table_ref=<[ALR].[Inquiry]>}]}, table_alias={ad=<[ALR].[Inquiry]>}}}");
+	}
+
+	@Test
+	public void orderedAliasRegression_birthQualifiedTest() {
+		String query = "select right(ad.BIRTH_YEAR, 2) BIRTH_DAY, substring(BIRTH_DAY, 6, 2) BIRTH_MONTH from <[ALR].[Inquiry]> as ad";
+		SqlParseEventWalker extractor = parseHappyPath(query);
+		Assert.assertEquals("All diagnostics", 0, extractor.getSnippet().getParserDiagnosticList().size());
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={function={parameters={1={column={name=BIRTH_YEAR, table_ref=ad}}, 2={literal=2}}, function_name=right}, alias=BIRTH_DAY}, 2={function={parameters={1={column={name=BIRTH_DAY, table_ref=null}}, 2={literal=6}, 3={literal=2}}, function_name=substring}, alias=BIRTH_MONTH}}, from={table={alias=ad, substitution={name=<[ALR].[Inquiry]>, parts={1=[ALR], 2=[Inquiry]}, type=tuple}}}}}",
+				"[BIRTH_MONTH, BIRTH_DAY]",
+				"{<[ALR].[Inquiry]>=tuple}",
+				"{<[ALR].[Inquiry]>={BIRTH_YEAR=[[@3,13:14='ad',<459>,1:13]]}}",
+				"{query0={BIRTH_MONTH=[[@19,69:79='BIRTH_MONTH',<459>,1:69]], BIRTH_DAY=[[@9,31:39='BIRTH_DAY',<459>,1:31], [@13,52:60='BIRTH_DAY',<459>,1:52]]}}",
+				"{def_query0={query_dictionary={BIRTH_MONTH=[[@19,69:79='BIRTH_MONTH',<459>,1:69]], BIRTH_DAY=[[@9,31:39='BIRTH_DAY',<459>,1:31], [@13,52:60='BIRTH_DAY',<459>,1:52]]}, table_dictionary={<[ALR].[Inquiry]>={BIRTH_YEAR=[[@3,13:14='ad',<459>,1:13]]}}, interface={BIRTH_MONTH=[{name=BIRTH_DAY, table_ref=query0}], BIRTH_DAY=[{name=BIRTH_YEAR, table_ref=ad}]}, table_alias={ad=<[ALR].[Inquiry]>}}}");
+	}
+
 	// --- origin item types (first select-list entry) ---
 
 	@Test

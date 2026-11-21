@@ -1,5 +1,12 @@
 # Copilot Instructions
 
+## Symbol-Table Frame Edits
+
+Follow the [frame-edit rule in AGENTS.md](../AGENTS.md#parser-implementation-rules-this-repository):
+classify exits as merge, publish, or discard; preserve eligible accumulated
+references and occurrence tokens without crossing scope boundaries; and test
+both accumulation and isolation.
+
 ## Test Suite Selection
 
 - "Full suite", "full test suite", and "all tests" mean the default

@@ -715,6 +715,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		bumpSymbolTableStackGeneration();
 	}
 
+	/**
+	 * Restores the parent and shallowly merges the frame, except for table aliases.
+	 * Callers must detach and merge accumulation buckets such as unresolved columns
+	 * when both frames can contain eligible references; raw {@code putAll} replaces
+	 * the parent bucket. Filter child-scope references before merging and preserve
+	 * all distinct occurrence tokens and their payloads.
+	 */
 	@SuppressWarnings("unchecked")
 	public void popSymbolTablePutAll(HashMap<String, Object> symbols) {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
