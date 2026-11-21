@@ -58,7 +58,7 @@ Link to those records rather than copying their inventories or measurements.
 | **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Targeted fix complete in source** — focused regressions pass; broader caller audit and release acceptance remain open |
 | **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Complete in source** (2026-11-21) — focused datetime regressions pass; local release JAR not rebuilt |
 | **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete in source** (2026-11-20) — focused tests pass; local release JAR not rebuilt |
-| **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Reported; not yet source-verified or fixed** |
+| **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Complete in source** (2026-11-21) — unquoted keys merge case-insensitively with deduplicated tokens; focused dictionary/scope regressions pass |
 | **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Source-order fix complete in source** — focused alias/scope regressions pass; release-level verification remains open |
 | **29** | Parser-owned structured lineage and explanation | Enhancement / design | **Proposed; contract, scope, and acceptance thresholds pending** |
 
@@ -5271,7 +5271,8 @@ upstream text mutation before these transports is not addressed by this fix.
 
 ## Entry 27 — Cross-scope physical-column case fragmentation
 
-**Status:** Reported black-box defect; source verification and fix pending.
+**Status:** Complete in source (2026-11-21); focused SQL/QUERY dictionary and
+scope regressions pass. The local release JAR has not been rebuilt.
 **Report:** [cross-scope column-case fragmentation](<./514 defect and enhancement requirements/cross-scope-column-case-fragmentation-defect.md>).
 
 ### Goal and evidence
@@ -5285,16 +5286,18 @@ This is not a token-ID renumbering issue.
 
 ### Phases and acceptance
 
-1. Trace child-to-global dictionary merging and establish the actual cause;
-   preserve local scope boundaries and the existing chosen canonical spelling.
-2. Merge unquoted keys case-insensitively and deduplicate occurrence tokens
-   without dropping any valid distinct occurrence. Respect dialect-specific
-   semantics for delimited identifiers; do not blindly fold quoted names.
-3. Add independent full-golden tests for same-scope, predicate-subquery,
-   FROM-subquery or CTE, swapped casing, and case-sensitive delimited-identifier
-   controls. Assert one appropriate key, exact token positions, and diagnostics.
-4. Verify SQL/QUERY behavior and existing dictionary/scope regressions; update
-   consumer dictionary guidance if the published contract requires clarification.
+1. **Complete.** Traced the defect to exact-key and `putAll` bypasses around the
+   shared dictionary merge path.
+2. **Complete.** Global and convert-egress table-dictionary merges now use the
+   standard column merge, which folds unquoted keys case-insensitively,
+   preserves the first collected spelling, and deduplicates occurrence tokens.
+   Double-quoted identifiers remain distinct.
+3. **Complete.** Added independent full-golden tests for same-scope,
+   predicate-subquery, CTE, swapped casing, production-shaped QUERY input, and
+   case-sensitive double-quoted controls.
+4. **Complete in source.** SQL/QUERY behavior and 737 focused dictionary/scope
+   regressions pass; consumer dictionary guidance now states the casing
+   contract. Release-JAR rebuilding and release-level verification remain open.
 
 **Out of scope:** changing identifier spelling globally, merging distinct
 quoted identifiers, or relaxing query-scope visibility.

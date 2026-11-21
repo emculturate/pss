@@ -5209,13 +5209,24 @@ public class SqlParseSymbolTreeHelper {
 		if (localTableCollection != null && localTableCollection.size() > 0) {
 			for (String tab_ref : localTableCollection.keySet()) {
 				String reference = normalizeTableRef(tab_ref);
-				HashMap<String, Object> currDict = (HashMap<String, Object>)  currentTableDictionary.get(reference);
-				if (currDict != null)
-					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-				else {
-					HashMap<String, Object> newDict = new HashMap<String, Object>();
-					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-					 currentTableDictionary.put(reference, newDict);
+				Object localColumnsObj = localTableCollection.get(tab_ref);
+				if (!(localColumnsObj instanceof Map<?, ?> localColumns)) {
+					continue;
+				}
+				HashMap<String, Object> currDict =
+						(HashMap<String, Object>) currentTableDictionary.get(reference);
+				if (currDict == null) {
+					currDict = new HashMap<String, Object>();
+					currentTableDictionary.put(reference, currDict);
+				}
+				for (Map.Entry<?, ?> columnEntry : localColumns.entrySet()) {
+					if (columnEntry.getKey() instanceof String columnName
+							&& columnEntry.getValue() != null) {
+						walker.mergeResolvedColumnIntoDictionary(
+								currDict,
+								columnName,
+								columnEntry.getValue());
+					}
 				}
 			}
 		}
@@ -5910,13 +5921,24 @@ public class SqlParseSymbolTreeHelper {
 		if (localTableCollection != null && localTableCollection.size() > 0) {
 			for (String tab_ref : localTableCollection.keySet()) {
 				String reference = normalizeTableRef(tab_ref);
-				HashMap<String, Object> currDict = (HashMap<String, Object>) currentTableDictionary.get(reference);
-				if (currDict != null) {
-					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-				} else {
-					HashMap<String, Object> newDict = new HashMap<String, Object>();
-					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-					currentTableDictionary.put(reference, newDict);
+				Object localColumnsObj = localTableCollection.get(tab_ref);
+				if (!(localColumnsObj instanceof Map<?, ?> localColumns)) {
+					continue;
+				}
+				HashMap<String, Object> currDict =
+						(HashMap<String, Object>) currentTableDictionary.get(reference);
+				if (currDict == null) {
+					currDict = new HashMap<String, Object>();
+					currentTableDictionary.put(reference, currDict);
+				}
+				for (Map.Entry<?, ?> columnEntry : localColumns.entrySet()) {
+					if (columnEntry.getKey() instanceof String columnName
+							&& columnEntry.getValue() != null) {
+						walker.mergeResolvedColumnIntoDictionary(
+								currDict,
+								columnName,
+								columnEntry.getValue());
+					}
 				}
 			}
 		}

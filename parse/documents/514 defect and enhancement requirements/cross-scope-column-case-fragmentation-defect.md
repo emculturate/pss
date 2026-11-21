@@ -4,6 +4,12 @@ Date: 2026-11-20
 
 Classification: **confirmed 5.1.4 defect**
 
+Resolution: **complete in source (2026-11-21)**. Cross-scope global table
+dictionary merges now use the shared column merge path for case-insensitive
+unquoted-key matching and token deduplication. Double-quoted identifiers remain
+case-sensitive. Focused SQL/QUERY dictionary and scope regressions pass; the
+local release JAR has not been rebuilt.
+
 This is a black-box finding. No parser source was consulted.
 
 PSS 5.1.4 can publish two case-variant keys for one unquoted physical column

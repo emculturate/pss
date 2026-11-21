@@ -41,6 +41,12 @@ From **any clause** in the active query frame, when there is a clear visibility 
 
 The global table dictionary is intentionally **cross-scope**: `tab_a.pd1` tokens from the outer query, a scalar predicand, and a nested derived table may all appear under one `tab_a` entry.
 
+Unquoted physical-column keys merge case-insensitively across those scopes while
+preserving the spelling of the first collected key. Their occurrence-token
+lists are deduplicated after the keys are unified. Double-quoted identifiers
+remain case-sensitive and therefore retain distinct keys when their spelling
+differs.
+
 ### What it is not
 
 - Not keyed by query output column names.

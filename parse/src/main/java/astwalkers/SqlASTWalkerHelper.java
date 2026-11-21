@@ -494,7 +494,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				HashMap<String, Object> newColumns = new HashMap<String, Object>();
 				for (Map.Entry<?, ?> columnEntry : incomingColumns.entrySet()) {
 					if (columnEntry.getKey() instanceof String columnName) {
-						newColumns.put(columnName, columnEntry.getValue());
+						mergeColumnEntry(newColumns, columnName, columnEntry.getValue());
 					}
 				}
 				globalTableDictionary.put(normalizedTableRef, newColumns);
@@ -506,19 +506,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				if (!(columnEntry.getKey() instanceof String columnName)) {
 					continue;
 				}
-
-				Object incomingRefs = columnEntry.getValue();
-				Object existingRefs = existingColumns.get(columnName);
-				if (existingRefs == null) {
-					existingColumns.put(columnName, incomingRefs);
-				} else if (existingRefs instanceof ArrayList<?> existingRefList
-						&& incomingRefs instanceof ArrayList<?> incomingRefList) {
-					for (Object incomingRef : incomingRefList) {
-						if (!((ArrayList<Object>) existingRefList).contains(incomingRef)) {
-							((ArrayList<Object>) existingRefList).add(incomingRef);
-						}
-					}
-				}
+				mergeColumnEntry(existingColumns, columnName, columnEntry.getValue());
 			}
 		}
 	}
