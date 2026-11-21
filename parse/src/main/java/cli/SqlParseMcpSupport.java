@@ -61,26 +61,65 @@ final class SqlParseMcpSupport {
     }
 
     /**
-     * Replace characters that break Gson request deserialization or the lexer:
-     * Unicode whitespace → ASCII space; Unicode dashes → '-'; strip U+FE0F variation selectors.
+     * Normalize problematic syntax characters while preserving string literal contents.
+     * Comments and double-quoted identifiers must not start a string on an embedded apostrophe.
      */
     static String normalizeSqlTextForMcp(String sql) {
         if (sql == null || sql.isEmpty()) {
             return sql;
         }
         StringBuilder normalized = new StringBuilder(sql.length());
+        boolean stringLiteral = false;
+        boolean quotedIdentifier = false;
+        boolean lineComment = false;
+        boolean blockComment = false;
+        char previous = 0;
         for (int index = 0; index < sql.length(); index++) {
             char ch = sql.charAt(index);
+            if (stringLiteral) {
+                normalized.append(ch);
+                if ((ch == '\\' || ch == '\'') && index + 1 < sql.length()
+                        && (ch == '\\' || sql.charAt(index + 1) == '\'')) {
+                    normalized.append(sql.charAt(++index));
+                } else if (ch == '\'') {
+                    stringLiteral = false;
+                }
+                previous = 0;
+                continue;
+            }
             if (ch == '\uFE0F') {
                 continue;
             }
             if (isProblematicWhitespace(ch)) {
-                normalized.append(' ');
+                ch = ' ';
             } else if (isUnicodeDash(ch)) {
-                normalized.append('-');
-            } else {
-                normalized.append(ch);
+                ch = '-';
             }
+            normalized.append(ch);
+            if (lineComment) {
+                if (ch == '\r' || ch == '\n') {
+                    lineComment = false;
+                }
+            } else if (blockComment) {
+                if (previous == '*' && ch == '/') {
+                    blockComment = false;
+                    ch = 0;
+                }
+            } else if (quotedIdentifier) {
+                if (ch == '"' || ch == '\r' || ch == '\n') {
+                    quotedIdentifier = false;
+                }
+            } else if (previous == '-' && ch == '-') {
+                lineComment = true;
+            } else if (previous == '/' && ch == '*') {
+                blockComment = true;
+                ch = 0;
+            } else if (ch == '"') {
+                quotedIdentifier = true;
+            } else if (ch == '\'') {
+                stringLiteral = true;
+            }
+            previous = ch;
         }
         return normalized.toString();
     }

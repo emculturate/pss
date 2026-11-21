@@ -52,6 +52,15 @@ Link to those records rather than copying their inventories or measurements.
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Complete** (closed 2026-11-16) |
 | **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Complete** (closed 2026-11-13) — targeted fix + warning policy + parity re-evaluation delivered; see Entry 20 section |
+| **21** | QUERY variables in FROM/JOIN: author guidance and tuple-versus-query distinction | Diagnostic enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — policy discussion pending; not implemented |
+| **22** | Conflicting types for repeated occurrences of one substitution name | Diagnostic / consistency enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — severity and compatibility policy pending; not implemented |
+| **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — representation and diagnostic policy pending; not implemented |
+| **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Confirmed; fourth 5.1.4 remediation** (2026-11-19) — root cause traced; ready for targeted implementation; not implemented |
+| **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Fifth 5.1.4 remediation** (2026-11-20) — deficiencies verified on the existing local JAR; correction substeps approved for planning; not implemented |
+| **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete in source** (2026-11-20) — focused tests pass; local release JAR not rebuilt |
+| **27** | Cross-scope case fragmentation in the global table dictionary | Defect | **Reported; not yet source-verified or fixed** |
+| **28** | Ordered output-alias lineage depends on consumer name or temporal-looking alias | Defect | **Reported; root cause and relationship between reproductions unverified; not fixed** |
+| **29** | Parser-owned structured lineage and explanation | Enhancement / design | **Proposed; contract, scope, and acceptance thresholds pending** |
 
 **5.0.0 → 5.1.4 parity gate update:** Entry **20** is closed (2026-11-13) and
 no longer blocks parity. Remaining parity/release checks continue to be the
@@ -90,6 +99,40 @@ gates listed below, and is not whole-release certification.
     [current coverage inventory](coverage/sql_walker_exit_method_gaps.md).
     Scope is limited to that approved twelve-method set, not a new broad audit.
   - **Tier 3 is explicitly out of 5.1.4 scope.**
+
+- **Entries 21–23 — newly recorded 5.1.4 remediation proposals (2026-11-19)**
+  - Discuss FROM/JOIN query-variable guidance, repeated-name type conflicts,
+    and opaque query-source column binding before implementation.
+  - These are open assessment/design items, not approved diagnostic severities,
+    symbol-table formats, or completed fixes. Additional integration findings
+    may extend this remediation list.
+
+- **Entry 24 — fourth 5.1.4 remediation: confirmed IN-list collection defect**
+  - Preserve all source columns and occurrence tokens across successive
+    ordinary IN lists in SELECT CASE expressions.
+  - Root cause, reproduction, runtime trace, and completed characterization
+    are recorded in [Entry 24](#entry-24--successive-in-lists-silently-overwrite-column-collection).
+    Implementation can start from that evidence without repeating discovery;
+    post-fix regression verification is still required.
+
+- **Entry 25 — fifth 5.1.4 remediation: datetime story deficiencies**
+  - Correct datetime TRUNCATE handling, missing supported parts/aliases,
+    per-function part subsets, and false dialect conflicts for shared aliases.
+  - Implement multiple named date/time-part allowlists for functions with
+    different supported subsets, backed by shared part/alias definitions.
+  - [Entry 25](#entry-25--datetime-story-completion-and-function-specific-part-lists)
+    records verified baseline examples and correction/acceptance substeps.
+    Historical Entry 1 slice completion does not waive these later findings.
+
+- **Entry 26 — Unicode literal preservation: complete in source**
+  - MCP JSON, stream, and bulk preprocessing preserves literal data while
+    retaining existing syntax normalization. Focused tests passed; the local
+    release JAR still needs the ordinary candidate build and owner validation.
+
+- **Entries 27–29 — additional 5.1.4 handoffs**
+  - Resolve cross-scope dictionary casing and ordered-alias lineage defects;
+    assess and specify parser-owned structured lineage. The reports contain
+    black-box evidence, not source-verified root causes or approved schemas.
 
 **Latest scope reduction — deferred beyond 5.1.4, not release prerequisites:**
 - **Entry 7, entirely:** endpoint parity, type×grammar coverage and their
@@ -507,6 +550,20 @@ The fix is not merely to suppress q5866's diagnostic. Every recognized date/time
 ### Extract/corpus re-test required before Entry 1 closes
 
 Use a rebuilt 5.1.4 fat jar and re-run both 11-10-2026 extracts through their correct endpoints:
+
+**Additional RMCP evidence (2026-11-19):** use the strict
+[query assessment](<./514 defect and enhancement requirements/queries/rmcp-strict-queries-latest.md>)
+and [snippet assessment](<./514 defect and enhancement requirements/snippets/rmcp-strict-snippets-latest.md>).
+The detailed dated query and snippet comparisons in that directory's
+`queries/` and `snippets/` subdirectories are local-only corpus artifacts and
+are not included in the repository checkpoint; their corresponding
+`*-latest.md` copies were byte-identical when reviewed. These are historical inventories, not a
+current-candidate validation or proof that every tagged difference is a defect.
+Adjudicate findings against the current contract and existing dispositions;
+the [interface-loss audit](<./514 defect and enhancement requirements/interface-loss-audit.md>)
+classifies snippet 35573 and bound rows 1535/1539 as false positives or
+improvements, not parser defects. Track any remaining unadjudicated material
+findings rather than accepting or rejecting all differences by tag.
 
 1. Parse every record in `bound_queries_11-10-2026.csv` through `SQL`.
 2. Parse every record in `snippets-11-10-2026.csv` through the endpoint implied by its type (`COLUMN`, `PREDICAND`, `CONDITION`, `TUPLE`, `QUERY`, `JOIN_EXTENSION`, `IN_LIST`, etc.), using the same endpoint-input normalization as the prior 5.0.0-3 vs 5.1.4-1 comparison.
@@ -2035,6 +2092,14 @@ UDF controls, statement reset, and mixed-affinity minimum parity are delivered.
 | **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred | **Complete except deferred parts** — consumer docs updated for delivered datetime families; datetime generator support deferred to **Entry 10**; Slice E handoff deferred post-release |
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
+
+**Post-completion story comparison (2026-11-20):** the delivered slice
+milestones remain historical evidence, not proof of complete Snowflake
+part/signature coverage. [Entry 25](#entry-25--datetime-story-completion-and-function-specific-part-lists)
+owns the subsequently verified TRUNCATE alias, supported-part, function-subset,
+and shared-alias dialect-classification deficiencies. These are 5.1.4
+remediations, separate from the intentionally deferred PostgreSQL expansion
+and SQL-generator work.
 
 #### Slice A matrix accounting (strict traceability, 2026-11-16)
 
@@ -4379,6 +4444,920 @@ both JAR results, and the typed-substitution AST are retained locally under
 **Out of scope:** implementing broader variable binding, weakening concrete
 column or alias validation, automatically accepting the other Pattern 6
 cases, or changing the DATEADD test goldens.
+
+---
+
+## Entry 21 — QUERY variables in FROM/JOIN: author guidance
+
+**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
+not implemented.
+**Kind:** Diagnostic enhancement.
+
+### Shared evidence and sample for Entries 21–23
+
+Keep this subquery as the discussion and regression fixture:
+
+```sql
+select partnercontact_id, partner_system_name, eab_entry_year_academic,
+       sum(agg_fund_amount) as agg_fund_amount
+from (<fao_calc.query.total_fund_amount_per_fund_type>) fund_agg
+where eab_fund_type = 'pell_grant'
+  and coalesce(imputed_flag, false) = false
+group by partnercontact_id, partner_system_name, eab_entry_year_academic
+```
+
+In isolation, both 5.0.0 and 5.1.4 type the parenthesized variable as `query`;
+removing its surrounding parentheses changes the occurrence to `tuple`.
+5.0.0 collects all six input-column names under the variable in the table
+dictionary in either form. Current 5.1.4 excludes the `query` form and reports
+`UNRESOLVED_UNQUALIFIED_COLUMNS` for all six distinct names in the standalone
+replay. Its enclosing query dictionary contains the four SELECT output names
+and their definition tokens, not the WHERE or GROUP BY occurrence tokens.
+The placeholder itself has no parsed child query body or query dictionary.
+
+**Larger-query observation (owner-reported):** the same variable also occurs
+without parentheses in a second subquery and is typed `tuple` there. The global
+table dictionary contains SELECT-related columns but lacks the expected WHERE/
+GROUP BY coverage from the affected subquery. Preserve this distinction from
+the isolated replay; the complete larger statement is still needed to reproduce
+its exact scope, token, and traversal-order effects.
+
+**Owner direction:** 5.1.4 is correct not to turn a QUERY variable into a table
+dictionary entry. Do not restore 5.0.0's indiscriminate table-dictionary behavior.
+Typing, row-source participation, inferred columns, and binding validation are
+separate concerns.
+
+### Goal and proposal
+
+Consider a warning when a FROM/JOIN row source is a QUERY variable, explaining
+when a TUPLE variable would be preferable. Keep the QUERY form legal and retain
+its contextual type. Diagnostic wording, applicability, and severity remain
+open; this is not approval for a blanket warning.
+
+### Reasonableness and decisions
+
+- **Benefit:** explain the parentheses-driven distinction and help authors
+  choose the intended snippet endpoint instead of encountering opaque column
+  diagnostics.
+- **Legitimate QUERY use:** `FROM (<q>) q` can intentionally require a query-body
+  snippet such as `SELECT id FROM t`. A TUPLE occurrence can instead accept
+  `schema.table` or a parenthesized query fragment such as `(SELECT id FROM t)`.
+  The choice affects the snippet's grammar and who supplies its parentheses;
+  switching the template alone is not necessarily a compatible correction.
+- **Risk:** warning on every legal QUERY row source could create noise or
+  incorrectly imply that a deliberate whole-query binding is invalid. Decide
+  whether guidance should be unconditional, conditional, or documentation-only.
+- Coordinate with Entry 23 so advice about authoring style is not confused with
+  source-column validity or duplicated by unresolved-column diagnostics.
+
+### Phases and acceptance
+
+1. Characterize parenthesized QUERY and bare TUPLE occurrences in FROM and JOIN,
+   with concrete snippet bindings, before selecting a guidance policy.
+2. Agree warning conditions and wording. If implemented, identify the variable,
+   occurrence location, contextual type, and endpoint/parenthesis implications.
+3. Keep legitimate QUERY row sources accepted, preserve their AST type, and
+   create no table-dictionary entry for them.
+4. Add focused, one-query-per-method full-golden and position-based diagnostic
+   tests for the agreed positive and negative cases; update consumer guidance
+   only after the policy is approved.
+
+**Out of scope:** rejecting all QUERY row sources, automatically retagging them
+as TUPLE, changing lexer tokens, or implementing variable substitution itself.
+
+**Design reference:** [typed AST substitution and endpoint distinctions](panto-variable-inheritance-using-bundles.md#typed-ast-substitution).
+
+---
+
+## Entry 22 — Conflicting types for one substitution name
+
+**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
+not implemented.
+**Kind:** Diagnostic / substitution-map consistency enhancement.
+
+**Evidence:** use the [Entry 21 sample](#shared-evidence-and-sample-for-entries-2123)
+inside a larger statement that also uses the same variable as a bare TUPLE in
+another subquery. The owner observed this mixed-type use; exact larger-query
+reproduction and traversal-order characterization remain pending.
+
+### Goal and proposal
+
+At substitution registration, compare every second and subsequent occurrence's
+contextual type with the type already registered for that name. Report a type
+conflict rather than silently replacing the registry value. The owner's
+preferred starting policy is to preserve the first registration and issue at
+least a severe warning, potentially a fatal diagnostic. Final severity is not
+yet decided.
+
+### Reasonableness and decisions
+
+- **Benefit:** one named binding should not silently acquire incompatible
+  endpoint requirements or change source eligibility as traversal proceeds.
+- **First-entry retention:** preserves the original evidence and prevents
+  last-write-wins behavior. It does not by itself make a conflicting statement
+  valid or eliminate order-dependent behavior; diagnostics and downstream
+  handling must make that explicit.
+- **Severity trade-off:** a fatal prevents potentially incompatible snippet
+  composition; a severe warning preserves authoring/inspection workflows but
+  must not be presented as proof that one snippet satisfies every occurrence.
+- **Compatibility question:** decide whether all unequal contextual types
+  conflict or whether explicitly justified compatible pairs are allowed.
+  For example, a column-reference fragment may also be a valid scalar
+  predicand. Do not silently coerce types or assume endpoint overlap proves
+  equivalent composition behavior.
+- Define identity using the existing variable-name normalization rules, and
+  decide the registry lifetime across nested scopes, SCRIPT statements, and
+  separate parser invocations. Do not accidentally introduce cross-parse state.
+- Preserve each AST occurrence's grammar-derived type even if the global map
+  retains the first type. Evaluate effects on dictionaries, binding, generation,
+  serialization, and consumers that currently expect one type per name.
+
+### Phases and acceptance
+
+1. Inventory all substitution-registration paths and characterize current
+   overwrite behavior, including the QUERY/TUPLE example in both source orders.
+2. Agree conflict/compatibility, severity, registry lifetime, first-entry
+   retention, and repeated-diagnostic policies before changing registration.
+3. Diagnostics must identify the name, original/new types, and both occurrence
+   locations/scopes. Detect third and fourth conflicting occurrences as well;
+   decide whether they produce individual or aggregated diagnostics.
+4. Test same-name/same-type reuse, each approved conflicting or compatible pair,
+   nested/sibling scopes, reversed occurrence order, and parser reuse/reset.
+   Assert full AST/maps/dictionaries and exact positioned diagnostics, with one
+   SQL query per test method.
+
+**Out of scope:** silently renaming variables, rewriting occurrence types,
+selecting a usable binding for the author, or silently changing the public
+substitution-map value shape.
+
+**Design reference:** [typed AST substitution and bundles](panto-variable-inheritance-using-bundles.md#typed-ast-substitution).
+
+---
+
+## Entry 23 — Opaque QUERY-variable row-source column binding
+
+**Status:** Proposed for 5.1.4 remediation (2026-11-19); discussion pending,
+not implemented.
+**Kind:** Resolution / symbol-table metadata enhancement.
+
+**Evidence:** the [Entry 21 sample](#shared-evidence-and-sample-for-entries-2123)
+has a visible FROM alias but no parsed body behind its QUERY placeholder.
+Names in the enclosing SELECT's query dictionary establish output identity,
+not successful resolution of the WHERE, GROUP BY, or SELECT input references.
+The [query-substitution presumed-lineage report](<./514 defect and enhancement requirements/query-substitution-single-source-binding-defect.md>)
+adds qualified and tuple controls, corpus cases, and a proposed placeholder
+shape. Treat that shape as design input, not an approved public schema; preserve
+the owner-specified diagnostic and design decisions below.
+
+### Goal and proposal
+
+Consider associating otherwise unresolved columns with a visible opaque
+QUERY-variable row source, rather than reporting them as having no possible
+source. Preserve `type=query` and the owner's rule that such a source does
+**not** become a table-dictionary entry. Distinguish an assumed/deferred source
+binding from validation against an actual exported query interface.
+
+**Owner-specified warning (2026-11-19):** if columns are credited to the QUERY
+variable as presumed outputs, still emit a **warning**, replacing the generic
+unresolved-column diagnostic for those credited references. Use this message:
+
+```text
+Columns presumed output of Query Variable <variable name> include: <list of column names>
+```
+
+Include the actual substitution name and a deduplicated list of the column
+names presumed to come from that occurrence's row source, across the relevant
+clauses. Anchor the diagnostic's source location/hyperlink at the **QUERY
+variable occurrence in the SQL text**, not at the first presumed column.
+Do not suppress unrelated unresolved, ambiguous, or conflicting-type
+diagnostics. This warning policy is specified; the source representation and
+eligibility rules remain proposals pending discussion and implementation.
+
+### Representation options and trade-offs
+
+- **Owner's candidate:** represent the placeholder using an alias and a
+  synthetic `def_queryN` scope containing the minimum interface/query-dictionary
+  metadata needed to record columns required by surrounding clauses.
+- **Benefit:** existing alias-to-query traversal could expose these dependencies
+  without pretending the placeholder is a physical table.
+- **Risk:** ordinary `def_queryN` payloads describe parsed scopes and exported
+  outputs. A synthetic payload could falsely imply a real SELECT body or proven
+  exports. An explicit opaque/inferred marker and substitution link may be
+  necessary; their schema and consumer compatibility are not yet approved.
+- **Alternative for discussion:** explicit opaque-row-source metadata linked
+  from the existing alias, rather than fabricating a normal query scope.
+  Compare consumer work and compatibility before choosing either format.
+- Preserve an explicit author alias such as `fund_agg`. Decide whether the
+  variable name is a source identity, a fallback alias, or both; do not overwrite
+  aliases or derive colliding scope keys directly from variable text.
+- Record all required SELECT/aggregate-argument, WHERE, GROUP BY, JOIN/ON, and
+  other clause occurrences with their token evidence and roles. Do not add
+  WHERE-only names to the enclosing SELECT's output dictionary or interface.
+- Keep inferred requirements occurrence/scope-aware when one name appears in
+  several subqueries. Do not let another occurrence's table dictionary or
+  inferred columns leak into this scope as proof of resolution.
+- Define ambiguity behavior for multiple visible opaque sources, or opaque
+  sources mixed with physical/known query sources. A single opaque source does
+  not justify choosing arbitrarily when several sources could supply a name.
+- Replace generic unresolved reporting only for references actually credited
+  under the approved policy, retaining the owner-specified presumed-output
+  warning above. Decide how Entry 21 guidance relates without redundant advice.
+  Real existence/export validation requires an available bound snippet; do not
+  claim the parser already performs that later validation.
+
+### Phases and acceptance
+
+1. Characterize the standalone sample, a nested wrapper, and mixed QUERY/TUPLE
+   reuse. Coordinate with Entry 22 so registry conflicts cannot silently change
+   source eligibility.
+2. Approve the opaque-source representation, assumed-versus-validated status,
+   token ownership, scope visibility, ambiguity, and diagnostic policies.
+3. Test qualified and unqualified references in SELECT/aggregate arguments,
+   WHERE, GROUP BY, and JOIN/ON; include multiple-source ambiguity, repeated
+   names, and inaccessible sibling/ancestor-scope controls.
+4. Keep missing concrete columns on closed, parsed query interfaces invalid.
+   Do not admit condition, column, predicand, in-list, or join-extension
+   substitutions as row sources merely because they are variables.
+5. Assert no QUERY-variable table-dictionary entry; correct clause lineage and
+   token coverage; unchanged surrounding output boundaries; and explicit
+   assumed/deferred status in the approved representation. Use independent
+   full-golden tests and positioned diagnostics. Assert the exact presumed-output
+   warning, its deduplicated column list, and its location/hyperlink target at
+   the applicable QUERY variable occurrence. Repeated column uses must not
+   duplicate names in the message; unrelated diagnostics must remain intact.
+6. Document any published schema/consumer impact and update the symbol-table
+   and dictionary guides before implementation is accepted.
+
+**Out of scope:** restoring type-agnostic 5.0.0 table collection, inventing
+verified exports or a real SQL body, bypassing normal concrete-subquery
+validation, or implementing bundle resolution/execution.
+
+**Design references:** [symbol-table scope boundaries](symbol-table-bucket-reference.md#sql-visibility-conventions),
+[dictionary ownership](table-and-query-dictionary-design.md),
+and [typed AST substitution](panto-variable-inheritance-using-bundles.md#typed-ast-substitution).
+
+---
+
+## Entry 24 — Successive IN lists silently overwrite column collection
+
+**Status:** Confirmed defect; fourth 5.1.4 remediation (2026-11-19), following
+Entries 21–23. Root cause traced; not implemented.
+**Kind:** Dictionary / reference-token collection defect.
+**Implementation starting point:** the evidence below is sufficient to begin
+the targeted fix. Do not make repeating the exploratory probes a prerequisite.
+This does not waive regression tests or post-fix verification.
+The [compound IN report](<./514 defect and enhancement requirements/compound-in-table-dictionary-defect.md>)
+adds SQL/QUERY, OR, mixed-predicate, direct boolean-output, and JOIN ON
+reproductions, plus WHERE/HAVING controls. Its JOIN ON case reports losing even
+the selected left-table `id`; verify the responsible path and include that
+case, rather than assuming every reported manifestation has the same root cause.
+
+### Report and evidence provenance
+
+RMCP row **9922** repeatedly tests two column families inside CASE WHEN:
+
+```sql
+when (('') IN (end_date,end_date_1,end_date_2,end_date_3,end_date_4,
+              end_date_5,end_date_6,end_date_7,end_date_8,end_date_9)
+  AND ('Future Donor') IN (constituent_code,constituent_code_1,
+                          constituent_code_2,constituent_code_3,
+                          constituent_code_4,constituent_code_5,
+                          constituent_code_6,constituent_code_7,
+                          constituent_code_8,constituent_code_9))
+then 'Future Donor'
+```
+
+The next reported WHEN repeats the two families with `'Student'` in the
+second predicate. The single source is `<[AMS].[donor_source]>`, and the
+SELECT also includes `src_donor_id`.
+
+- **Owner-reported full-query evidence:** 5.0.0 collects all twenty family
+  names; 5.1.4 collects only `constituent_code*`. Both SQL and QUERY endpoints
+  succeed without diagnostics. The AST contains all ten `end_date*` names,
+  with forty occurrences of each in the complete query. The full original
+  statement was not supplied; do not reconstruct it and call it row-9922
+  replay evidence.
+- **Locally verified current-parser evidence:** reduced complete queries
+  reproduce the loss, and a live walker trace proves replacement of the
+  pending-reference map at each ordinary IN-list frame exit. AST and output
+  interface dependencies retain both families, including resolved source
+  references, while the table dictionary omits the first family.
+- **Baseline:** source HEAD `718fffd49fa97d79ae373f42deef85404ff9d3d7`;
+  locally rebuilt `parse/target/pss-parse-5.1.4-1-fat.jar`, SHA256
+  `91ca73c8b39268df6c4b5c63b6bdfcb84694e107686224cb5802aabfbcc9fecf`.
+  This is an existing defect in that candidate, not an error introduced by
+  new remediation code.
+- **Old-version limitation:** the local cached 5.0.0 JAR threw an unrelated
+  `NullPointerException` in `AbstractASTWalkerHelper.handleOneChild` via
+  `exitAlias_identifier` on the reduced CASE probe. No successful local
+  old-JAR CASE comparison is claimed. The owner's full-query comparison and
+  the independently proven current-code overwrite must remain distinguished.
+
+### Complete minimal reproduction and exact captured trace
+
+This complete reduced query was traced successfully against current code:
+
+```sql
+select src_donor_id,
+       case when '' in (end_date)
+                 and 'Future Donor' in (constituent_code)
+            then 'Future Donor'
+            else 'Other'
+       end as donor_type
+from donor_source
+```
+
+**Expected:** table dictionary `donor_source` contains `src_donor_id`,
+`end_date`, and `constituent_code`, each with its SQL occurrence token;
+diagnostics remain empty.
+**Actual:** only `src_donor_id` and `constituent_code` are present;
+diagnostics are empty. The AST and CASE output dependency list retain both
+predicate columns.
+
+Live trace, reading the internal pending map rather than the published
+symbol-table accessor:
+
+```text
+BEFORE PUSH (end_date) unresolved=[src_donor_id]
+CHILD BEFORE POP (end_date) unresolved=[end_date]
+PARENT AFTER POP (end_date) unresolved=[end_date]
+BEFORE PUSH (constituent_code) unresolved=[end_date]
+CHILD BEFORE POP (constituent_code) unresolved=[constituent_code]
+PARENT AFTER POP (constituent_code) unresolved=[constituent_code]
+FINAL DICTIONARY names: donor_source -> [constituent_code, src_donor_id]
+```
+
+The trace also shows that references pending before the first list can be
+overwritten. An earlier SELECT item already has separately captured interface
+site metadata, explaining why final `src_donor_id` retention must not be used
+as evidence that the pending-map merge was safe.
+
+### Completed characterization — do not repeat for discovery
+
+These are observed reduced-query controls, not proposed results:
+
+| Change from the affected CASE shape | Observed 5.1.4 result |
+|------------------------------------|-----------------------|
+| Two successive IN predicates, end-date family first | First family absent; second family retained |
+| Reverse the two predicates | `end_date*` retained; `constituent_code*` absent |
+| Rename the first column family | First family still absent |
+| Replace the empty-string literal with a nonempty string | Same loss |
+| Replace AND with OR | Same loss |
+| Remove parentheses around the literal operands | Same loss |
+| Replace the tuple-variable source with a physical table | Same loss |
+| Keep only one IN predicate | That list's columns retained |
+| Put the compound condition in WHERE instead of SELECT CASE | Both families retained |
+| Reduce each list to one column | First column absent; second retained |
+
+Repeated WHEN branches also lose earlier occurrence tokens: in the reduced
+two-WHEN capture, the surviving second-family dictionary entries retain only
+the final processed list's tokens, not both WHEN occurrences. Fixing just
+distinct column-name membership is therefore insufficient.
+
+### Confirmed code path and reason for silence
+
+Source line anchors below describe the investigated baseline; use the method
+names if later edits move lines.
+
+1. [SqlParseEventWalker.enterIn_predicate_value](../src/main/java/sql/walker/SqlParseEventWalker.java#L11045)
+   opens a frame using `pushDependentQueryContextForFrame(ctx)` and
+   `pushSymbolTableWithParentVisibleScope()`. This happens for ordinary
+   expression lists as well as SELECT subqueries. During SELECT traversal,
+   FROM has not yet been processed, so these list-column tokens accumulate
+   in the child's `unresolved_column` map.
+2. `exitIn_predicate_value` calls
+   [SqlParseSymbolTreeHelper.exitPredicateSubqueryFrame](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java#L19982)
+   with merge kind `IN`. Its `isSubquery` test checks for the SELECT AST key.
+   The ordinary-list branch calls `popPredicateFrameSymbolTableMerge` and
+   returns without separately consuming/merging unresolved entries.
+3. [popPredicateFrameSymbolTableMerge](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java#L20068)
+   separately handles `dependent_queries`, strips frame-local keys, and calls
+   [SqlASTWalkerHelper.popSymbolTablePutAll](../src/main/java/astwalkers/SqlASTWalkerHelper.java#L719).
+   That method restores the parent and executes `symbolTable.putAll(symbols)`.
+   It specially merges `table_alias`, but not `unresolved_column`. The child's
+   entire unresolved map replaces the parent's map. Each later list repeats
+   that destructive replacement.
+4. AST construction is independent of this pending map, so it preserves the
+   SQL references. SELECT-item dependency flattening also retains their names.
+   However,
+   [attachWalkCapturedSiteTokensToSelectItemDependencyRefs](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java#L3702)
+   gets occurrence evidence from the surviving unresolved map; missing entries
+   are skipped. The lost tokens are unavailable for dictionary materialization,
+   and erased pending entries cannot generate unresolved-column diagnostics.
+   Successful interface source binding is not proof of complete dictionary
+   token collection.
+
+This explains positional asymmetry, not an `end_date` keyword classification
+issue. WHERE's already-visible source context avoids the observed failure in
+the tested control; do not generalize that every use of IN loses columns.
+
+**Historical corroboration:** the earlier walker at `3e83b60` handled
+`exitIn_predicate_value` with substitution checking and `handleOneChild`, without
+the current list-frame merge path. Current frame entry dates to `6d54818c`;
+the shared predicate-frame helper path is attributed to `6d2adbea`. This is
+source-history evidence, not a successful local 5.0.0 binary replay.
+
+### Targeted implementation approach and invariants
+
+- Prefer a central, bucket-specific accumulation contract in
+  `SqlASTWalkerHelper.popSymbolTablePutAll`, subject to the bounded caller audit
+  below, rather than an IN-only workaround. For a temporary frame explicitly
+  being merged into its parent, `unresolved_column` must not be replaced:
+  - Parent has no map: retain the child's eligible entries.
+  - Parent has a map: merge child column keys and all distinct occurrence
+    tokens into it, preserving parent-only and child-only references.
+  - Both contain the same column: retain both sets of occurrence tokens,
+    without duplication, mutable self-merges, or loss of token payload metadata.
+  Detach the child's accumulation bucket before the shallow `putAll` and use
+  the restored parent's existing bucket when merging. Check aliasing and
+  mutation order; merging only after replacement cannot recover discarded
+  parent entries. The existing special handling of `table_alias` demonstrates
+  why accumulation buckets need explicit contracts rather than raw replacement.
+- Reuse
+  [mergeUnresolvedEntriesIntoCurrentScope](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java#L9828)
+  and the existing `SqlASTWalkerHelper.mergeUnknownEntries` machinery where
+  appropriate. Preserve names **and every distinct occurrence token**,
+  including repeated names shared by parent and child lists. Avoid duplicate
+  token insertion or mutable self-merges.
+- The real SELECT-subquery branch already consumes unresolved entries,
+  partitions inner-local versus outer-correlated references, publishes the
+  query scope, and merges only deferred parent references. Preserve that
+  behavior, `def_queryN` boundaries, dependency registrations, alias precedence,
+  flag restoration, and balanced frame push/pop.
+- This contract applies to **merge operations**, not automatically to every
+  stack pop. Publishing a named scope retains its local references within that
+  scope; discarding a frame must not publish them. A real subquery must first
+  partition/filter references for parent eligibility. Preserve those caller
+  responsibilities even if the accumulation merge itself is centralized.
+  Do not indiscriminately deep-merge every symbol-table bucket or route publish/
+  discard operations through the merge helper. If a caller cannot meet the
+  eligibility contract, fix its boundary handling or retain a narrower
+  non-subquery merge; do not flatten child scopes to force a generic solution.
+- Do not compensate by scanning AST text for columns, using query output
+  dictionaries as input dictionaries, or adding a warning in place of collecting
+  valid references. This valid single-source SQL should remain diagnostic-free.
+- No lexer/grammar changes or token-ID remapping are needed. This is separate
+  from Entries 21–23: the tuple-variable example is a valid physical/tuple
+  source, not a request to admit opaque QUERY variables to the table dictionary.
+
+### Bounded caller audit and related regression guards
+
+**Yes, a targeted audit is worthwhile.** The defect is in walker symbol-table
+frame handling, not grammar recognition. Start from merge/pop implementations
+and their callers, then map those callers to grammar productions for realistic
+SQL regressions. Do not search every grammar rule or rerun the completed
+IN-list investigation before implementing.
+
+The source search performed while updating this proposal found two direct
+implementation callers of `popSymbolTablePutAll`:
+
+| Merge path | Callers / contexts to assess | Classification |
+|------------|-----------------------------|----------------|
+| `popPredicateFrameSymbolTableMerge` | IN values, EXISTS values, predicand subqueries, quantified comparisons | IN ordinary-list overwrite confirmed; other contexts are audit candidates or isolation controls, not confirmed defects |
+| `popFrameAndMergeIntoParent` | Passthrough `exitIntersected_query`, passthrough `exitUnionized_query`, and insert-source primary exit after source finalization | Audit candidates; no additional defect or runtime failure established |
+
+Relevant productions in
+[SQLSelectParser.g4](../src/main/antlr4/sql/SQLSelectParser.g4) include
+`in_predicate_value`, `exists_predicate_value`, `predicand_subquery`,
+`quantified_comparison_predicate`, `intersected_query`, and `unionized_query`.
+Passthrough union/intersection grammar frames can occur even without an actual
+set operator. Inspect their existing finalization and scope ownership rather
+than assuming every such frame contains transferable unresolved references.
+
+For each distinct path, record:
+
+1. Whether the exit merges, publishes, or discards the frame, and where
+   unresolved entries are consumed, resolved, partitioned, or retained.
+2. Whether both parent and child can contain eligible unresolved entries at
+   merge time; whether overlapping column names refer to distinct SQL sites.
+3. Whether the shared contract protects the path, or the caller intentionally
+   preserves local entries under a named scope instead.
+4. The existing observable regression that covers it, or a small new SQL
+   regression needed to demonstrate accumulation or isolation.
+
+Inspect any other raw symbol-table `putAll`/`put` near these frame boundaries
+only to establish whether it can replace an accumulation bucket. Do not treat
+AST assembly `putAll`, intentional scope publication, or resolved-bucket
+replacement as this defect solely because the operation has the same name.
+Keep the audit limited to reference loss and scope safety coupled to Entry 24;
+record unrelated findings separately instead of silently expanding the fix.
+
+Add a few representative regressions for distinct uncovered behaviors, not
+a matrix of every grammar production. In particular, require preservation of
+parent-only references, child-only references, and repeated-name occurrence
+tokens. Include an IN in a later WHEN with no AND/OR between the lists, ordinary
+comparison references before an IN, and nested expression/frame controls.
+These are proposed regression cases; their exact SQL shapes have not yet been
+replayed. Actual IN/EXISTS/scalar/quantified subqueries and set-operation sibling
+boundaries are negative isolation controls, not permission to merge their
+local references into the enclosing query.
+
+### Future-agent prevention guard — deliver with the fix
+
+Document the invariant in three complementary places:
+
+- Add a mandatory frame-edit review rule under parser implementation rules in
+  [AGENTS.md](../../AGENTS.md), and reference the same rule from
+  [.github/copilot-instructions.md](../../.github/copilot-instructions.md).
+  If a dedicated rule is useful, place it in `.cursor/rules/` and link it from
+  both entry points; do not rely only on editor-specific automatic loading.
+- Put the precise merge contract in the Javadoc beside
+  `SqlASTWalkerHelper.popSymbolTablePutAll`, with caller obligations for
+  filtering child-scope references and preserving token payloads.
+- Enforce the contract with persistent SQL/extractor regression tests.
+  Documentation alone cannot prevent a future implementation from silently
+  reintroducing replacement.
+
+Proposed mandatory review wording:
+
+> Before changing symbol-table frame push/pop or merging, classify the exit as
+> merge, publish, or discard. Merge operations must preserve accumulated
+> unresolved references and all distinct occurrence tokens. Never let a shallow
+> `putAll` replace an existing accumulation bucket. Establish parent eligibility
+> before merging child references; preserve query and sibling-scope boundaries.
+> Do not apply blanket deep merging to unrelated buckets. Validate both reference
+> accumulation and scope isolation through observable SQL regression outputs.
+
+These agent instructions and helper documentation are planned deliverables,
+not changes already made by this workplan update.
+
+### Regression work and acceptance
+
+Start implementation from the confirmed merge defect above. Convert the
+captured minimal SQL and characterized cases into persistent regression tests;
+do not rerun the exploratory harness merely to rediscover the cause.
+
+1. Prefer the existing
+   [SqlEventWalkerPredicatesOperatorsSubstitutionsTests](../src/test/java/sql/walker/SqlEventWalkerPredicatesOperatorsSubstitutionsTests.java)
+   or the nearest established CASE regression class. Use one query per test
+   method, full extractor golden strings, and exact positioned diagnostics
+   according to existing test conventions.
+2. Cover the minimal CASE, reversed predicate order, AND/OR, repeated WHEN
+   branches, both ten-column families, and surrounding SELECT items before
+   and after CASE. Assert all expected names and exact occurrence tokens,
+   not merely nonempty dictionaries or successful parsing.
+3. For a complete two-WHEN fixture using each ten-column family once per WHEN
+   and `src_donor_id` once, require **21 distinct input names** and **two
+   occurrence tokens per family member**, plus the one `src_donor_id` token.
+   This is a new regression fixture's acceptance shape, not a claim that the
+   complete owner query was locally replayed. Keep `donor_type` as an output
+   alias, not a source-table input.
+4. Cover physical and tuple-variable sources, qualified references, NOT IN,
+   the working single-list and WHERE controls, and SQL/QUERY endpoint parity.
+   Cases not listed as observed above are required post-fix coverage, not
+   already verified investigative results.
+5. Run existing real IN-subquery and correlation tests, including closed
+   interfaces and sibling scopes, to prove the fix does not flatten inner
+   references into the parent. Keep legitimate unresolved diagnostics intact.
+6. Complete the bounded caller audit above. Reuse existing passing regressions
+   for covered paths and add focused observable SQL tests for uncovered
+   accumulation/isolation behavior. Include no-AND WHEN traversal, repeated
+   tokens across parent/child frames, and representative passthrough or
+   insert-source paths only where the audit establishes relevant coverage gaps.
+   Mark source-derived risks, reproduced defects, and passing controls distinctly.
+7. Deliver the future-agent guard and merge-helper contract documentation with
+   the fix. Verify that tests enforce the invariant rather than merely asserting
+   that the documentation or helper exists.
+8. Run the focused regression selection first, then the release suite for
+   acceptance. Distinguish baseline reproduction failures from new failures
+   caused by the patch. Verify current source before rebuilding the local
+   parser/docs candidate; do not publish to Archiva without separate approval.
+9. Add the report's JOIN ON case and its OR variant, asserting both tables'
+   complete dictionaries including the selected `l.id`; retain WHERE/HAVING
+   and separate single-IN select-item controls.
+
+**Out of scope:** implementing Entries 21–23, changing substitution types or
+dictionary eligibility, weakening true subquery encapsulation, altering lexer
+identities, repairing the unrelated old-JAR CASE crash, or adding generator
+features.
+
+---
+
+## Entry 25 — Datetime story completion and function-specific part lists
+
+**Status:** Fifth 5.1.4 remediation (2026-11-20); deficiencies verified on the
+existing local candidate. Not implemented.
+**Kind:** Defect correction / completion of the Entry 1 Snowflake story.
+**Owner direction:** correct the deficiencies below, including creating
+multiple date/time-part lists where functions support different subsets.
+
+### Scope and verified baseline
+
+The [Entry 1 product story](#product-story-authoritative) requires structured
+datetime ASTs, normal expression/substitution handling, part metadata excluded
+from column resolution, and support for the named Snowflake datetime families,
+including both TRUNC and TRUNCATE. Most of that implementation is present.
+The add-family fields `level`, `increment`, and `value` are the approved
+contract; `value` fulfills the story's date/timestamp-expression role. Do not
+rename it to the literal key `"date part"`.
+
+The following complete SQL inputs were replayed on 2026-11-20 through
+`SqlParserAccess.executeTheParse(..., "SQL")` using the existing local
+`parse/target/pss-parse-5.1.4-1-fat.jar` built on 2026-11-19
+(SHA256 `91ca73c8b39268df6c4b5c63b6bdfcb84694e107686224cb5802aabfbcc9fecf`).
+All had zero syntax errors; the deficiencies are AST/collection/semantic
+classification results, not grammar-recovery failures. No correction code
+was introduced by these probes.
+
+| Complete baseline SQL | Observed deficiency |
+|-----------------------|---------------------|
+| `select truncate(a.ts, day) as bucket from events a` | Generic `function` AST; `day` incorrectly added to the `events` table dictionary; no diagnostics |
+| `select truncate(a.ts, 'day') as bucket from events a` | Generic `function` AST instead of `datetime_function`; quoted part avoids phantom column but does not fix the missing datetime semantics |
+| `select date_trunc('week_iso', a.ts) as bucket from events a` | `INVALID_DATETIME_PART` FATAL at the quoted part, despite documented Snowflake support |
+| `select trunc(a.ts, 'week_iso') as bucket from events a` | Same false invalid-part FATAL |
+| `select last_day(a.ts, 'hour') as bucket from events a` | No invalid-part diagnostic although HOUR is outside LAST_DAY's supported subset |
+| `select time_slice(a.ts, 1, 'millisecond') as bucket from events a` | No invalid-part diagnostic although MILLISECOND is outside TIME_SLICE's supported subset |
+| `select dateadd(day, date_part(dow, a.ts), a.ts) as shifted from events a` | `dow` classified as PostgreSQL-only; valid Snowflake composition receives a false `STATEMENT_MIXED_DIALECT_GRAMMAR` FATAL |
+
+Passing controls were also replayed:
+
+```sql
+select dateadd(day, abs(a.n), coalesce(a.ts, a.other_ts)) as shifted
+from events a
+```
+
+This builds named datetime arguments, collects `n`, `ts`, and `other_ts`, and
+does not collect `day`. It emits only the expected Snowflake dialect warning.
+
+```sql
+select dateadd(day, <increment>, <date value>) as shifted
+```
+
+Both substitutions are `predicand`, the table dictionary is empty, and only
+the expected Snowflake warning is emitted. `select trunc(a.ts, day) as bucket
+from events a` also produces the correct datetime AST without a phantom `day`.
+Retain these controls; the correction must not undo already delivered behavior.
+
+### Substep 25.1 — Complete the datetime TRUNCATE alias
+
+- Route unqualified datetime `TRUNCATE(value, part)` through the same structured
+  contract as datetime TRUNC, retaining the authored `function_name`, expression
+  subtree, part text/form, and valid part normalization.
+- Correct both dedicated grammar routing and generic-routine promotion where
+  applicable. Current `snowflake_datetime_trunc_expression` accepts only TRUNC;
+  `maybePromoteRoutineInvocationToDatetimeFunction` also recognizes only
+  `"trunc"` for this family.
+- Bare parts must be metadata, not collected as source columns before or after
+  promotion. Quoting the part is not an acceptable workaround for missing
+  structured handling.
+- Preserve neutral numeric TRUNC/TRUNCATE calls, schema-qualified same-name
+  UDFs, and DDL `TRUNCATE TABLE`. Snowflake's datetime TRUNC/TRUNCATE takes two
+  required arguments; do not infer a missing one-argument datetime overload
+  from the numeric overload's optional scale.
+
+### Substep 25.2 — Complete supported part and alias coverage
+
+- Reconcile the supported canonical parts and documented variations for every
+  delivered datetime family against Snowflake documentation. Include ISO-week
+  spellings such as `week_iso` and `weekiso`, and other supported ISO/calendar/
+  extraction/epoch forms in the families that actually accept them.
+- Correct the verified false rejection of `week_iso` in DATE_TRUNC and TRUNC,
+  and apply the resulting truncation-family rules to datetime TRUNCATE.
+- Preserve authored spelling/case, quoted-versus-bare form, and expression
+  structure while normalizing semantic identity. Test documented aliases, not
+  just canonical names; do not invent abbreviations.
+- Keep parts out of dictionaries and unresolved-reference handling without
+  suppressing real columns named `day`, `year`, or other part names in ordinary
+  expression positions.
+
+### Substep 25.3 — Implement function-specific date/time-part lists
+
+The current `DatetimePartRegistry` is explicitly an add-family registry but is
+also used to validate diff, truncation, TIME_SLICE, and LAST_DAY. Membership in
+one broad set is not proof that a part is valid for a particular function.
+
+- Provide multiple named, immutable supported-part lists/sets for differing
+  function families, backed by shared canonical-part and alias definitions.
+  At minimum distinguish add/diff, extraction, truncation, TIME_SLICE, and
+  LAST_DAY. Families with genuinely identical supported sets may share a set
+  explicitly; do not force differing families to use the union of all parts.
+- Associate each invocation and alias with its appropriate subset:
+  DATEADD/TIMEADD/TIMESTAMPADD, DATEDIFF/TIMEDIFF/TIMESTAMPDIFF,
+  EXTRACT/DATE_PART, DATE_TRUNC/TRUNC/TRUNCATE, TIME_SLICE, and LAST_DAY.
+  Preserve PostgreSQL/shared extraction forms already accepted; a Snowflake
+  allowlist must not globally reject legitimate other-dialect syntax.
+- Canonicalize aliases before family-membership checks, with dialect/context
+  accounted for where meanings differ. Keep validity and dialect affinity
+  separate; a valid alias must not become invalid merely because it overlaps
+  with another dialect.
+- LAST_DAY's function-specific documentation lists YEAR, QUARTER, MONTH, WEEK
+  and supported variations. Reject HOUR and other parts outside its verified
+  set. TIME_SLICE permits YEAR through DAY for DATE input and additionally
+  HOUR/MINUTE/SECOND for TIMESTAMP_NTZ input; reject MILLISECOND/MICROSECOND/
+  NANOSECOND. Do not invent input types for untyped columns to enforce the
+  DATE-versus-TIMESTAMP restriction.
+- Check supported ISO variants for each relevant family explicitly. Where a
+  general reference table and a function page differ, resolve and document the
+  discrepancy before finalizing that family list rather than copying all
+  extraction aliases into every family.
+- Reuse these definitions for validation and consumer-facing discovery APIs;
+  do not scatter independent hardcoded sets across grammar and walker exits.
+  Existing weekday and START/END boundary sets remain distinct metadata
+  domains, not date/time parts.
+- Emit the existing positioned `INVALID_DATETIME_PART` diagnostic for a known
+  part used in the wrong family, not only for unknown strings like `bogus`.
+
+### Substep 25.4 — Correct shared-alias dialect classification
+
+- Reconcile `ExtractDatetimeFieldAffinity` with the supported-part/alias data.
+  Snowflake accepts `dow`; treating it as PostgreSQL-only causes the verified
+  false mixed-dialect FATAL. Review related overlaps such as `doy` and `epoch`
+  against documentation rather than assuming a Postgres-oriented spelling is
+  exclusive to that engine.
+- Preserve shared/neutral forms and genuinely target-specific affinity,
+  statement hit counting, single-warning aggregation, mixed-dialect FATALs
+  when genuinely warranted, and SCRIPT statement reset.
+- Do not remove all dialect diagnostics or globally relabel PostgreSQL
+  constructs as Snowflake to make the failing example pass.
+
+### Substep 25.5 — Regression and acceptance
+
+1. Add focused regressions in the existing datetime placement, trunc/extract,
+   boundary/slice, metadata, and snippet test classes as appropriate. Use one
+   query per method, complete extractor goldens, applicable access-layer
+   snapshots, and exact positioned diagnostics. Existing tests that encode
+   incorrect subset or affinity assumptions must be corrected deliberately,
+   not blindly refreshed.
+2. Convert every deficient baseline example above into a regression with the
+   corrected result. Add numeric/DDL/UDF controls for TRUNCATE and bare/quoted,
+   mixed-case, canonical/alias controls for changed part sets.
+3. Test each family list's accepted names/aliases and representative
+   cross-family negatives: a part accepted by one family must be rejected by
+   a family that excludes it. Assert token/column collection, not merely parse
+   success or list membership.
+4. Verify complex expression operands and predicand substitutions still work
+   for DATEADD, TIMEADD, and TIMESTAMPADD. Check genuine column references
+   named like part constants alongside metadata slots.
+5. Test the `dow` nested Snowflake example, shared-alias standalone cases,
+   genuine Postgres-only/mixed-dialect controls, and SCRIPT isolation. Exercise
+   SQL and relevant snippet endpoints without conflating syntax success with
+   absence of semantic FATALs.
+6. Run focused tests first and the required release verification before
+   acceptance. Update the published datetime guidance and supported-part
+   discovery contract; sync the vendor docs. Rebuild local parser/docs
+   artifacts only as part of the authorized packaging workflow. Archiva
+   publication remains prohibited without separate owner approval.
+
+**Implementation references:** [datetime grammar](../src/main/antlr4/sql/SQLSelectParser.g4),
+[datetime walker and generic-routine promotion](../src/main/java/sql/walker/SqlParseEventWalker.java),
+[current add-family part registry](../src/main/java/sql/grammar/DatetimePartRegistry.java),
+[extraction affinity classifier](../src/main/java/sql/diagnostics/ExtractDatetimeFieldAffinity.java),
+and [weekday/boundary registry](../src/main/java/sql/grammar/SnowflakeDatetimeValueRegistry.java).
+
+**External specifications checked for the baseline comparison:**
+[Snowflake parts and aliases](https://docs.snowflake.com/en/sql-reference/functions-date-time#supported-date-and-time-parts),
+[datetime TRUNCATE/TRUNC](https://docs.snowflake.com/en/sql-reference/functions/trunc2),
+[TIME_SLICE](https://docs.snowflake.com/en/sql-reference/functions/time_slice),
+and [LAST_DAY](https://docs.snowflake.com/en/sql-reference/functions/last_day).
+
+**Out of scope:** PostgreSQL Slice E expansion, SQL-generator Entry 10,
+implementing Entries 21–24, full SQL type inference or date arithmetic
+execution, unrelated Snowflake function catalog expansion, automatic lexer-ID
+golden replacement, and publication. Reuse existing lexer tokens and contextual
+identifiers for part aliases; any unavoidable lexer addition must follow the
+existing token-ID workflow rather than making part names newly reserved.
+
+---
+
+## Entry 26 — Preserve Unicode string-literal contents
+
+**Status:** Complete in source (2026-11-20); local release JAR not rebuilt and
+downstream integration not yet verified.
+**Kind:** MCP / bulk preprocessing defect.
+**Report:** [Unicode string-literal normalization defect](<./514 defect and enhancement requirements/unicode-string-literal-normalization-defect.md>).
+
+The shared MCP/bulk normalizer converted Unicode dashes and spaces and removed
+variation selectors inside string literals. Direct parser calls bypass that
+normalizer; do not attribute every possible upstream mutation to the parser.
+The fix in [SqlParseMcpSupport](../src/main/java/cli/SqlParseMcpSupport.java)
+preserves quoted literal contents, including doubled and backslash-escaped
+quotes, while retaining syntax normalization outside literals. It recognizes
+comments and double-quoted identifiers so their apostrophes do not begin a
+literal. No lexer tokens were changed.
+
+**Verification:** [SqlParseUnicodeLiteralTest](../src/test/java/cli/SqlParseUnicodeLiteralTest.java)
+checks exact ASTs for U+2013, U+2014, U+2212, U+00A0, U+202F, U+FE0F and
+unchanged Unicode controls through SQL, QUERY, PREDICAND, and IN_LIST, using
+direct access, JSON-RPC, stream, and bulk paths; it also covers base64, escaped
+quotes, comments, and syntax normalization. The outdated normalization
+expectation in [SqlParseMCPTest](../src/test/java/cli/SqlParseMCPTest.java)
+was corrected. Focused Maven run: **27 tests, 0 failures, 0 errors, 1
+skipped**. Ordinary release build and RMCP integration remain separate gates;
+upstream text mutation before these transports is not addressed by this fix.
+
+---
+
+## Entry 27 — Cross-scope physical-column case fragmentation
+
+**Status:** Reported black-box defect; source verification and fix pending.
+**Report:** [cross-scope column-case fragmentation](<./514 defect and enhancement requirements/cross-scope-column-case-fragmentation-defect.md>).
+
+### Goal and evidence
+
+Merge occurrences of the same unquoted physical column across query scopes
+under one case-insensitive global table-dictionary key, without duplicating
+tokens. The report's predicate-subquery example publishes both `SRC_DONOR_ID`
+and `src_donor_id` and duplicates an outer occurrence; same-scope references
+merge correctly. Its case-swapped and production-shaped examples are complete.
+This is not a token-ID renumbering issue.
+
+### Phases and acceptance
+
+1. Trace child-to-global dictionary merging and establish the actual cause;
+   preserve local scope boundaries and the existing chosen canonical spelling.
+2. Merge unquoted keys case-insensitively and deduplicate occurrence tokens
+   without dropping any valid distinct occurrence. Respect dialect-specific
+   semantics for delimited identifiers; do not blindly fold quoted names.
+3. Add independent full-golden tests for same-scope, predicate-subquery,
+   FROM-subquery or CTE, swapped casing, and case-sensitive delimited-identifier
+   controls. Assert one appropriate key, exact token positions, and diagnostics.
+4. Verify SQL/QUERY behavior and existing dictionary/scope regressions; update
+   consumer dictionary guidance if the published contract requires clarification.
+
+**Out of scope:** changing identifier spelling globally, merging distinct
+quoted identifiers, or relaxing query-scope visibility.
+
+---
+
+## Entry 28 — Ordered select-alias lineage invariance
+
+**Status:** Reported black-box defects; source verification and fix pending.
+**Reports:** [consumer-alias iteration-order finding](<./514 defect and enhancement requirements/ordered-alias-iteration-order-defect.md>)
+and [temporal-name finding](<./514 defect and enhancement requirements/ordered-alias-temporal-name-resolution-defect.md>).
+
+### Goal and evidence
+
+An earlier grounded select-list alias referenced by a later item must be
+represented by the appropriate `queryN` reference under the existing ordered
+alias policy. The first report changes only the consumer alias (`y` versus
+`out_col`) and observes an incorrect physical-table reference in one case.
+The second reports name/case-sensitive failures such as `BIRTH_DAY` and
+`END_DATE`, including nested derived-table forms. Both show interface lineage
+pointing to a physical column absent from the table dictionary.
+
+The proposed map-iteration and temporal-classification explanations are
+black-box hypotheses. Determine whether these are one or multiple code paths;
+do not assume either cause or alter precedence before tracing it.
+
+### Phases and acceptance
+
+1. Reproduce both reports and trace alias grounding, source-order handling,
+   final interface stamping, and any temporal-name handling.
+2. Correct each demonstrated path so valid prior grounded aliases resolve
+   according to source order, independent of consumer name, unrelated output
+   keys, case, nesting, and qualification of the defining source.
+3. Add one-query-per-method full-golden tests for both minimal reproductions,
+   their passing controls, consumer-name permutations, added/reordered
+   unrelated outputs, and temporal-looking alias case variants. Assert the
+   `queryN` hop, underlying physical lineage, dictionaries, and diagnostics.
+4. Retain forward-reference, physical-column, ungrounded-alias, and sibling
+   scope controls; run existing ordered-alias and scope regressions and update
+   the consumer policy guide if the contract changes.
+
+**Out of scope:** making forward aliases visible or bypassing existing
+scope/ambiguity rules merely to force a `queryN` reference.
+
+---
+
+## Entry 29 — Parser-owned structured lineage and explanation
+
+**Status:** Proposed enhancement; design, release scope, and acceptance
+thresholds pending.
+**Handoff:** [complete 5.1.4 lineage plan](<./514 defect and enhancement requirements/complete-5.1.4-lineage-plan.md>).
+
+### Goal and dependencies
+
+Evaluate the handoff's proposal for the parser to publish a structured lineage
+graph and a human-readable explanation derived from it, allowing RMCP to be a
+thin consumer. The report describes desired scope topology, role participation,
+token proof, typed leaves, recursive visibility, set operations, substitutions,
+and optional source-impact tracing. Its proposed API and `PRESUMED` placeholder
+shape are not yet approved. Coordinate query-variable representation and the
+owner-specified warning with Entry 23, dictionary casing with Entry 27, and
+ordered aliases with Entry 28; do not silently settle their open policies here.
+
+### Phases and acceptance
+
+1. Review the handoff, current parser consumer guides, available RMCP code and
+   corpus evidence; verify external report paths and data availability rather
+   than assuming they exist in this repository.
+2. Define and approve the versioned payload, explanation contract, backward
+   compatibility, scope visibility, token evidence, leaf types, unresolved and
+   presumed states, and explicit release scope. Agree measurable corpus
+   thresholds before claiming completion.
+3. Build source-anchored golden cases for each specified construct, including
+   dependent queries, correlated references, set operations, ordered aliases,
+   windows, VALUES, modifiers, scripts, and DML. Verify legal parent/child
+   traversal, no sibling leakage, cycle termination, and graph/prose agreement.
+4. Implement and verify the agreed parser contract; assess the live corpus and
+   report resolvable, presumed and unresolved rates, hop depth, role coverage,
+   dependent-subquery coverage, and source-impact reachability where in scope.
+5. Document the consumer contract and coordinate RMCP adoption separately;
+   retain existing compatibility behavior until a versioned transition is agreed.
+
+**Out of scope without further approval:** assuming a concrete placeholder
+schema, claiming presumed outputs are verified, unrestricted deep scope search,
+or changing RMCP in this repository.
 
 ---
 

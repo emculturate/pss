@@ -505,12 +505,9 @@ public class SqlParseMCPTest {
     }
 
     @Test
-    public void normalizeSqlTextForMcp_replacesEnDashAndStripsVariationSelector() {
-        String normalized = SqlParseMCP.normalizeSqlTextForMcp("select '\u2013' as dash, 'test\uFE0F' as t");
-        assertFalse(normalized.contains("\u2013"));
-        assertFalse(normalized.contains("\uFE0F"));
-        assertTrue(normalized.contains("'-'"));
-        assertTrue(normalized.contains("'test'"));
+    public void normalizeSqlTextForMcp_preservesCharactersInsideLiterals() {
+        String sql = "select '\u2013' as dash, 'test\uFE0F' as t";
+        assertEquals(sql, SqlParseMCP.normalizeSqlTextForMcp(sql));
     }
 
     @Test
