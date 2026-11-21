@@ -2042,6 +2042,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		scriptParseAccumulator.beginStatement();
 		walker.pushSymbolTable();
 		walker.resetPerStatementScope();
+		symbolTreeHelper.resetPerStatementScope();
 		resetStatementDialectGrammarCounters();
 		joinExtensionVariableLocations.clear();
 		statementDiagnosticStart = walker.getWalkerDiagnostics().size();
@@ -3230,6 +3231,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 		    walker.checkForSubstitutionVariable((Map<String, Object>) aliasMap, MUMBLE_TUPLE_KEY);
 			boolean tupleWithSubstitution = symbolTreeHelper.isTupleWithSubstitution(aliasMap);
+			boolean opaqueQueryVariable = symbolTreeHelper.isOpaqueQueryVariableSubstitution(aliasMap);
 
 			Map<String, Object> withItem = new HashMap<String, Object>();
 			withItem.put(MUMBLE_ALIAS_KEY, alias);
@@ -3239,8 +3241,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Add query to parent symbol table. Use the alias and current query number and put that in the table_alias submap.
 			// Then take the current query's symbol table and put that in the parent symbol table with a "def_" prefix. 
+			Map<String, Object> cteListSymbols = symbolTreeHelper.ensureContextListSymbolMap();
+			symbolTreeHelper.emitShadowedParentCteNameWarningIfNeeded(alias, cteListSymbols, ctx);
 			String currentQueryName;
-			if (tupleWithSubstitution) {
+			if (opaqueQueryVariable) {
+				currentQueryName = symbolTreeHelper.registerOpaqueQueryVariableSource(aliasMap, alias, false);
+			} else if (tupleWithSubstitution) {
 				currentQueryName = MUMBLE_QUERY_KEY + walker.queryCount;
 				walker.queryCount++;
 			} else {
@@ -3248,24 +3254,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// HashMap<String, Object> currentQuerySymbolTable = (HashMap<String, Object>) walker.symbolTable.remove(currentQueryName);
 			// Pop the symbol table for this level and add it to the parent level with a unique key.
-			Map<String, Object> cteListSymbols = symbolTreeHelper.ensureContextListSymbolMap();
-			symbolTreeHelper.emitShadowedParentCteNameWarningIfNeeded(alias, cteListSymbols, ctx);
 			walker.collectTableAlias(alias, currentQueryName);
 
-					
-			Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias, cteListSymbols);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_VALUES_KEY, alias, cteListSymbols);
+			if (opaqueQueryVariable) {
+				cteListSymbols.put(alias, currentQueryName);
+			} else {
+				Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias, cteListSymbols);
+				if (!done)
+						done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_VALUES_KEY, alias, cteListSymbols);
+			}
 
 		} else {
 			// Wrong number of entries for WITH list item context: ctx.getText()
@@ -4531,6 +4538,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		symbolTreeHelper.normalizeFromClauseCteAliasMappings(subMap);
+		symbolTreeHelper.restoreCurrentScopeOpaqueQueryVariableAliases();
 
 		// Clauses after exitSelect_list (QUALIFY, HAVING, ORDER BY, …) may harvest
 		// in-OVER PARTITION BY / ORDER BY into pending window-interface latch state.
@@ -5195,7 +5203,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (tableName != null) {
 				Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
 				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
-				if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+				if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType)
+						&& !MUMBLE_PREDICAND_KEY.equals(substitutionType)
+						&& !MUMBLE_QUERY_KEY.equals(substitutionType))) {
 					walker.ensureTableDictionaryEntry(tableName);
 				}
 			}
@@ -5416,7 +5426,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				String tableName = resolveSubstitutionTableReference(substitution);
 				Object substitutionTypeObj = substitution == null ? null : substitution.get(MUMBLE_TYPE_KEY);
 				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
-				if (tableName != null
+				if (MUMBLE_QUERY_KEY.equals(substitutionType)) {
+					symbolTreeHelper.registerOpaqueQueryVariableSource(typed, alias, true);
+				} else if (tableName != null
 						&& (substitutionType == null
 								|| (!MUMBLE_COLUMN_KEY.equals(substitutionType)
 										&& !MUMBLE_PREDICAND_KEY.equals(substitutionType)))) {

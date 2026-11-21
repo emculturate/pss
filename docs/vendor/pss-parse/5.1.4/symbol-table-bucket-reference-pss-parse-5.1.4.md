@@ -214,6 +214,34 @@ Row sources from which `interface` entries may draw columns fall into two broad 
 
 Unlike physical tables, constructs defined entirely within the SQL text (`SELECT`, `VALUES`, set operations, DML shells, etc.) finalize as **`def_*` scopes** carrying their own `interface`, `query_dictionary`, and related buckets. See the [master scope table](#master-reference-scopes-keys-and-row-sources) above for the complete key list and examples.
 
+**Opaque QUERY substitution row sources (synthetic `def_queryN` scopes)**
+
+A QUERY substitution used as a row source, such as `FROM (<source_query>) q` or
+`WITH q AS (<source_query>)`, has no bound query AST at template-parse time.
+Each occurrence therefore receives its own synthetic **`def_queryN`**:
+
+- The parent registers its author alias or CTE name against the live `queryN`
+  reference in the normal `table_alias` / `context_list` maps.
+- Qualified references to that source, and unqualified references for which it
+  is the only possible local source, become required presumed outputs.
+- The synthetic `interface` maps each required output name to an empty list.
+  The empty list means the output is required but internal lineage is unknown;
+  it is not proof that a bound snippet actually exports the column.
+- The matching `query_dictionary` key contains every deduplicated external
+  reference token that established the requirement.
+- A synthetic scope contains no `table_dictionary`, clause buckets, internal
+  aliases, or fabricated query body. QUERY substitutions also never become
+  physical entries in the global table dictionary.
+- `*` is not a named presumed output and is excluded from both synthetic
+  buckets.
+
+Normal ambiguity rules still apply. An unqualified reference with multiple
+possible physical, concrete-query, or opaque-query sources is not credited to
+any synthetic interface; consumers should expect the parser's ordinary
+ambiguity and unresolved diagnostics. A positioned
+`QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS` warning identifies every opaque
+occurrence that did receive one or more presumed outputs.
+
 **Other row sources (within a `def_queryN` scope, not separate `def_*` types)**
 
 - **Table functions** — appear as aliased row sources in `table_alias` and `table_dictionary` (e.g. `flatten0`, `generator0`) within a parent query scope.
@@ -229,6 +257,7 @@ Multi-statement scripts collect per-statement symbol tables under a **`SCRIPT`**
 | Category | Examples | Published as `def_*`? | Parser knowledge |
 |----------|----------|----------------------|----------------|
 | **Externally defined** | Physical tables (`tab1`, `sch.tbl`) | No — referenced via `table_dictionary` / `table_alias` | **None** — column names taken on faith from the SQL text |
+| **Externally defined — opaque query substitution** | `FROM (<query_var>) q`, `WITH q AS (<query_var>)` | **Synthetic `def_queryN` per occurrence** | Required output names only; empty interface dependencies mean unknown internal lineage |
 | **Internally defined — query-like** | `SELECT`, subqueries, CTE bodies | **`def_queryN`** | Full — columns established by the statement |
 | **Internally defined — literal rows** | `VALUES (…), (…)` | **`def_valuesN`** | Full — column names from position or alias |
 | **Internally defined — set operations** | `UNION`, `EXCEPT`, `INTERSECT` | **`def_unionN`** / **`def_intersectN`** | Full — composite `interface` aligned across branches |
@@ -406,6 +435,32 @@ def_query1={
   }
 }
 ```
+
+**Opaque QUERY substitution source**
+
+```sql
+SELECT q.id, q.name
+FROM (<source_query>) AS q
+WHERE q.active = 1
+```
+
+```
+def_query1={
+  table_alias={q=query0},
+  interface={
+    id=[{name=id, table_ref=q}],
+    name=[{name=name, table_ref=q}]
+  },
+  filters=[{name=active, table_ref=q}],
+  def_query0={
+    query_dictionary={id=[[@…]], name=[[@…]], active=[[@…]]},
+    interface={id=[], name=[], active=[]}
+  }
+}
+```
+
+The nested empty dependency lists are presumed output requirements, not
+validated lineage. The enclosing query keeps the clause roles.
 
 **Window functions — `window_partition_by` / `window_ordered_by`**
 

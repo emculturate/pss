@@ -105,6 +105,34 @@ public class SqlParseSymbolTreeHelper {
 	private HashMap<String, Object> unresolvedColumnSnapshotBeforeSelectItem = new HashMap<>();
 	private final HashMap<String, WindowSelectInterfaceClauseDeps> windowOutputInterfaceClauseDepsByAlias =
 			new LinkedHashMap<>();
+	private final HashMap<String, OpaqueQueryVariableSource> opaqueQueryVariableSources =
+			new LinkedHashMap<>();
+
+	private static final class OpaqueQueryVariableSource {
+		private final String queryRef;
+		private final String variableName;
+		private final Token token;
+		private final Map<String, Object> ownerScope;
+		private final String alias;
+		private final boolean localFromSource;
+		private final LinkedHashSet<String> presumedOutputColumns = new LinkedHashSet<>();
+		private boolean diagnosticEmitted;
+
+		private OpaqueQueryVariableSource(
+				String queryRef,
+				String variableName,
+				Token token,
+				Map<String, Object> ownerScope,
+				String alias,
+				boolean localFromSource) {
+			this.queryRef = queryRef;
+			this.variableName = variableName;
+			this.token = token;
+			this.ownerScope = ownerScope;
+			this.alias = alias;
+			this.localFromSource = localFromSource;
+		}
+	}
 
 	private static final class WindowSelectInterfaceClauseDeps {
 		private final ArrayList<Object> partitionByRefs;
@@ -6435,19 +6463,18 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void finalizeTopLevelUnresolvedColumns(boolean insertStatementBoundary) {
 		HashMap<String, Object> unresolvedMap = collectStatementBoundaryUnresolvedColumns();
-		if (unresolvedMap == null || unresolvedMap.isEmpty()) {
-			return;
+		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
+			// Bare-value egress site 6: statement-boundary safety net.
+			pruneBareValueExpressionsFromUnresolvedMap(unresolvedMap);
+
+			HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
+			HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
+			splitUnresolvedEntriesByQualification(unresolvedMap, qualifiedUnresolved, unqualifiedUnresolved);
+
+			emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolved);
+			emitQualifiedSourceNotFoundFatals(qualifiedUnresolved);
 		}
-
-		// Bare-value egress site 6: statement-boundary safety net.
-		pruneBareValueExpressionsFromUnresolvedMap(unresolvedMap);
-
-		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
-		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
-		splitUnresolvedEntriesByQualification(unresolvedMap, qualifiedUnresolved, unqualifiedUnresolved);
-
-		emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolved);
-		emitQualifiedSourceNotFoundFatals(qualifiedUnresolved);
+		emitOpaqueQueryVariablePresumedOutputWarnings();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9668,6 +9695,9 @@ public class SqlParseSymbolTreeHelper {
 		if (nodeObj instanceof Map<?, ?> nodeMapObj) {
 			Map<String, Object> nodeMap = (Map<String, Object>) nodeMapObj;
 			if (nodeMap.containsKey(MUMBLE_SELECT_KEY)) {
+				return;
+			}
+			if (isOpaqueQueryVariableSubstitution(nodeMap)) {
 				return;
 			}
 
@@ -13834,6 +13864,9 @@ public class SqlParseSymbolTreeHelper {
 				|| columnName == null || columnName.isBlank()) {
 			return false;
 		}
+		if (isOpaqueQueryVariableSource(querySourceRef)) {
+			return true;
+		}
 
 		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(querySourceRef);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
@@ -16738,7 +16771,13 @@ public class SqlParseSymbolTreeHelper {
 		// Do NOT look into nested or ancestor symbol tables - those have their own resolution pass
 		// This ensures each query only resolves against its direct sources (FROM/JOIN)
 		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
-			for (Object mappedSourceObj : tableAliasCollection.values()) {
+			for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+				String aliasKey = aliasEntry.getKey();
+				if (isInheritedCteContextListAlias(aliasKey)
+						&& !isLocalFromRegisteredAlias(aliasKey)) {
+					continue;
+				}
+				Object mappedSourceObj = aliasEntry.getValue();
 				if (!(mappedSourceObj instanceof String mappedSource) || !isQuerySourceReference(mappedSource)) {
 					continue;
 				}
@@ -16793,6 +16832,9 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> queryCollection) {
 		if (queryRef == null || !isQuerySourceReference(queryRef) || columnName == null || columnName.isBlank()) {
 			return false;
+		}
+		if (isOpaqueQueryVariableSource(queryRef)) {
+			return true;
 		}
 
 		if (isSetOperationSourceReference(queryRef)) {
@@ -17512,6 +17554,10 @@ public class SqlParseSymbolTreeHelper {
 		if (liveQueryRef == null || liveQueryRef.isBlank()) {
 			return;
 		}
+		if (isOpaqueQueryVariableSource(liveQueryRef) && "*".equals(columnName)) {
+			return;
+		}
+		ensureOpaqueQueryVariableOutputColumn(liveQueryRef, columnName);
 
 		Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(liveQueryRef);
 		HashMap<String, Object> sourceQueryDictionary;
@@ -17579,6 +17625,9 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void promoteQualifiedWildcardIntoQuerySource(String querySourceRef, Object unknownEntryValue) {
 		if (querySourceRef == null || querySourceRef.isBlank()) {
+			return;
+		}
+		if (isOpaqueQueryVariableSource(querySourceRef)) {
 			return;
 		}
 
@@ -18033,6 +18082,175 @@ public class SqlParseSymbolTreeHelper {
 
 	public Boolean collectQuerySymbolTable(String hdr, String alias) {
 		return collectQuerySymbolTable(hdr, alias, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	public boolean isOpaqueQueryVariableSubstitution(Map<String, Object> source) {
+		if (source == null) {
+			return false;
+		}
+		Object substitutionObj = source.get(MUMBLE_SUBSTITUTION_KEY);
+		if (!(substitutionObj instanceof Map<?, ?> substitutionMapObj)) {
+			return false;
+		}
+		Object typeObj = ((Map<String, Object>) substitutionMapObj).get(MUMBLE_TYPE_KEY);
+		return MUMBLE_QUERY_KEY.equals(typeObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	public String registerOpaqueQueryVariableSource(
+			Map<String, Object> source,
+			String alias,
+			boolean localFromSource) {
+		if (!isOpaqueQueryVariableSubstitution(source)) {
+			return null;
+		}
+		Map<String, Object> substitution =
+				(Map<String, Object>) source.get(MUMBLE_SUBSTITUTION_KEY);
+		Object nameObj = substitution.get(MUMBLE_NAME_KEY);
+		if (!(nameObj instanceof String variableName) || variableName.isBlank()) {
+			return null;
+		}
+
+		String queryRef = MUMBLE_QUERY_KEY + walker.queryCount++;
+		HashMap<String, Object> queryDictionary = new HashMap<String, Object>();
+		HashMap<String, Object> outputInterface = new HashMap<String, Object>();
+		HashMap<String, Object> queryDefinition = new LinkedHashMap<String, Object>();
+		queryDefinition.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
+		queryDefinition.put(MUMBLE_INTERFACE_KEY, outputInterface);
+		walker.symbolTable.put(toDefinitionScopeKey(queryRef), queryDefinition);
+		walker.queryColumnDictionaryMap.put(queryRef, queryDictionary);
+
+		Token token = walker.getSubstitutionOccurrenceToken(substitution);
+		opaqueQueryVariableSources.put(
+				queryRef,
+				new OpaqueQueryVariableSource(
+						queryRef,
+						variableName,
+						token,
+						walker.symbolTable,
+						alias,
+						localFromSource));
+
+		String sourceAlias = alias == null || alias.isBlank() ? queryRef : alias;
+		upsertCurrentTableAliasMapping(sourceAlias, queryRef);
+		if (localFromSource) {
+			recordLocalFromRegisteredAlias(sourceAlias);
+		}
+		return queryRef;
+	}
+
+	public void restoreCurrentScopeOpaqueQueryVariableAliases() {
+		for (OpaqueQueryVariableSource source : opaqueQueryVariableSources.values()) {
+			if (source.ownerScope != walker.symbolTable
+					|| !source.localFromSource
+					|| source.alias == null
+					|| source.alias.isBlank()) {
+				continue;
+			}
+			upsertCurrentTableAliasMapping(source.alias, source.queryRef);
+			recordLocalFromRegisteredAlias(source.alias);
+		}
+	}
+
+	public void resetPerStatementScope() {
+		opaqueQueryVariableSources.clear();
+	}
+
+	private boolean isOpaqueQueryVariableSource(String queryRef) {
+		String liveQueryRef = normalizeQuerySourceReference(queryRef);
+		return liveQueryRef != null && opaqueQueryVariableSources.containsKey(liveQueryRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean ensureOpaqueQueryVariableOutputColumn(String queryRef, String columnName) {
+		String liveQueryRef = normalizeQuerySourceReference(queryRef);
+		OpaqueQueryVariableSource source = liveQueryRef == null
+				? null
+				: opaqueQueryVariableSources.get(liveQueryRef);
+		if (source == null || columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+			return false;
+		}
+
+		Object definitionObj = getQueryDefinitionSymbol(liveQueryRef);
+		if (!(definitionObj instanceof Map<?, ?> definitionMapObj)) {
+			return false;
+		}
+		Map<String, Object> definition = (Map<String, Object>) definitionMapObj;
+		Object interfaceObj = definition.get(MUMBLE_INTERFACE_KEY);
+		Map<String, Object> outputInterface;
+		if (interfaceObj instanceof Map<?, ?> interfaceMapObj) {
+			outputInterface = (Map<String, Object>) interfaceMapObj;
+		} else {
+			outputInterface = new HashMap<String, Object>();
+			definition.put(MUMBLE_INTERFACE_KEY, outputInterface);
+		}
+		outputInterface.putIfAbsent(columnName, new ArrayList<Object>());
+		source.presumedOutputColumns.add(columnName);
+		return true;
+	}
+
+	private void emitOpaqueQueryVariablePresumedOutputWarnings() {
+		String code = walker.getDiagnosticCode(
+				SqlASTWalkerHelper.DIAG_SQL_QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS);
+		String template = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS);
+		for (OpaqueQueryVariableSource source : opaqueQueryVariableSources.values()) {
+			removeOpaqueQueryVariableWildcard(source.queryRef);
+			if (source.diagnosticEmitted || source.presumedOutputColumns.isEmpty()) {
+				continue;
+			}
+			Integer line = source.token == null ? null : source.token.getLine();
+			Integer charPosition = source.token == null ? null : source.token.getCharPositionInLine();
+			String columns = source.presumedOutputColumns.toString();
+			String message = template == null
+					? "Columns presumed output of Query Variable " + source.variableName + " include: " + columns
+					: String.format(template, source.variableName, columns);
+			walker.addWalkerDiagnostic(
+					ParseDiagnostic.Severity.SEVERE_WARNING,
+					code,
+					message,
+					line,
+					charPosition,
+					walker.getClass().getSimpleName(),
+					null,
+					source.variableName,
+					true,
+					"ast-walk",
+					null,
+					null);
+			source.diagnosticEmitted = true;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void removeOpaqueQueryVariableWildcard(String queryRef) {
+		Object dictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+		if (dictionaryObj instanceof Map<?, ?> dictionaryMapObj) {
+			removeWildcardKey((Map<String, Object>) dictionaryMapObj);
+		}
+		Object definitionObj = getQueryDefinitionSymbol(queryRef);
+		if (!(definitionObj instanceof Map<?, ?> definitionMapObj)) {
+			return;
+		}
+		Object embeddedDictionaryObj =
+				((Map<String, Object>) definitionMapObj).get(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (embeddedDictionaryObj instanceof Map<?, ?> embeddedDictionaryMapObj) {
+			removeWildcardKey((Map<String, Object>) embeddedDictionaryMapObj);
+		}
+	}
+
+	private void removeWildcardKey(Map<String, Object> dictionary) {
+		String wildcardKey = null;
+		for (String key : dictionary.keySet()) {
+			if ("*".equalsIgnoreCase(key)) {
+				wildcardKey = key;
+				break;
+			}
+		}
+		if (wildcardKey != null) {
+			dictionary.remove(wildcardKey);
+		}
 	}
 
 	public Boolean collectQuerySymbolTable(String hdr, String alias, Map<String, Object> definitionTarget) {

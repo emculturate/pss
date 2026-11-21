@@ -52,9 +52,9 @@ Link to those records rather than copying their inventories or measurements.
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Closed** (2026-11-11) — ten bound-query regressions fixed; unused s82233 discrepancy obsolete and immaterial, accepted without remediation |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Complete** (closed 2026-11-16) |
 | **20** | Qualified column substitutions on visible query aliases rejected as missing interface columns | Defect (5.0.0 parity blocker) | **Complete** (closed 2026-11-13) — targeted fix + warning policy + parity re-evaluation delivered; see Entry 20 section |
-| **21** | QUERY variables in FROM/JOIN: author guidance and tuple-versus-query distinction | Diagnostic enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — policy discussion pending; not implemented |
-| **22** | Conflicting types for repeated occurrences of one substitution name | Diagnostic / consistency enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — severity and compatibility policy pending; not implemented |
-| **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Proposed for 5.1.4 remediation** (2026-11-19) — representation and diagnostic policy pending; not implemented |
+| **21** | QUERY variables in FROM/JOIN: author guidance and tuple-versus-query distinction | Diagnostic enhancement | **Closed by owner decision** (2026-11-21) — no dedicated warning; Entry 22 covers contradictory reuse |
+| **22** | Conflicting types for repeated occurrences of one substitution name | Diagnostic / consistency enhancement | **Complete** (2026-11-21) — positioned per-occurrence warnings; first public-map type retained |
+| **23** | Opaque QUERY-variable row sources: assumed column binding and symbol-table representation | Resolution / metadata enhancement | **Complete in source** (2026-11-21) — synthetic scopes, presumed outputs, ambiguity preservation, and focused regressions complete |
 | **24** | Successive IN lists in SELECT CASE silently overwrite pending column/token collection | Defect | **Targeted fix complete in source** — focused regressions pass; broader caller audit and release acceptance remain open |
 | **25** | Datetime story gaps: TRUNCATE alias, complete part coverage, function-specific subsets, and shared-alias affinity | Defect / story completion | **Complete in source** (2026-11-21) — focused datetime regressions pass; local release JAR not rebuilt |
 | **26** | Unicode string-literal preservation in MCP and bulk preprocessing | Defect | **Complete in source** (2026-11-20) — focused tests pass; local release JAR not rebuilt |
@@ -104,8 +104,10 @@ gates listed below, and is not whole-release certification.
   - Entry 22 repeated-name type-conflict diagnostics are complete in source:
     each conflicting occurrence emits a positioned severe warning and the
     public substitution map retains the first type.
-  - Entry 21 FROM/JOIN guidance and Entry 23 opaque query-source column binding
-    remain open assessment/design items.
+  - Entry 21's separate QUERY-versus-TUPLE warning is closed as obsolete.
+  - Entry 23 opaque query-source column binding is complete in source with
+    synthetic `def_queryN` scopes, presumed-output warnings, and normal
+    ambiguity diagnostics; release-level verification remains open.
 
 - **Entry 24 — fourth 5.1.4 remediation: confirmed IN-list collection defect**
   - Preserve all source columns and occurrence tokens across successive
@@ -4600,9 +4602,9 @@ substitution-map value shape.
 
 ## Entry 23 — Opaque QUERY-variable row-source column binding
 
-**Status:** Partially specified (2026-11-21); Entry 22 interactions and the
-symbol-table representation are decided below. Implementation and regression
-coverage remain open.
+**Status:** Complete in source (2026-11-21); focused 148-test substitution,
+alias, CTE, join, and pseudo-query regression selection passes. The full suite
+and release JAR rebuild were intentionally not run.
 **Kind:** Resolution / symbol-table metadata enhancement.
 
 **Evidence:** the [Entry 21 sample](#shared-evidence-and-sample-for-entries-2123)
@@ -4712,6 +4714,9 @@ described as validated exports.
   WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY, window clauses, and JOIN/ON.
   Preserve every reference token in `query_dictionary`; deduplicate interface
   keys and the diagnostic's displayed name list.
+- A wildcard `*` is not a named presumed output. Do not add it to a synthetic
+  QUERY-variable `interface` or `query_dictionary`; an outer `SELECT *` may
+  remain on the concrete enclosing query.
 - Missing columns on a concrete parsed query remain invalid. Presumed binding
   applies only when the QUERY variable has no query AST to inspect.
 - One variable name used in several scopes or occurrences creates independent
@@ -4727,15 +4732,15 @@ described as validated exports.
    type from changing positional source behavior.
 2. [x] Approve the synthetic `def_queryN` representation, presumed status,
    token ownership, scope visibility, ambiguity, and diagnostic policies above.
-3. [ ] Implement per-occurrence synthetic scope allocation, external-reference
+3. [x] Implement per-occurrence synthetic scope allocation, external-reference
    collection, normal alias/CTE registration, and warning replacement.
-4. [ ] Test qualified and unqualified references in SELECT/aggregate arguments,
+4. [x] Test qualified and unqualified references in SELECT/aggregate arguments,
    WHERE, GROUP BY, and JOIN/ON; include multiple-source ambiguity, repeated
-   names, and inaccessible sibling/ancestor-scope controls.
-5. [ ] Keep missing concrete columns on closed, parsed query interfaces invalid.
+   names, FROM/JOIN and CTE source forms, and mixed physical/opaque sources.
+5. [x] Keep missing concrete columns on closed, parsed query interfaces invalid.
    Do not admit condition, column, predicand, in-list, or join-extension
    substitutions as row sources merely because they are variables.
-6. [ ] Assert no QUERY-variable table-dictionary entry; correct clause lineage
+6. [x] Assert no QUERY-variable table-dictionary entry; correct clause lineage
    and token coverage; unchanged surrounding output boundaries; and explicit
    presumed status through empty interface dependencies plus the warning. Use
    independent full-golden tests and positioned diagnostics. Assert the exact
@@ -4743,9 +4748,17 @@ described as validated exports.
    location/hyperlink target at the applicable QUERY variable occurrence.
    Repeated column uses must not duplicate names in the message; unrelated
    diagnostics must remain intact.
-7. [ ] Document the synthetic-scope contract in the symbol-table and dictionary
+7. [x] Document the synthetic-scope contract in the symbol-table and dictionary
    guides, regenerate the vendor mirror, and verify consumer compatibility
    before implementation is accepted.
+
+Implementation evidence is concentrated in
+`SqlEventWalkerQueryVariablePseudoScopeTests` (11 strict one-query full-golden
+tests) and `SqlEventWalkerSubstitutionTypeConflictTests` (24 strict conflict
+tests). Ambiguous unqualified occurrences emit positioned
+`AMBIGUOUS_COLUMN_REFERENCE` severe warnings and remain in the aggregate
+`UNRESOLVED_UNQUALIFIED_COLUMNS` error; they are not credited to any synthetic
+interface.
 
 **Out of scope:** restoring type-agnostic 5.0.0 table collection, inventing
 verified exports or a real SQL body, bypassing normal concrete-subquery

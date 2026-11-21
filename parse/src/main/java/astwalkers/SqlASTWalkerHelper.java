@@ -103,6 +103,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				"SQL_STATEMENT_MIXED_DIALECT_GRAMMAR";
 		public static final String DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT =
 				"SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT";
+		public static final String DIAG_SQL_QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS =
+				"SQL_QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
@@ -374,6 +376,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_SUBSTITUTION_VARIABLE_TYPE_CONFLICT,
 				 "SUBSTITUTION_VARIABLE_TYPE_CONFLICT",
 				 "First occurrence of %s registered as %s. Conflicting variable of type %s found at (l:%s c:%s).");
+		 registerDiagnostic(
+				 DIAG_SQL_QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS,
+				 "QUERY_VARIABLE_PRESUMED_OUTPUT_COLUMNS",
+				 "Columns presumed output of Query Variable %s include: %s");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -3017,6 +3023,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (substitution != null && token != null) {
 			substitutionOccurrenceTokens.put(substitution, token);
 		}
+	}
+
+	public Token getSubstitutionOccurrenceToken(Map<String, Object> substitution) {
+		return substitution == null ? null : substitutionOccurrenceTokens.get(substitution);
 	}
 
 	public void registerSubstitutionVariable(Map<String, Object> substitution, String type) {

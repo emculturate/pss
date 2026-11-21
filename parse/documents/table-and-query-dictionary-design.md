@@ -68,6 +68,16 @@ Each `queryN` / `def_queryN.query_dictionary` is **locked to that query only**. 
 
 Only names that appear in the query's **projected interface** (select list, INSERT column list, VALUES row shape, UPDATE projection, etc.) may be keys.
 
+**Opaque QUERY substitution exception:** a QUERY substitution used as a
+FROM/JOIN or CTE row source receives a synthetic `def_queryN` because its bound
+query AST is unavailable. Its `query_dictionary` keys are the named columns
+that an enclosing scope requires the eventual query snippet to export, and the
+values are the external reference tokens that established each requirement.
+The synthetic `interface` has the same keys with empty dependency lists,
+signifying unknown internal lineage. These scopes contain no physical
+`table_dictionary`. Wildcard `*` is not a named requirement and is excluded
+from both synthetic buckets.
+
 **Exception — relational modifiers:** PIVOT/UNPIVOT can synthesize **derived columns** tracked in local `derived_columns` / hint metadata. Resolution policy: [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md). Those generated names must **not** widen the pure query dictionary unless they are also genuine interface outputs. Keep derived-column lineage separate so the query dictionary stays a clean record of declared outputs.
 
 ### When token strings are collected (values)
@@ -192,6 +202,7 @@ Physical table sources (`ic.pd7`) should follow the **same routing shape**: mate
 |-------|------|------|
 | **1 — Origins** | `exitSelect_item` (and statement-specific seeds) | Every interface output name receives its **output-name / alias** token (`ctx.getStop()`). Source expressions (`ic.pd7`, `sub.col`) are **not** copied here. |
 | **2 — External usage** | Scope exit, after interface resolution | Qualified refs on query aliases in **parent** scopes merge into the **source** query's dictionary via interface loop + `materializeResolvedQualifiedQuerySourceReference`. |
+| **Opaque requirement** | Scope exit for a QUERY substitution source | Eligible external refs create matching synthetic `query_dictionary` and empty-dependency `interface` keys; ambiguous refs and `*` are excluded. |
 | **Lineage (parallel track)** | Resolution / materialization | Physical refs → table dictionary; query-backed refs → source query dictionary; correlated refs → outer scope. **Not** local query dictionary. |
 | **GROUP BY / ORDER BY output proof** | Archived clause probe | Unqualified (or proved output) refs in `grouped_by` / `ordered_by` may merge onto local interface keys when the ref is the output column, not a physical source alias. |
 

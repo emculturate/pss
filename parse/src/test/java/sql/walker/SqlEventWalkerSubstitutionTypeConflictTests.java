@@ -274,8 +274,8 @@ public class SqlEventWalkerSubstitutionTypeConflictTests extends AbstractSqlPars
 				"[c, id]",
 				"{<shared>=query}",
 				"{other={}, <shared>={<shared>=[[@13,43:43='t',<459>,1:43]], id=[[@7,31:31='t',<459>,1:31], [@28,115:115='t',<459>,1:115], [@34,135:135='t',<459>,1:135]]}}",
-				"{query0={c=[[@17,57:57='c',<459>,1:57]], id=[[@11,39:40='id',<459>,1:39]]}}",
-				"{def_union1={def_query0={query_dictionary={c=[[@17,57:57='c',<459>,1:57]], id=[[@11,39:40='id',<459>,1:39]]}, table_dictionary={other={}, <shared>={<shared>=[[@13,43:43='t',<459>,1:43]], id=[[@7,31:31='t',<459>,1:31], [@28,115:115='t',<459>,1:115], [@34,135:135='t',<459>,1:135]]}}, filters=[{name=id, table_ref=t}, {name=<shared>, type=predicand}], interface={c=[{substitution={name=<shared>, type=column}, table_ref=t}], id=[{name=id, table_ref=t}]}, table_alias={t=<shared>, u=other}}, interface={c=query_column, id=query_column}, table_alias={seed=query0}}}");
+				"{query0={}, query1={c=[[@17,57:57='c',<459>,1:57]], id=[[@11,39:40='id',<459>,1:39]]}}",
+				"{def_union2={context_list={seed=query0}, def_query1={context_list={seed=query0}, query_dictionary={c=[[@17,57:57='c',<459>,1:57]], id=[[@11,39:40='id',<459>,1:39]]}, table_dictionary={other={}, <shared>={<shared>=[[@13,43:43='t',<459>,1:43]], id=[[@7,31:31='t',<459>,1:31], [@28,115:115='t',<459>,1:115], [@34,135:135='t',<459>,1:135]]}}, filters=[{name=id, table_ref=t}, {name=<shared>, type=predicand}], interface={c=[{substitution={name=<shared>, type=column}, table_ref=t}], id=[{name=id, table_ref=t}]}, table_alias={seed=query0, t=<shared>, u=other}}, def_query0={query_dictionary={}, interface={}}, interface={c=query_column, id=query_column}, table_alias={seed=query0}}}");
 	}
 
 	@Test
@@ -299,30 +299,30 @@ public class SqlEventWalkerSubstitutionTypeConflictTests extends AbstractSqlPars
 	public void tupleThenParenthesizedQueryConflictTest() {
 		SqlParseEventWalker extractor = parseQuery(
 				"SELECT x.id FROM <shared> x JOIN (<shared>) q ON x.id = q.id");
-		assertConflictDiagnostics(extractor, "tuple", new String[] {"query"}, new int[] {34});
+		assertConflictDiagnostics(extractor, "tuple", new String[] {"query"}, new int[] {34}, 1);
 		assertFullGoldens(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=x}}}, from={join={1={table={alias=x, substitution={name=<shared>, type=tuple}}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=x}}, right={column={name=id, table_ref=q}}, operator==}}}, 3={table={alias=q, substitution={name=<shared>, type=query}}}}}}}",
 				"[id]",
 				"{<shared>=tuple}",
-				"{<shared>={id=[[@1,7:7='x',<459>,1:7], [@13,49:49='x',<459>,1:49], [@17,56:56='q',<459>,1:56]]}}",
-				"{query0={id=[[@3,9:10='id',<459>,1:9]]}}",
-				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={<shared>={id=[[@1,7:7='x',<459>,1:7], [@13,49:49='x',<459>,1:49], [@17,56:56='q',<459>,1:56]]}}, filters=[{name=id, table_ref=x}, {name=id, table_ref=q}], interface={id=[{name=id, table_ref=x}]}, table_alias={q=<shared>, x=<shared>}}}");
+				"{<shared>={id=[[@1,7:7='x',<459>,1:7], [@13,49:49='x',<459>,1:49]]}}",
+				"{query0={id=[[@17,56:56='q',<459>,1:56]]}, query1={id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query1={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={<shared>={id=[[@1,7:7='x',<459>,1:7], [@13,49:49='x',<459>,1:49]]}}, def_query0={query_dictionary={id=[[@17,56:56='q',<459>,1:56]]}, interface={id=[]}}, filters=[{name=id, table_ref=x}, {name=id, table_ref=q}], interface={id=[{name=id, table_ref=x}]}, table_alias={q=query0, x=<shared>}}}");
 	}
 
 	@Test
 	public void parenthesizedQueryThenTupleConflictTest() {
 		SqlParseEventWalker extractor = parseQuery(
 				"SELECT q.id FROM (<shared>) q JOIN <shared> x ON q.id = x.id");
-		assertConflictDiagnostics(extractor, "query", new String[] {"tuple"}, new int[] {35});
+		assertConflictDiagnostics(extractor, "query", new String[] {"tuple"}, new int[] {35}, 1);
 		assertFullGoldens(
 				extractor,
 				"{SQL={select={1={column={name=id, table_ref=q}}}, from={join={1={table={alias=q, substitution={name=<shared>, type=query}}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=q}}, right={column={name=id, table_ref=x}}, operator==}}}, 3={table={alias=x, substitution={name=<shared>, type=tuple}}}}}}}",
 				"[id]",
 				"{<shared>=query}",
-				"{<shared>={id=[[@17,56:56='x',<459>,1:56], [@1,7:7='q',<459>,1:7], [@13,49:49='q',<459>,1:49]]}}",
-				"{query0={id=[[@3,9:10='id',<459>,1:9]]}}",
-				"{def_query0={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={<shared>={id=[[@17,56:56='x',<459>,1:56], [@1,7:7='q',<459>,1:7], [@13,49:49='q',<459>,1:49]]}}, filters=[{name=id, table_ref=q}, {name=id, table_ref=x}], interface={id=[{name=id, table_ref=q}]}, table_alias={q=<shared>, x=<shared>}}}");
+				"{<shared>={id=[[@17,56:56='x',<459>,1:56]]}}",
+				"{query0={id=[[@1,7:7='q',<459>,1:7], [@13,49:49='q',<459>,1:49]]}, query1={id=[[@3,9:10='id',<459>,1:9]]}}",
+				"{def_query1={query_dictionary={id=[[@3,9:10='id',<459>,1:9]]}, table_dictionary={<shared>={id=[[@17,56:56='x',<459>,1:56]]}}, def_query0={query_dictionary={id=[[@1,7:7='q',<459>,1:7], [@13,49:49='q',<459>,1:49]]}, interface={id=[]}}, filters=[{name=id, table_ref=q}, {name=id, table_ref=x}], interface={id=[{name=id, table_ref=q}]}, table_alias={q=query0, x=<shared>}}}");
 	}
 
 	@Test
@@ -379,8 +379,18 @@ public class SqlEventWalkerSubstitutionTypeConflictTests extends AbstractSqlPars
 			String originalType,
 			String[] conflictingTypes,
 			int[] characterPositions) {
+		assertConflictDiagnostics(extractor, originalType, conflictingTypes, characterPositions, 0);
+	}
+
+	private void assertConflictDiagnostics(
+			SqlParseEventWalker extractor,
+			String originalType,
+			String[] conflictingTypes,
+			int[] characterPositions,
+			int additionalSevereWarnings) {
 		assertNoFatalErrors(extractor);
-		assertConflictDiagnostics(extractor.getSnippet(), originalType, conflictingTypes, characterPositions);
+		assertConflictDiagnostics(extractor.getSnippet(), originalType, conflictingTypes, characterPositions,
+				additionalSevereWarnings);
 	}
 
 	private void assertConflictDiagnostics(
@@ -388,11 +398,20 @@ public class SqlEventWalkerSubstitutionTypeConflictTests extends AbstractSqlPars
 			String originalType,
 			String[] conflictingTypes,
 			int[] characterPositions) {
+		assertConflictDiagnostics(snippet, originalType, conflictingTypes, characterPositions, 0);
+	}
+
+	private void assertConflictDiagnostics(
+			Snippet snippet,
+			String originalType,
+			String[] conflictingTypes,
+			int[] characterPositions,
+			int additionalSevereWarnings) {
 		List<ParseDiagnostic> conflicts = conflictDiagnostics(snippet);
 		Assert.assertEquals("Test setup must provide one position per conflict type",
 				conflictingTypes.length, characterPositions.length);
 		Assert.assertEquals("Unexpected conflict diagnostic count", conflictingTypes.length, conflicts.size());
-		Assert.assertEquals("Unexpected severe-warning count", conflictingTypes.length,
+		Assert.assertEquals("Unexpected severe-warning count", conflictingTypes.length + additionalSevereWarnings,
 				snippet.getDiagnosticCountBySeverity(ParseDiagnostic.Severity.SEVERE_WARNING));
 		Assert.assertEquals("Unexpected fatal diagnostics: " + snippet.getParserDiagnosticList(), 0,
 				snippet.getDiagnosticCountBySeverity(ParseDiagnostic.Severity.FATAL));
